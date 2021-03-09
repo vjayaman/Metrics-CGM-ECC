@@ -1,0 +1,93 @@
+
+
+Rscript env_setup.R
+  # run functions/formattingdata.R > convertAndSave() on the cluster assignment files - need to add this to env_setup.R (as option)
+
+Rscript datacollection.R -a t1_clusters_processed.csv -b t2_clusters_processed.csv -x "0,5,10"
+  # need to update the logfile, some of the stdout messages don't need to be here, also not detailed enough for debugging
+
+Rscript input_check.R 
+  # need to update this, so it's easily adjustable with a different height
+  # also needs to be automated, so we can do this for multiple heights in one go
+  # ideally, this would be part of cov_epi.R
+  # outputs are saved to "newly created" input_data
+
+Rscript cov_epi.R -a source.tsv -b strains.tsv -c input_data -t "010-001"
+  # need to make sure the way source.tsv, strains.tsv are prepared are straightforward, automated, and easily testable
+
+Rscript merge_data.R
+  # this needs to take inputs (remove the temporarily hard-coded filenames)
+  # update with latest edits
+
+
+
+
+
+
+
+
+# ### Section 2: Generating the EpiMatrix 
+# strain_data <- 
+#   read_tsv(params$strains) %>% 
+#   mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")),
+#          Location = paste(Country, Province, City, sep = "_")
+#   )
+# 
+# # placeholder <- strain_data$Source %>% unique() # just "Cow_Farm" at time of prep
+# # pre_source_file <- read_tsv(params$source)
+# # pre_source_file$Source.1 <- pre_source_file$Source.2 <- placeholder
+# # pre_source_file$value <- 0
+# 
+# source_pw <- read_tsv(params$source) %>% 
+#   mutate(Source.Dist = 1- value) %>% 
+#   select(-value)
+# ## Important! Check to make sure your source_pw text file is in distance-format and not in similarity, 
+# ## this will save  you lots of headache down the line 
+# #source_pw[,3] <- 1-source_pw[,3]
+# 
+# ## Coeffs for source, temporal and geographical components of the EpiQuant Model: combination should add to 1.0
+# # params$sigma #source,   params$tau #temporal,   params$gamma #geographical 
+# 
+# 
+# # TODO Testing variables: remove
+# # datafile <- strain_data; source_matrix <- source_pw; source_coeff <- params$sigma; temp_coeff <- params$tau; geog_coeff <- params$gamma
+# 
+# temp_pw <- temp_calc(strain_data)
+# geog_pw <- geog_calc(strain_data)
+# geog_temp <- left_join(geog_pw, temp_pw)
+# 
+# ## This generates a table of your comparisons based on your epidemiological data (source, time, geographical) 
+# ## with the  assigned weights of s, t and g and then computes the similarity/distance and generates a matrix
+# epi.table <- EpiTable(strain_data, source_pw, params$sigma, params$tau, params$gamma, geog_temp)
+# epi.matrix <- EpiMatrix(epi.table)
+# 
+# ### Section 3: Incorporating the allele data with the epidemiological data 
+# 
+# typing_data_files <- list.files(params$clusters, full.names = TRUE)
+# names(typing_data_files) <- typing_data_files %>% basename() %>% tools::file_path_sans_ext()
+# 
+# read_typing <- function(path) {
+#   read.table(path, header = TRUE, sep = "\t", row.names = 1, check.names = FALSE, quote = "",
+#              stringsAsFactors = FALSE)
+# }
+# 
+# typing_data <- lapply(typing_data_files, read_typing)
+# 
+# # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
+# Sys.time()
+# eccs <- lapply(typing_data, function(typing_datum) {
+#   
+#   g_cuts <- typing_datum %>% rownames_to_column("genome") %>% as_tibble()
+#   epi_cohesion_calc(g_cuts, epi.matrix, cpus = params$cpus)
+# })
+# Sys.time()
+# 
+# dir.create("results", showWarnings = FALSE)
+# 
+# opfiles <- lapply(seq_along(eccs), function(i) {
+#   
+#   cur_name <- str_interp("results/${names(eccs)[[i]]}(${params$sigma}.${params$tau}.${params$gamma}).tsv")
+#   write.table(eccs[[i]], file = cur_name,
+#               col.names = TRUE, row.names = FALSE, quote = FALSE)
+# })
+# 
