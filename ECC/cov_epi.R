@@ -1,10 +1,38 @@
 #! /usr/bin/env Rscript
+msg <- file("logs/logfile_epiquant.txt", open="wt")
+sink(msg, type="message")
+
 x <- c("optparse", "tibble", "magrittr", "readr", "dplyr", "tidyr", "purrr", "beepr", "stringr", 
        "reshape2", "gplots", "fossil")
-lapply(x, require, character.only = TRUE)
+y <- lapply(x, require, character.only = TRUE)
 
-source("epi-helper.R")
-source("ECC-sep_singletons.R")  # source("helpers/ECC-helper.R")
+cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ", 
+           paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
+stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
+
+source("ECC/epi-helper.R")
+source("ECC/ECC-sep_singletons.R") # 010 took 9 minutes and 10 seconds
+# source("ECC/ECC-helper.R") # 010 took 1 hour, 1 minute, 12 seconds
+
+# Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
+# ("pt") and a two-element named vector with Sys.time() values named "start_time" and "end_time"
+timeTaken <- function(pt, sw) {
+  z <- difftime(sw[['end_time']], sw[['start_time']], units = "secs") %>% as.double()
+  m <- 60
+  h <- m^2
+  
+  if (z >= h) {
+    hrs <- trunc(z/h)
+    mins <- trunc(z/m - hrs*m)
+    paste0("The ", pt, " process took ", hrs, " hour(s), ", mins, " minute(s), and ", 
+           round(z - hrs*h - mins*m), " second(s).") %>% return()
+  }else if (z < h & z >= m) {
+    mins <- trunc(z/m)
+    paste0("The ", pt, " process took ", mins, " minute(s) and ", round(z - mins*m), " second(s).") %>% return()
+  }else {
+    paste0("The ", pt, " process took ", round(z), " second(s).") %>% return()
+  }
+}
 
 read_typing <- function(path) {
   read.table(path, header = TRUE, sep = "\t", row.names = 1, check.names = FALSE, quote = "",
@@ -15,14 +43,11 @@ read_typing <- function(path) {
 # author: "Elissa Giang, National Microbiology Laboratory (Guelph), elissagiang6@gmail.com"
 
 option_list <- list(
-  make_option(c("-a", "--source"), metavar = "file", default = "source.tsv", help = "Source data"),
-  make_option(c("-b", "--strains"), metavar = "file", default = "strains.tsv", help = "Strain data"),
-  make_option(c("-c", "--tp1"), metavar = "file", default = "../input_data/tp1_clusters.txt", 
-              help = "TP1 cluster assignments"), 
-  make_option(c("-d", "--tp2"), metavar = "file", default = "../input_data/tp2_clusters.txt", 
-              help = "TP2 cluster assignments"), 
-  # make_option(c("-c", "--clusters"), metavar = "file", default = "../input_data/", help = "Cluster input file"),
-  make_option(c("-h", "--heights"), metavar = "character", default = "0,5", 
+  make_option(c("-a", "--source"), metavar = "file", default = NULL, help = "Source data"),
+  make_option(c("-b", "--strains"), metavar = "file", default = NULL, help = "Strain data"),
+  make_option(c("-c", "--tp1"), metavar = "file", default = NULL, help = "TP1 cluster assignments"), 
+  make_option(c("-d", "--tp2"), metavar = "file", default = NULL, help = "TP2 cluster assignments"), 
+  make_option(c("-x", "--heights"), metavar = "character", default = "0,5", 
               help = "Comma-delimited string of heights to collect ECCs for"), 
   make_option(c("-p", "--cpus"), metavar = "numeric", default = 1, help = "CPUs"),
   make_option(c("-t", "--trio"), metavar = "character", default = "010-001", 
@@ -30,10 +55,11 @@ option_list <- list(
 
 params <- parse_args(OptionParser(option_list=option_list))
 
-dir.create("results", showWarnings = FALSE)
+
 
 ### Section 3: Incorporating the allele data with the epidemiological data 
 oneCombo <- function(strains, source_file, sigma, tau, gamma, clusters, cpus, typing_data) {
+  cat(paste0("\nCollecting ECC values for source = ", sigma, ", temporal = ", tau, ", geo = ", gamma))
   ### Section 2: Generating the EpiMatrix
   strain_data <- 
     read_tsv(strains) %>% 
@@ -57,12 +83,6 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, clusters, cpus, ty
   # ### Section 3: Incorporating the allele data with the epidemiological data 
   # typing_data_files <- list.files(clusters, full.names = TRUE)
   # names(typing_data_files) <- typing_data_files %>% basename() %>% tools::file_path_sans_ext()
-  # 
-  # read_typing <- function(path) {
-  #   read.table(path, header = TRUE, sep = "\t", row.names = 1, check.names = FALSE, quote = "",
-  #              stringsAsFactors = FALSE)
-  # }
-  # 
   # typing_data <- lapply(typing_data_files, read_typing)
   
   # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
@@ -109,4 +129,7 @@ Reduce(function(...) merge(..., by = c("TP1", "TP1_cluster", "TP1_cl_size")), sa
 Reduce(function(...) merge(..., by = c("TP2", "TP2_cluster", "TP2_cl_size")), sapply(z, `[`, 'TP2')) %>% as_tibble() %>% 
   write.table(., file = "results/TP2_ECCs.tsv", col.names = TRUE, row.names = FALSE, quote = FALSE)
 
-
+stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
+cat(timeTaken(pt = "ECC data collection", stopwatch))
+cat(paste0("\n||", paste0(rep("-", 30), collapse = ""), " End of ECC metric generation ", 
+           paste0(rep("-", 31), collapse = ""), "||\n"))

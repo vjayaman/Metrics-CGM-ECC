@@ -1,6 +1,3 @@
-x <- c("tibble", "magrittr", "dplyr", "reshape2", "scales", "progress", "reader", 
-       "stringr", "ggplot2", "plotly", "optparse", "methods", "R6", "testit")
-lapply(x, require, character.only = TRUE)
 
 # Identifying the first and last time each TPX cluster was seen in TPX - flags (for TP1 and TP2 individually)
 flaggingClusters <- function(tp_comps, tpx) {

@@ -1,9 +1,14 @@
 #! /usr/bin/env Rscript
-msg <- file("outputs/logfile_datacollection.txt", open="wt")
+msg <- file("logs/logfile_datacollection.txt", open="wt")
 sink(msg, type="message")
 
-suppressWarnings(suppressPackageStartupMessages(source("functions/tracking_functions.R")))
-source("class_definitions.R")
+x <- c("tibble", "magrittr", "dplyr", "reshape2", "scales", "progress", "reader", 
+       "stringr", "ggplot2", "plotly", "optparse", "methods", "R6", "testit")
+y <- lapply(x, require, character.only = TRUE)
+
+suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/formattingdata.R")))
+suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/tracking_functions.R")))
+source("CGM/class_definitions.R")
 
 option_list <- list(
   make_option(c("-a", "--tp1"), metavar = "file", default = NULL, help = "Time point 1 file name (TP1)"),
@@ -65,7 +70,7 @@ if (length(heights) > 1) {
   outputDetails(paste0("\nPART 3 OF 3: Tracking and flagging clusters for the rest of the heights (",
                        length(heights) - 1, " of them) ..........."), newcat = TRUE)
   outputDetails(paste0("  This may take some time. \n  For a more detailed look at progress, ", 
-                       "see the logfile in the outputs directory.\n"))
+                       "see the logfile in the logs directory.\n"))
   outputDetails("  Collecting data for other heights: ", newcat = TRUE)
 
   fcb <- txtProgressBar(min = 0, max = length(heights[-1])*2, initial = 0, style = 3)
@@ -151,13 +156,13 @@ isolates_file %>%
                  "Number of novels in the TP2 match", "Actual cluster size change (TP2 size - TP1 size)", 
                  "Actual growth rate = (TP2 size - TP1 size) / (TP1 size)", 
                  "Novel growth = (TP2 size) / (TP2 size - number of novels)")) %>% 
-  write.table(., file.path("outputs/","CGM_strain_results.txt"), row.names = FALSE, quote = FALSE, sep = "\t")
+  write.table(., file.path("results","CGM_strain_results.txt"), row.names = FALSE, quote = FALSE, sep = "\t")
 
 # WRAPPING THINGS UP -------------------------------------------------------------------------------------------
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 
 outputDetails(paste0("\nSuccessfully collected data for all heights."), newcat = TRUE)
-timeTaken(pt = "data collection", stopwatch) %>% outputDetails(., newcat = TRUE)
+timeTaken(pt = "CGM data collection", stopwatch) %>% outputDetails(., newcat = TRUE)
 outputDetails(paste0("\n||", paste0(rep("-", 28), collapse = ""), " End of cluster metric generation ", 
                      paste0(rep("-", 29), collapse = ""), "||\n"))
 closeAllConnections()

@@ -1,6 +1,4 @@
 
-source("functions/formattingdata.R")
-
 # --------------------------------------------------------------------------------------------------------------
 # Given a TP dataset, we output a set where the composition of each cluster is indicated with a string where 
 # each character represents a single isolate (easier to compare cluster composition later on)

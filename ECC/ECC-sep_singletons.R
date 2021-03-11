@@ -19,7 +19,7 @@ epi_cohesion_calc <- function(g_cuts, epi_matrix, cpus){
     
   }
   
-  print("Starting Calculation")
+  # print("Starting Calculation")
   
   cut_cluster_members <-
     g_cuts %>%
@@ -29,7 +29,7 @@ epi_cohesion_calc <- function(g_cuts, epi_matrix, cpus){
       members = list(cur_data()$genome)
     )
   
-  print("Part 2")  
+  # print("Part 2")  
   cut_cluster_members <- cut_cluster_members %>% 
     add_column(cluster_size = map_int(cut_cluster_members$members, length))
   
@@ -39,7 +39,7 @@ epi_cohesion_calc <- function(g_cuts, epi_matrix, cpus){
     rename(s1 = value) %>% select(-mem2) %>% 
     mutate(across(members, as.list))
 
-  print("Part 3")
+  # print("Part 3")
   others <- cut_cluster_members %>% filter(cluster_size != 1) %>% 
     mutate(s1 = map_dbl(members, calculate_s1))
   
