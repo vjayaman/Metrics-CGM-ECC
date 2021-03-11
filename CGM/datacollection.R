@@ -8,7 +8,7 @@ y <- lapply(x, require, character.only = TRUE)
 
 suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/formattingdata.R")))
 suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/tracking_functions.R")))
-source("CGM/class_definitions.R")
+source("CGM/functions/class_definitions.R")
 
 option_list <- list(
   make_option(c("-a", "--tp1"), metavar = "file", default = NULL, help = "Time point 1 file name (TP1)"),

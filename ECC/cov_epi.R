@@ -10,8 +10,8 @@ cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation 
            paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
-source("ECC/epi-helper.R")
-source("ECC/ECC-sep_singletons.R") # 010 took 9 minutes and 10 seconds
+source("ECC/functions/epi-helper.R")
+source("ECC/functions/ECC-sep_singletons.R") # 010 took 9 minutes and 10 seconds
 # source("ECC/ECC-helper.R") # 010 took 1 hour, 1 minute, 12 seconds
 
 # Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
