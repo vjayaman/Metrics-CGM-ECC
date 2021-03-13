@@ -131,3 +131,12 @@ convertAndSave <- function(ip, op) {
   df %>% set_colnames(c("isolate", 0:m1)) %>% 
     write.table(., op, row.names = FALSE, quote = FALSE, sep = "\t")
 }
+
+# isolate column names
+# # set_colnames(c("Strain", "Novel", "First time this cluster was seen in TP2", "TP2 height", "TP2 cluster", 
+#                "TP2 cluster size", "Last time this cluster was seen in TP2", "TP1 ID", "TP1 height", "TP1 cluster",
+#                "TP1 cluster size", "First time this cluster was seen in TP1", 
+#                "Last time this cluster was seen in TP1", "Number of additional TP1 strains in the TP2 match", 
+#                "Number of novels in the TP2 match", "Actual cluster size change (TP2 size - TP1 size)", 
+#                "Actual growth rate = (TP2 size - TP1 size) / (TP1 size)", 
+#                "Novel growth = (TP2 size) / (TP2 size - number of novels)")) %>% 

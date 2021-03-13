@@ -7,16 +7,14 @@ epi_cohesion_calc <- function(g_cuts, epi_matrix, cpus){
   
   epi_melt_joined <- 
     expand_grid(genome_names, genome_names, .name_repair = function(x) {c("Var1", "Var2")}) %>% 
-    left_join(epi_melt)
+    left_join(epi_melt, by = c("Var1", "Var2"))
   
   calculate_s1 <- function(k) {
-    
     epi_melt_joined %>% 
       filter(Var1 %in% k, Var2 %in% k) %>%
       select(value) %>% 
       pull() %>% 
       sum()
-    
   }
   
   # print("Starting Calculation")
@@ -25,9 +23,7 @@ epi_cohesion_calc <- function(g_cuts, epi_matrix, cpus){
     g_cuts %>%
     pivot_longer(-genome, names_to = "cut", values_to = "cluster") %>%  
     group_by(cut, cluster) %>% 
-    summarise(
-      members = list(cur_data()$genome)
-    )
+    summarise(members = list(cur_data()$genome), .groups = "drop")
   
   # print("Part 2")  
   cut_cluster_members <- cut_cluster_members %>% 
@@ -45,8 +41,10 @@ epi_cohesion_calc <- function(g_cuts, epi_matrix, cpus){
   
   bind_rows(singletons, others) %>% arrange(cluster) %>%
     mutate(
-      ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1)),
-      W_ECC = ECC * cluster_size
+      ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))
+      # W_ECC = ECC * cluster_size
     ) %>%
-    select(-members, -s1)
+    select(-cut, -members, -s1) %>% 
+    set_colnames(c(names(g_cuts)[2], paste0(names(g_cuts)[2], "_Size"), 
+                   paste0(names(g_cuts)[2], "_ECC")))
 }

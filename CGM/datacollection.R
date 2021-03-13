@@ -6,9 +6,9 @@ x <- c("tibble", "magrittr", "dplyr", "reshape2", "scales", "progress", "reader"
        "stringr", "ggplot2", "plotly", "optparse", "methods", "R6", "testit")
 y <- lapply(x, require, character.only = TRUE)
 
-suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/formattingdata.R")))
+suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/formatting_cgm.R")))
 suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/tracking_functions.R")))
-source("CGM/functions/class_definitions.R")
+source("CGM/functions/classes_cgm.R")
 
 option_list <- list(
   make_option(c("-a", "--tp1"), metavar = "file", default = NULL, help = "Time point 1 file name (TP1)"),
@@ -98,7 +98,7 @@ if (length(heights) > 1) {
   outputDetails(paste0("\nPART 3 OF 3: Only one threshold provided, so no further tracking necessary"), newcat = TRUE)
 }
 
-outputDetails("  Saving the data in two separate files, with cluster and strain identifiers.\n", newcat = TRUE)
+outputDetails("  Saving the data in a file with strain identifiers.\n", newcat = TRUE)
 
 clusters_just_tp1 <- lapply(heights, function(h) {
   hx$results[[h]] %>% left_join(., tp1$flagged) %>% left_join(., tp2$flagged) %>% 
@@ -142,20 +142,14 @@ all_mixed <- isolates_base %>%
 # note: two types of novel clusters, those that are fully novel, and those that are not
 isolates_file <- bind_rows(isolates_base, pure_novels) %>% bind_rows(., all_mixed) %>% 
   mutate(novel = ifelse(isolate %in% setdiff(tp2$raw$isolate, tp1$raw$isolate), 1, 0)) %>% 
-  rename(strain = isolate)
+  rename(Strain = isolate)
 isolates_file[,c("tp1_h", "tp2_h")] %<>% apply(., 2, padCol, padval = ph, padchr = "h")
 isolates_file[,c("tp1_cl", "tp2_cl")] %<>% apply(., 2, padCol, padval = pc, padchr = "c")
   
 isolates_file %>% 
-  select(strain, novel, first_tp2_flag, tp2_h, tp2_cl, tp2_cl_size, last_tp2_flag, tp1_id, tp1_h, tp1_cl, tp1_cl_size, 
-         first_tp1_flag, last_tp1_flag, add_TP1, num_novs, actual_size_change, actual_growth_rate, new_growth) %>% 
-  set_colnames(c("Strain", "Novel", "First time this cluster was seen in TP2", "TP2 height", "TP2 cluster", 
-                 "TP2 cluster size", "Last time this cluster was seen in TP2", "TP1 ID", "TP1 height", "TP1 cluster",
-                 "TP1 cluster size", "First time this cluster was seen in TP1", 
-                 "Last time this cluster was seen in TP1", "Number of additional TP1 strains in the TP2 match", 
-                 "Number of novels in the TP2 match", "Actual cluster size change (TP2 size - TP1 size)", 
-                 "Actual growth rate = (TP2 size - TP1 size) / (TP1 size)", 
-                 "Novel growth = (TP2 size) / (TP2 size - number of novels)")) %>% 
+  select(Strain, novel, first_tp2_flag, tp2_h, tp2_cl, tp2_cl_size, last_tp2_flag, 
+         tp1_id, tp1_h, tp1_cl, tp1_cl_size, first_tp1_flag, last_tp1_flag, add_TP1, 
+         num_novs, actual_size_change, actual_growth_rate, new_growth) %>% 
   write.table(., file.path("results","CGM_strain_results.txt"), row.names = FALSE, quote = FALSE, sep = "\t")
 
 # WRAPPING THINGS UP -------------------------------------------------------------------------------------------

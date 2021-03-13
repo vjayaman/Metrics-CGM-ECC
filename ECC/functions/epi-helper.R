@@ -92,7 +92,8 @@ geog_calc <- function(geogdata){
 
 ##########################################################################################################
 ######## Function to return table of all the epi-similarities and final strain similarity ################
-
+# datafile <- strain_data; source_matrix <- source_pw; source_coeff <- sigma; temp_coeff <- tau
+# geog_coeff <- gamma; geog_temp <- geog_temp
 EpiTable <- function(datafile, source_matrix, source_coeff, temp_coeff, geog_coeff, geog_temp){
   #### Read data into memory from previous outputs ####
 
@@ -153,7 +154,7 @@ EpiTable <- function(datafile, source_matrix, source_coeff, temp_coeff, geog_coe
   str.matrix <-
     strain_sims %>% 
     left_join(source_matrix, by = c("Source.1", "Source.2")) %>% 
-    left_join(geog_temp)
+    left_join(geog_temp, by = c("Strain.1", "Strain.2"))
     # left_join(temp_matrix, by = c("Strain.1", "Strain.2")) %>% 
     # left_join(geog_matrix, by = c("Strain.1", "Strain.2")) 
     
