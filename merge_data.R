@@ -36,12 +36,14 @@ step1 <- left_join(strain_data, cgms, by = "Strain") %>%
 step1[,grep("ECC", colnames(step1))] %<>% apply(., 2, repNA, i = 1.000) %>% as_tibble()
 step1[,grep("tp1_id", colnames(step1))] %<>% apply(., 2, repNA, i = "") %>% as_tibble()
 
+ecccols <- grep("ECC", colnames(step1), value = TRUE)
+
 step2 <- step1 %>% rename("TP1 cluster" = tp1_id) %>% 
   mutate("TP2 cluster" = first_tp2_flag, "TP1 cluster size" = tp1_cl_size, 
          "TP2 cluster size" = tp2_cl_size) %>% 
   select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, 
-         TP1, `TP1 cluster`, tp1_cl_size, TP1_T0_ECC_0.0.1, TP1_T0_ECC_0.1.0, 
-         TP2, `TP2 cluster`, tp2_cl_size, TP2_T0_ECC_0.0.1, TP2_T0_ECC_0.1.0,
+         TP1, `TP1 cluster`, tp1_cl_size, grep("TP1", ecccols, value = TRUE), 
+         TP2, `TP2 cluster`, tp2_cl_size, grep("TP2", ecccols, value = TRUE), 
          first_tp1_flag, last_tp1_flag, first_tp2_flag, last_tp2_flag, `TP1 cluster size`, 
          `TP2 cluster size`, actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth) %>% 
   rename("TP1 cluster size (2)" = tp1_cl_size, 
