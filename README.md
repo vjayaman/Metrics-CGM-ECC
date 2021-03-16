@@ -53,11 +53,12 @@ inputs/strain_data.tsv -c inputs/processed/tp1_clusters.txt -d
 inputs/processed/tp2_clusters.txt -x "0" -t "010"`
 
 Another example, but using the placeholder source data (since the
-coefficient is 0 anyway) and for source = 0, temporal = 0, and geo = 1:
+coefficient is 0 anyway) and for two sets of ECC parameters (source = 0,
+temporal = 0, and geo = 1) and (source = 0, temporal = 1, and geo = 0):
 
 `Rscript ECC/cov_epi.R -b inputs/strain_data.tsv -c
 inputs/processed/tp1_clusters.txt -d inputs/processed/tp2_clusters.txt
--x "0" -t "001"`
+-x "0" -t "001-010"`
 
 To merge the ECCs and the CGM results into a strain file and a cluster
 file:
