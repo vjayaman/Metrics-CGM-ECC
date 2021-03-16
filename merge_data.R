@@ -1,6 +1,13 @@
-x <- c("magrittr", "tibble", "dplyr", "readxl", "purrr", "testit", "readr")
+x <- c("magrittr", "tibble", "dplyr", "readxl", "purrr", "testit", "readr", "optparse")
 y <- lapply(x, require, character.only = TRUE)
 assert("All packages loaded correctly", all(unlist(y)))
+
+option_list <- list(
+  make_option(c("-e", "--ECCs"), metavar = "file", default = "results/ECCs.tsv", help = "ECC result file"),
+  make_option(c("-c", "--CGMs"), metavar = "file", default = "results/CGM_strain_results.txt", help = "CGM result file"),
+  make_option(c("-s", "--strains"), metavar = "file", default = "inputs/strain_data.tsv", help = "Strain metadata file"))
+
+arg <- parse_args(OptionParser(option_list=option_list))
 
 repNA <- function(vec_x, i) {
   ifelse(is.na(vec_x), i, vec_x)
@@ -10,14 +17,16 @@ writeData <- function(fp, df) {
   write.table(df, fp, row.names = FALSE, quote = FALSE, sep = "\t")
 }
 
+readData <- function(fp) {
+  read.table(fp, stringsAsFactors = FALSE, header = TRUE) %>% as_tibble() %>% return()
+}
 # ------------------------------------------------------------------------------------------------------------
 # NOW SAVING OUTPUTS AND MERGING ECCS WITH CGM DATA ----------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------
-eccs <- read.table("results/ECCs.tsv", stringsAsFactors = FALSE, header = TRUE) %>% as_tibble()
-cgms <- read.table("results/CGM_strain_results.txt", sep = "\t", 
-                   stringsAsFactors = FALSE, header = TRUE) %>% as_tibble() %>% rename(Strain = strain)
+eccs <- readData(arg$ECCs)
+cgms <- readData(arg$CGMs) %>% rename(Strain = strain)
 
-strain_data <- read_tsv("inputs/strain_data.tsv") %>% 
+strain_data <- read_tsv(arg$strains) %>% 
   filter(Province != "England") %>% filter(Country != "United Kingdom") %>% 
   filter(TP2 == 1) # actually assigned a cluster at TP2, not NA (185 such cases)
 # ------------------------------------------------------------------------------------------------------------
