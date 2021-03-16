@@ -12,7 +12,11 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
     mutate(Source.Dist = 1- value) %>% select(-value)
   
   temp_pw <- temp_calc(strain_data)
+  saveRDS(temp_pw, "inputs/ecc_averages/temp.Rds")
+  
   geog_pw <- geog_calc(strain_data)
+  saveRDS(geog_pw, "inputs/ecc_averages/geo.Rds")
+  
   geog_temp <- left_join(geog_pw, temp_pw, by = c("Strain.1", "Strain.2"))
   
   ## This generates a table of your comparisons based on your epidemiological data (source, time, geographical) 
@@ -53,13 +57,13 @@ timeTaken <- function(pt, sw) {
   if (z >= h) {
     hrs <- trunc(z/h)
     mins <- trunc(z/m - hrs*m)
-    paste0("The ", pt, " process took ", hrs, " hour(s), ", mins, " minute(s), and ", 
+    paste0("\nThe ", pt, " process took ", hrs, " hour(s), ", mins, " minute(s), and ", 
            round(z - hrs*h - mins*m), " second(s).") %>% return()
   }else if (z < h & z >= m) {
     mins <- trunc(z/m)
-    paste0("The ", pt, " process took ", mins, " minute(s) and ", round(z - mins*m), " second(s).") %>% return()
+    paste0("\nThe ", pt, " process took ", mins, " minute(s) and ", round(z - mins*m), " second(s).") %>% return()
   }else {
-    paste0("The ", pt, " process took ", round(z), " second(s).") %>% return()
+    paste0("\nThe ", pt, " process took ", round(z), " second(s).") %>% return()
   }
 }
 
