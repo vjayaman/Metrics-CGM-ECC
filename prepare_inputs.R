@@ -24,8 +24,6 @@ checkAndSave <- function(x = TRUE, msg, filepath, filedata, ext) {
   }
 }
 
-dir.create(file.path(arg$inputdir, "processed"))
-
 # Reading and processing the data in the full metadata excel file ----------------------------------------------
 # read_excel("input_data/Europe TP2 metadata.xlsx", sheet = 4, col_names = TRUE, .name_repair = "minimal")
 strain_data <- file.path(arg$inputdir, arg$metadata) %>% read_tsv() %>% 
@@ -59,9 +57,10 @@ checkAndSave(
 
 # ECC-SPECIFIC INPUT FILES -------------------------------------------------------------------------------------
 # placeholder source file --------------------------------------------------------------------------------------
-tibble(Source.1 = strain_data$Source %>% unique(), Source.2 = strain_data$Source %>% unique(), value = 0) %>% 
-  checkAndSave(filepath = file.path(arg$inputdir, "processed", "source_data.tsv"), filedata = .)
 
+tibble(Source.1 = "Placeholder1", Source.2 = "Placeholder2", value = 0) %>% 
+  write.table(., file.path("inputs", "processed", "source_data.tsv"), 
+              row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
 
 
 

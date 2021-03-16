@@ -17,7 +17,7 @@ source("ECC/functions/ECC-sep_singletons.R") # 010 took 9 minutes and 10 seconds
 # author: "Elissa Giang, National Microbiology Laboratory (Guelph), elissagiang6@gmail.com"
 
 option_list <- list(
-  make_option(c("-a", "--source"), metavar = "file", default = NULL, help = "Source data"),
+  make_option(c("-a", "--source"), metavar = "file", default = "inputs/processed/source_data.tsv", help = "Source data"),
   make_option(c("-b", "--strains"), metavar = "file", default = NULL, help = "Strain data"),
   make_option(c("-c", "--tp1"), metavar = "file", default = NULL, help = "TP1 cluster assignments"), 
   make_option(c("-d", "--tp2"), metavar = "file", default = NULL, help = "TP2 cluster assignments"), 
