@@ -32,6 +32,7 @@ files used in the examples below.
 *\<tp2 cluster assignments\>* **-x** *\<comma-delimited string of
 heights\>*
 
+Example:  
 `Rscript CGM/datacollection.R -a inputs/processed/tp1_clusters.txt -b
 inputs/processed/tp2_clusters.txt -x "0"`
 
@@ -50,6 +51,7 @@ resulting ECCs to the *results/* directory. The following example
 collects ECCs for height 0 with coefficients of source = 0, temporal =
 1, and geo = 0:
 
+Example:  
 `Rscript ECC/cov_epi.R -a inputs/processed/source_data.tsv -b
 inputs/strain_data.tsv -c inputs/processed/tp1_clusters.txt -d
 inputs/processed/tp2_clusters.txt -x "0" -t "010"`
@@ -58,7 +60,7 @@ Another example, but using the placeholder source data (since the
 coefficient is 0 anyway) and for two sets of ECC parameters (source = 0,
 temporal = 0, and geo = 1) and (source = 0, temporal = 1, and geo = 0):
 
-`Rscript ECC/cov_epi.R -b inputs/strain_data.tsv -c
+Example: `Rscript ECC/cov_epi.R -b inputs/strain_data.tsv -c
 inputs/processed/tp1_clusters.txt -d inputs/processed/tp2_clusters.txt
 -x "0" -t "001-010"`
 
@@ -68,5 +70,5 @@ file:
 **Rscript merge\_data.R -e** *\<ECC results\>* **-c** *\<CGM results\>*
 **-s** *\<Strain metadata\>*
 
-`Rscript merge_data.R -e results/ECCs.tsv -c
+Example: `Rscript merge_data.R -e results/ECCs.tsv -c
 results/CGM_strain_results.txt -s inputs/strain_data.tsv`
