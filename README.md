@@ -7,7 +7,7 @@ can be found at: <https://github.com/vjayaman/EQProject> and
 
 To collect the results, run the following in a terminal:
 
-**(1.a)** Rscript environment\_setup.R
+**(1.a) Rscript environment\_setup.R**
 
 This installs any R packages required but not found in the environment,
 and checks that they can be loaded without issue. It also writes a
@@ -17,7 +17,7 @@ instead.
 
 If running this process on the sample data, run
 
-**(1.b)** Rscript prepare\_inputs.R
+**(1.b) Rscript prepare\_inputs.R**
 
 otherwise move your (*correctly formatted*) input files into the
 *inputs/processed/* directory. To run the following, 4 tab-delimited
@@ -28,8 +28,9 @@ distances file (will use the placeholder if one not provided).
 If the sample data is used, and `prepare_inputs.R` is run, you get the
 files used in the examples below.
 
-**(2)** Rscript CGM/datacollection.R -a *\<tp1 cluster assignments\>* -b
-*\<tp2 cluster assignments\>* -x *\<comma-delimited string of heights\>*
+**(2) Rscript CGM/datacollection.R -a** *\<tp1 cluster assignments\>*
+**-b** *\<tp2 cluster assignments\>* **-x** *\<comma-delimited string of
+heights\>*
 
 `Rscript CGM/datacollection.R -a inputs/processed/tp1_clusters.txt -b
 inputs/processed/tp2_clusters.txt -x "0"`
@@ -37,10 +38,11 @@ inputs/processed/tp2_clusters.txt -x "0"`
 This collects the cluster growth metrics and saves them to newly created
 *results/* directory.
 
-**(3)** Rscript ECC/cov\_epi.R -a *\<source data\>* -b *\<strain data\>*
--c *\<TP1 cluster assignments\>* -d *\<TP2 cluster assignments\>* -x
-*\<comma-delimited string of heights\>* -t *\<hyphen-delimited numeric
-codes for source, temporal, geographic coefficients\>*
+**(3) Rscript ECC/cov\_epi.R -a** *\<source data\>* **-b** *\<strain
+data\>* **-c** *\<TP1 cluster assignments\>* **-d** *\<TP2 cluster
+assignments\>* **-x** *\<comma-delimited string of heights\>* **-t**
+*\<hyphen-delimited numeric codes for source, temporal, geographic
+coefficients\>*
 
 Note that the source data file does not need to be provided, the script
 will use the default placeholder if this is left blank. This saves the
@@ -63,8 +65,8 @@ inputs/processed/tp1_clusters.txt -d inputs/processed/tp2_clusters.txt
 To merge the ECCs and the CGM results into a strain file and a cluster
 file:
 
-**(4)** Rscript merge\_data.R -e *\<ECC results\>* -c *\<CGM results\>*
--s *\<Strain metadata\>*
+**(4) Rscript merge\_data.R -e** *\<ECC results\>* **-c** *\<CGM
+results\>* **-s** *\<Strain metadata\>*
 
 `Rscript merge_data.R -e results/ECCs.tsv -c
 results/CGM_strain_results.txt -s inputs/strain_data.tsv`
