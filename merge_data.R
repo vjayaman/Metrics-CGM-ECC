@@ -31,12 +31,13 @@ strain_data <- read_tsv(arg$strains) %>%
   filter(TP2 == 1) # actually assigned a cluster at TP2, not NA (185 such cases)
 # ------------------------------------------------------------------------------------------------------------
 
-step1 <- left_join(strain_data, cgms, by = "Strain") %>% 
-  left_join(., eccs, by = c("Strain", "TP1", "TP2"))
-step1[,grep("ECC", colnames(step1))] %<>% apply(., 2, repNA, i = 1.000) %>% as_tibble()
-step1[,grep("tp1_id", colnames(step1))] %<>% apply(., 2, repNA, i = "") %>% as_tibble()
+step1 <- left_join(strain_data, cgms, by = "Strain") %>% left_join(., eccs, by = c("Strain", "TP1", "TP2"))
 
-ecccols <- grep("ECC", colnames(step1), value = TRUE)
+ecccols <- grep("ECC", colnames(step1), value = TRUE) %>% sort(decreasing = TRUE)
+
+step1[,grep("avg", ecccols, invert = TRUE, value = TRUE)] %<>% apply(., 2, repNA, i = 1.000) %>% as_tibble()
+
+step1[,grep("tp1_id", colnames(step1))] %<>% apply(., 2, repNA, i = "") %>% as_tibble()
 
 step2 <- step1 %>% rename("TP1 cluster" = tp1_id) %>% 
   mutate("TP2 cluster" = first_tp2_flag, "TP1 cluster size" = tp1_cl_size, 
@@ -48,6 +49,10 @@ step2 <- step1 %>% rename("TP1 cluster" = tp1_id) %>%
          `TP2 cluster size`, actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth) %>% 
   rename("TP1 cluster size (2)" = tp1_cl_size, 
          "TP2 cluster size (2)" = tp2_cl_size, 
+         "TP1 temporal cluster average (distances)" = TP1_avg_temp_ECC, 
+         "TP1 geo cluster average (distances)" = TP1_avg_geo_ECC, 
+         "TP2 temporal cluster average (distances)" = TP2_avg_temp_ECC, 
+         "TP2 geo cluster average (distances)" = TP2_avg_geo_ECC, 
          "First time this cluster was seen in TP1" = first_tp1_flag, 
          "Last time this cluster was seen in TP1" = last_tp1_flag, 
          "First time this cluster was seen in TP2" = first_tp2_flag, 
@@ -59,7 +64,6 @@ step2 <- step1 %>% rename("TP1 cluster" = tp1_id) %>%
          "Novel growth = (TP2 size) / (TP2 size - number of novels)" = new_growth)
 
 writeData(fp = "results/Strain_results.tsv", df = step2)
-
 
 step2 %>% arrange(`TP2 cluster`) %>% group_by(`TP2 cluster`) %>% slice(1) %>% 
   select(-Strain) %>% ungroup() %>% 

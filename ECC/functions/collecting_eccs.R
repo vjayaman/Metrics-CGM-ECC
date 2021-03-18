@@ -1,3 +1,4 @@
+
 ### Section 3: Incorporating the allele data with the epidemiological data 
 oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data) {
   cat(paste0("\nCollecting ECC values for source = ", sigma, ", temporal = ", tau, ", geo = ", gamma))
@@ -12,10 +13,8 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
     mutate(Source.Dist = 1- value) %>% select(-value)
   
   temp_pw <- temp_calc(strain_data)
-  saveRDS(temp_pw, "inputs/ecc_averages/temp.Rds")
   
   geog_pw <- geog_calc(strain_data)
-  saveRDS(geog_pw, "inputs/ecc_averages/geo.Rds")
   
   geog_temp <- left_join(geog_pw, temp_pw, by = c("Strain.1", "Strain.2"))
   
@@ -35,7 +34,7 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   # names(eccs) == c("TP1_T0", "TP2_T0")
   newnames <- sapply(strsplit(names(eccs), "_"), `[`, 1)
   
-  lapply(names(eccs), function(x) {
+  ecc_data <- lapply(names(eccs), function(x) {
     y <- eccs[[x]]
     td[[x]] %>% rownames_to_column("Strain") %>% as_tibble() %>% 
       left_join(., y, by = colnames(y)[1]) %>% 
@@ -43,7 +42,46 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
       set_colnames(gsub("ECC", paste0("ECC_", sigma, ".", tau, ".", gamma), colnames(.)))
     
   }) %>% set_names(newnames) %>% 
-    Reduce(function(...) right_join(..., by = "Strain"), .) %>% return()
+    Reduce(function(...) right_join(..., by = "Strain"), .)
+  
+  results <- geog_temp %>% 
+    mutate(across(c(Strain.1, Strain.2), as.character)) %>% 
+    eccAverages(., ecc_data)
+  
+  return(results)
+}
+
+
+eccAverages <- function(pairwise_dists, ecc_data) {
+  
+  cnames <- colnames(ecc_data) %>% grep("Size|ECC", ., value = TRUE, invert = TRUE)
+  
+  tp1_base <- ecc_data %>% select(grep("Strain|TP1", cnames, value = TRUE)) %>% set_colnames(c("Strain", "TP1"))
+  tp1_data <- pairwise_dists %>% 
+    left_join(., tp1_base, by = c("Strain.1" = "Strain")) %>% rename(first_in_cl = TP1) %>% 
+    left_join(., tp1_base, by = c("Strain.2" = "Strain")) %>% rename(second_in_cl = TP1) %>% 
+    filter(first_in_cl == second_in_cl) %>% select(-second_in_cl) %>% rename(TP1 = first_in_cl)
+  
+  tp1_avg_eccs <- lapply(unique(tp1_data$TP1), function(x) {
+    tp1_data %>% filter(TP1 == x) %>% mutate(avg_geo = mean(Geog.Dist), avg_temp = mean(Temp.Dist))
+  }) %>% bind_rows() %>% 
+    select(TP1, avg_geo, avg_temp) %>% unique() %>% 
+    set_colnames(c(grep("TP1", cnames, value = TRUE), "TP1_avg_geo_ECC", "TP1_avg_temp_ECC"))
+  
+  
+  tp2_base <- ecc_data %>% select(grep("Strain|TP2", cnames, value = TRUE)) %>% set_colnames(c("Strain", "TP2"))
+  tp2_data <- pairwise_dists %>% 
+    left_join(., tp2_base, by = c("Strain.1" = "Strain")) %>% rename(first_in_cl = TP2) %>% 
+    left_join(., tp2_base, by = c("Strain.2" = "Strain")) %>% rename(second_in_cl = TP2) %>% 
+    filter(first_in_cl == second_in_cl) %>% select(-second_in_cl) %>% rename(TP2 = first_in_cl)
+  
+  tp2_avg_eccs <- lapply(unique(tp2_data$TP2), function(x) {
+    tp2_data %>% filter(TP2 == x) %>% mutate(avg_geo = mean(Geog.Dist), avg_temp = mean(Temp.Dist))
+  }) %>% bind_rows() %>% 
+    select(TP2, avg_geo, avg_temp) %>% unique() %>% 
+    set_colnames(c(grep("TP2", cnames, value = TRUE), "TP2_avg_geo_ECC", "TP2_avg_temp_ECC"))
+  
+  left_join(ecc_data, tp1_avg_eccs) %>% left_join(., tp2_avg_eccs) %>% return()
 }
 
 

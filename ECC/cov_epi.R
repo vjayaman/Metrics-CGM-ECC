@@ -21,7 +21,7 @@ option_list <- list(
   make_option(c("-b", "--strains"), metavar = "file", default = NULL, help = "Strain data"),
   make_option(c("-c", "--tp1"), metavar = "file", default = NULL, help = "TP1 cluster assignments"), 
   make_option(c("-d", "--tp2"), metavar = "file", default = NULL, help = "TP2 cluster assignments"), 
-  make_option(c("-x", "--heights"), metavar = "character", default = "0,5", 
+  make_option(c("-x", "--heights"), metavar = "character", default = "0", 
               help = "Comma-delimited string of heights to collect ECCs for"), 
   make_option(c("-p", "--cpus"), metavar = "numeric", default = 1, help = "CPUs"),
   make_option(c("-t", "--trio"), metavar = "character", default = "010-001", 
@@ -33,6 +33,9 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 
 params <- parse_args(OptionParser(option_list=option_list))
 
+# params$tp1 <- "inputs/processed/tp1_clusters.txt"
+# params$tp2 <- "inputs/processed/tp2_clusters.txt"
+
 combos <- params$trio %>% strsplit(., "-") %>% unlist()
 z <- vector("list", length = length(combos)) %>% set_names(combos)
 
@@ -42,7 +45,7 @@ tp1 <- Timepoint$new(params$tp1, "tp1")$Process(hx)$listHeights(hx)
 tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
 
 td <- tp1$height_list %>% append(tp2$height_list)
-
+# x <- combos[1]
 lapply(combos, function(x) {
   c1 <- strsplit(x, split = "") %>% unlist() %>% 
     as.numeric() %>% as.list() %>% set_names(c("sigma", "tau", "gamma"))
