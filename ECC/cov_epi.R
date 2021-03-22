@@ -1,4 +1,5 @@
 #! /usr/bin/env Rscript
+
 msg <- file("logs/logfile_epiquant.txt", open="wt")
 sink(msg, type="message")
 
@@ -13,7 +14,7 @@ source("ECC/functions/ECC-sep_singletons.R") # 010 took 9 minutes and 10 seconds
 # source("ECC/ECC-helper.R") # 010 took 1 hour, 1 minute, 12 seconds
 
 # title: "EpiQuant - Salmonella Enteritidis Project (2019-2020)"
-# author: "Elissa Giang, National Microbiology Laboratory (Guelph), elissagiang6@gmail.com"
+# authors of work behind this: Ben Hetman, Elissa Giang, Dillon Barker
 
 option_list <- list(
   make_option(c("-a", "--source"), metavar = "file", default = "inputs/processed/source_data.tsv", help = "Source data"),
@@ -32,8 +33,9 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 
 params <- parse_args(OptionParser(option_list=option_list))
 
-# params <- tibble(tp1 = "inputs/processed/tp1_clusters.txt", tp2 = "inputs/processed/tp2_clusters.txt",
-#                  heights = "0", strains = "inputs/strain_data.tsv", trio = "010")
+params <- tibble(tp1 = "inputs/processed/tp1_clusters.txt", tp2 = "inputs/processed/tp2_clusters.txt",
+                 heights = "0", strains = "inputs/strain_data.tsv", trio = "010-001", 
+                 source = "inputs/processed/source_data.tsv")
 
 combos <- params$trio %>% strsplit(., "-") %>% unlist()
 z <- vector("list", length = length(combos)) %>% set_names(combos)
@@ -45,7 +47,7 @@ tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
 
 td <- tp1$height_list %>% append(tp2$height_list)
 
-each_input_set <- lapply(combos, function(x) {
+lapply(combos, function(x) {
   c1 <- strsplit(x, split = "") %>% unlist() %>% 
     as.numeric() %>% as.list() %>% set_names(c("sigma", "tau", "gamma"))
   oneCombo(params$strains, params$source, c1$sigma, c1$tau, c1$gamma, params$cpus, td)
