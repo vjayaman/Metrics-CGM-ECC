@@ -1,4 +1,5 @@
 #! /usr/bin/env Rscript
+
 msg <- file("logs/logfile_datacollection.txt", open="wt")
 sink(msg, type="message")
 
@@ -16,8 +17,8 @@ option_list <- list(
               help = paste0("A string of comma-delimited numbers, e.g. '50,75,100' to ", 
                             "use as heights for metric generation (strain table outputs)")))
 
-# arg <- parse_args(OptionParser(option_list=option_list))
-arg <- tibble(tp1 = "inputs/processed/tp1_clusters.txt", tp2 = "inputs/processed/tp2_clusters.txt", heights = "0,5,6")
+arg <- parse_args(OptionParser(option_list=option_list))
+# arg <- tibble(tp1 = "inputs/processed/tp1_clusters.txt", tp2 = "inputs/processed/tp2_clusters.txt", heights = "0")
 outputDetails(paste0("\n||", paste0(rep("-", 32), collapse = ""), " Cluster metric generation ", 
                      paste0(rep("-", 32), collapse = ""), "||\nStarted process at: ", Sys.time()))
 cat(paste0("\nIf at any point the process cuts off with no success message, please see the log file.\n"))
@@ -71,17 +72,17 @@ if (length(heights) > 1) {
   outputDetails(paste0("  This may take some time. \n  For a more detailed look at progress, ", 
                        "see the logfile in the logs directory.\n"))
   outputDetails("  Collecting data for other heights: ", newcat = TRUE)
-
+  
   fcb <- txtProgressBar(min = 0, max = length(heights[-1])*2, initial = 0, style = 3)
   for (j in 1:length(heights[-1])) {
     hx$h_after <- heights[-1][j]
     message(paste0("  Height ", j + 1, " / ", length(heights)))
-
+    
     # Part 1: unchanged(): identifying clusters that have not changed from the previous height
     # Part 2: takes comps for new height, previous height, and the tracked data for the previous height
     #   --> identifies clusters that have not changed since the previous height, and reuses their tracking data
     hx$post_data(tp1$comps)$unchanged()
-
+    
     # Part 2: tracking clusters that changed, saving to results list, and prepping variable for next height
     hx$comps <- hx$aft %>% filter(!(id_aft %in% hx$same$tp1_id)) %>% set_colnames(colnames(tp1$comps))
     
@@ -144,7 +145,7 @@ isolates_file <- bind_rows(isolates_base, pure_novels) %>% bind_rows(., all_mixe
   rename(Strain = isolate)
 isolates_file[,c("tp1_h", "tp2_h")] %<>% apply(., 2, padCol, padval = ph, padchr = "h")
 isolates_file[,c("tp1_cl", "tp2_cl")] %<>% apply(., 2, padCol, padval = pc, padchr = "c")
-  
+
 isolates_file %>% 
   select(Strain, novel, first_tp2_flag, tp2_h, tp2_cl, tp2_cl_size, last_tp2_flag, 
          tp1_id, tp1_h, tp1_cl, tp1_cl_size, first_tp1_flag, last_tp1_flag, add_TP1, 
