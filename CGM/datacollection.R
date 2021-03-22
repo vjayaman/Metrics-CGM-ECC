@@ -2,9 +2,8 @@
 msg <- file("logs/logfile_datacollection.txt", open="wt")
 sink(msg, type="message")
 
-x <- c("tibble", "magrittr", "dplyr", "reshape2", "scales", "progress", "reader", 
-       "stringr", "ggplot2", "plotly", "optparse", "methods", "R6", "testit")
-y <- lapply(x, require, character.only = TRUE)
+libs <- c("R6", "tibble", "optparse", "magrittr", "dplyr", "reshape2", "progress", "testit")
+y <- lapply(libs, require, character.only = TRUE)
 
 suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/formatting_cgm.R")))
 suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/tracking_functions.R")))
@@ -17,8 +16,8 @@ option_list <- list(
               help = paste0("A string of comma-delimited numbers, e.g. '50,75,100' to ", 
                             "use as heights for metric generation (strain table outputs)")))
 
-arg <- parse_args(OptionParser(option_list=option_list))
-# arg <- tibble(tp1 = "t1_clusters_processed.csv", tp2 = "t2_clusters_processed.csv", heights = "0,5,25")
+# arg <- parse_args(OptionParser(option_list=option_list))
+arg <- tibble(tp1 = "inputs/processed/tp1_clusters.txt", tp2 = "inputs/processed/tp2_clusters.txt", heights = "0,5,6")
 outputDetails(paste0("\n||", paste0(rep("-", 32), collapse = ""), " Cluster metric generation ", 
                      paste0(rep("-", 32), collapse = ""), "||\nStarted process at: ", Sys.time()))
 cat(paste0("\nIf at any point the process cuts off with no success message, please see the log file.\n"))

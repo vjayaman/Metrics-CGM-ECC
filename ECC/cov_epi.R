@@ -2,8 +2,7 @@
 msg <- file("logs/logfile_epiquant.txt", open="wt")
 sink(msg, type="message")
 
-libs <- c("purrr", "magrittr", "tidyr", "dplyr", "tibble", "methods", "optparse", 
-          "readr", "testit", "fossil", "reshape2", "R6")
+libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr","reshape2","fossil","tidyr","purrr")
 y <- lapply(libs, require, character.only = TRUE)
 assert("All packages loaded correctly", all(unlist(y)))
 
@@ -33,8 +32,8 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 
 params <- parse_args(OptionParser(option_list=option_list))
 
-# params$tp1 <- "inputs/processed/tp1_clusters.txt"
-# params$tp2 <- "inputs/processed/tp2_clusters.txt"
+# params <- tibble(tp1 = "inputs/processed/tp1_clusters.txt", tp2 = "inputs/processed/tp2_clusters.txt",
+#                  heights = "0", strains = "inputs/strain_data.tsv", trio = "010")
 
 combos <- params$trio %>% strsplit(., "-") %>% unlist()
 z <- vector("list", length = length(combos)) %>% set_names(combos)
@@ -45,8 +44,8 @@ tp1 <- Timepoint$new(params$tp1, "tp1")$Process(hx)$listHeights(hx)
 tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
 
 td <- tp1$height_list %>% append(tp2$height_list)
-# x <- combos[1]
-lapply(combos, function(x) {
+
+each_input_set <- lapply(combos, function(x) {
   c1 <- strsplit(x, split = "") %>% unlist() %>% 
     as.numeric() %>% as.list() %>% set_names(c("sigma", "tau", "gamma"))
   oneCombo(params$strains, params$source, c1$sigma, c1$tau, c1$gamma, params$cpus, td)

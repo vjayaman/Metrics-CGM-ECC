@@ -2,9 +2,8 @@
 msg <- file("logs/logfile_inputs.txt", open="wt")
 sink(msg, type="message")
 
-x <- c("plyr", "dplyr", "tidyr", "readr", "stringr", "magrittr", "tibble", "purrr", "readxl", 
-       "reshape2", "optparse")
-y <- lapply(x, require, character.only = TRUE)
+libs <- c("optparse", "magrittr", "readr", "dplyr")
+y <- lapply(libs, require, character.only = TRUE)
 
 option_list <- list(
   make_option(c("-i", "--inputdir"), metavar = "dir", default = "inputs/", help = "Raw inputs directory"), 

@@ -2,8 +2,8 @@
 
 dir.create("logs", showWarnings = FALSE)
 # This should be run first, to make sure the required packages are installed
-msg <- file("logs/logfile_env.txt", open="wt")
-sink(msg, type="message")
+#msg <- file("logs/logfile_env.txt", open="wt")
+#sink(msg, type="message")
 
 # message(paste0("For reporting an issue, see https://github.com/vjayaman/ClusterGrowthMetrics/issues.\n"))
 

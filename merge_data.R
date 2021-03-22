@@ -1,6 +1,6 @@
-x <- c("magrittr", "tibble", "dplyr", "readxl", "purrr", "testit", "readr", "optparse")
-y <- lapply(x, require, character.only = TRUE)
-assert("All packages loaded correctly", all(unlist(y)))
+
+libs <- c("optparse","magrittr","tibble", "dplyr", "readr")
+y <- lapply(libs, require, character.only = TRUE)
 
 option_list <- list(
   make_option(c("-e", "--ECCs"), metavar = "file", default = "results/ECCs.tsv", help = "ECC result file"),
@@ -24,14 +24,12 @@ readData <- function(fp) {
 # NOW SAVING OUTPUTS AND MERGING ECCS WITH CGM DATA ----------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------
 eccs <- readData(arg$ECCs)
-cgms <- readData(arg$CGMs) %>% rename(Strain = strain)
+cgms <- readData(arg$CGMs)
 
-strain_data <- read_tsv(arg$strains) %>% 
-  filter(Province != "England") %>% filter(Country != "United Kingdom") %>% 
-  filter(TP2 == 1) # actually assigned a cluster at TP2, not NA (185 such cases)
-# ------------------------------------------------------------------------------------------------------------
+# actually assigned a cluster at TP2, not NA (185 such cases)
+strain_data <- read_tsv(arg$strains) %>% filter(TP2 == 1)
 
-step1 <- left_join(strain_data, cgms, by = "Strain") %>% left_join(., eccs, by = c("Strain", "TP1", "TP2"))
+step1 <- left_join(cgms, strain_data, by = "Strain") %>% left_join(., eccs, by = c("Strain", "TP1", "TP2"))
 
 ecccols <- grep("ECC", colnames(step1), value = TRUE) %>% sort(decreasing = TRUE)
 
@@ -69,10 +67,3 @@ step2 %>% arrange(`TP2 cluster`) %>% group_by(`TP2 cluster`) %>% slice(1) %>%
   select(-Strain) %>% ungroup() %>% 
   writeData(fp = "results/Cluster_results.tsv", df = .)
 
-
-# We realized that the easiest way to get actual numbers for the temporal window and the geographic radius 
-# was to use the equations themselves. 
-# And it turns out that the first steps in the calculations are to generate temporal and geo matrices already. 
-# And then the data in these matrices is used to generate the ECC matrix
-# So we figure we may as well also report the cluster averages for geo and temporal
-# So we don't have to go back to a calibration curve to figure it out later

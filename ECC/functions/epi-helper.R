@@ -1,6 +1,3 @@
-library(reshape2)
-library(gplots)
-library(fossil)
 
 ##########################################################################################
 ######## Function for generating time data from input datafile ###########################
