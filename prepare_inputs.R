@@ -1,4 +1,5 @@
 #! /usr/bin/env Rscript
+
 msg <- file("logs/logfile_inputs.txt", open="wt")
 sink(msg, type="message")
 

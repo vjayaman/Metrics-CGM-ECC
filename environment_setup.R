@@ -1,7 +1,5 @@
 #! /usr/bin/env Rscript
 
-# renv::activate()
-
 dir.create("logs", showWarnings = FALSE)
 # This should be run first, to make sure the required packages are installed
 
