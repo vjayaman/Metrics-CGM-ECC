@@ -1,3 +1,4 @@
+#! /usr/bin/env Rscript
 
 libs <- c("optparse","magrittr","tibble", "dplyr", "readr")
 y <- lapply(libs, require, character.only = TRUE)
@@ -61,9 +62,9 @@ step2 <- step1 %>% rename("TP1 cluster" = tp1_id) %>%
          "Actual growth rate = (TP2 size - TP1 size) / (TP1 size)" = actual_growth_rate, 
          "Novel growth = (TP2 size) / (TP2 size - number of novels)" = new_growth)
 
-writeData(fp = "results/Strain_results.tsv", df = step2)
+writeData(fp = "results/Merged_strain_results.tsv", df = step2)
 
 step2 %>% arrange(`TP2 cluster`) %>% group_by(`TP2 cluster`) %>% slice(1) %>% 
   select(-Strain) %>% ungroup() %>% 
-  writeData(fp = "results/Cluster_results.tsv", df = .)
+  writeData(fp = "results/Merged_cluster_results.tsv", df = .)
 
