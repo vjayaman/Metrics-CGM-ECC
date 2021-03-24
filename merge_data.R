@@ -1,5 +1,8 @@
 #! /usr/bin/env Rscript
 
+cat(paste0("\n||", paste0(rep("-", 29), collapse = ""), " Beginning CGM and ECC data merge ", 
+           paste0(rep("-", 28), collapse = ""), "||\n"))
+
 libs <- c("optparse","magrittr","tibble", "dplyr", "readr")
 y <- lapply(libs, require, character.only = TRUE)
 
@@ -21,6 +24,7 @@ writeData <- function(fp, df) {
 readData <- function(fp) {
   read.table(fp, stringsAsFactors = FALSE, header = TRUE) %>% as_tibble() %>% return()
 }
+
 # ------------------------------------------------------------------------------------------------------------
 # NOW SAVING OUTPUTS AND MERGING ECCS WITH CGM DATA ----------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------
@@ -67,4 +71,8 @@ writeData(fp = "results/Merged_strain_results.tsv", df = step2)
 step2 %>% arrange(`TP2 cluster`) %>% group_by(`TP2 cluster`) %>% slice(1) %>% 
   select(-Strain) %>% ungroup() %>% 
   writeData(fp = "results/Merged_cluster_results.tsv", df = .)
+
+cat(paste0("\n||", paste0(rep("-", 19), collapse = ""), 
+           " End of CGM and ECC data merge - see 'results' folder ", 
+           paste0(rep("-", 18), collapse = ""), "||\n"))
 
