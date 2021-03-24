@@ -4,7 +4,7 @@ dir.create("logs", showWarnings = FALSE)
 # This should be run first, to make sure the required packages are installed
 
 required_packages <- c("R6", "testit", "optparse", "magrittr", "dplyr", "tibble", "readr", "reshape2", 
-                       "fossil", "tidyr", "purrr", "progress")
+                       "fossil", "tidyr", "purrr", "progress", "reader")
 
 not_installed <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
 
