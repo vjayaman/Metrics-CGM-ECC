@@ -33,9 +33,9 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 
 params <- parse_args(OptionParser(option_list=option_list))
 
-params <- tibble(tp1 = "inputs/processed/tp1_clusters.txt", tp2 = "inputs/processed/tp2_clusters.txt",
-                 heights = "0", strains = "inputs/strain_data.tsv", trio = "010-001", 
-                 source = "inputs/processed/source_data.tsv")
+#params <- tibble(tp1 = "inputs/processed/tp1_clusters.txt", tp2 = "inputs/processed/tp2_clusters.txt",
+#                 heights = "0", strains = "inputs/strain_data.tsv", trio = "010-001", 
+#                 source = "inputs/processed/source_data.tsv")
 
 combos <- params$trio %>% strsplit(., "-") %>% unlist()
 z <- vector("list", length = length(combos)) %>% set_names(combos)
