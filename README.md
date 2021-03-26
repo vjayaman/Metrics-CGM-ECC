@@ -25,6 +25,9 @@ files are needed: a cluster assignments file for time point 1, a cluster
 assignments file for time point 2, a strain metadata file, and a source
 distances file (will use the placeholder if one not provided).
 
+Example:
+`Rscript prepare_inputs.R -i inputs -m strain_info.txt -a tp1_clusters_init.txt -b tp2_clusters_init.txt`
+
 If the sample data is used, and `prepare_inputs.R` is run, you get the
 files used in the examples below.
 
@@ -53,14 +56,14 @@ collects ECCs for height 0 with coefficients of source = 0, temporal =
 
 Example:  
 `Rscript ECC/cov_epi.R -a inputs/processed/source_data.tsv -b
-inputs/strain_data.tsv -c inputs/processed/tp1_clusters.txt -d
+inputs/strain_info.txt -c inputs/processed/tp1_clusters.txt -d
 inputs/processed/tp2_clusters.txt -x "0" -t "010"`
 
 Another example, but using the placeholder source data (since the
 coefficient is 0 anyway) and for two sets of ECC parameters (source = 0,
 temporal = 0, and geo = 1) and (source = 0, temporal = 1, and geo = 0):
 
-Example: `Rscript ECC/cov_epi.R -b inputs/strain_data.tsv -c
+Example: `Rscript ECC/cov_epi.R -b inputs/strain_info.txt -c
 inputs/processed/tp1_clusters.txt -d inputs/processed/tp2_clusters.txt
 -x "0" -t "001-010"`
 
@@ -71,4 +74,4 @@ file:
 **-s** *\<Strain metadata\>*
 
 Example: `Rscript merge_data.R -e results/ECCs.tsv -c
-results/CGM_strain_results.txt -s inputs/strain_data.tsv`
+results/CGM_strain_results.txt -s inputs/strain_info.txt`
