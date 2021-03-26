@@ -90,7 +90,7 @@ writeData(processed_tp1$new_cols, file.path(arg$inputdir, "processed", "tp1_clus
 
 writeData(processed_tp2$new_cols, file.path(arg$inputdir, "processed", "tp2_clusters.txt"))
 
-write.table(source_data, file.path("inputs", "processed", "source_data.tsv"),
+write.table(source_data, file.path(arg$inputdir, "processed", "source_data.tsv"),
             row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
 
 outputDetails(paste0("\n||", paste0(rep("-", 18), collapse = ""), " Saved formatted inputs to '", arg$inputdir, 
