@@ -82,8 +82,7 @@ processed_tp2 <- intClusters(time2)
 # placeholder source file --------------------------------------------------------------------------------------
 source_data <- tibble(Source.1 = "Placeholder1", Source.2 = "Placeholder2", value = 0)
 
-# metric_inputs <- list("tp1" = processed_tp1$new_cols, "tp2" = processed_tp1$new_cols,
-#                       "src" = source_data, "str" = strain_data)
+# metric_inputs <- list("tp1" = processed_tp1$new_cols, "tp2" = processed_tp1$new_cols,"src" = source_data, "str" = strain_data)
 # saveRDS(metric_inputs, file.path(arg$inputdir, "processed", "metric_inputs.Rds"))
 
 writeData(processed_tp1$new_cols, file.path(arg$inputdir, "processed", "tp1_clusters.txt"))
