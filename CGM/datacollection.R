@@ -10,6 +10,11 @@ suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/formatting
 suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/tracking_functions.R")))
 source("CGM/functions/classes_cgm.R")
 
+# option_list <- list(
+#   make_option(c("-m", "--metric_inputs"), metavar = "file", default = "new_inputs_mar25/processed/metric_inputs.Rds", 
+#               help = paste0("RData object with metric input files (for this part of the analysis, time point 1 ", 
+#                             "clusters and time point 2 clusters are required"))
+# )
 option_list <- list(
   make_option(c("-a", "--tp1"), metavar = "file", default = NULL, help = "Time point 1 file name (TP1)"),
   make_option(c("-b", "--tp2"), metavar = "file", default = NULL, help = "Time point 2 file name (TP2)"),
@@ -98,7 +103,7 @@ if (length(heights) > 1) {
   outputDetails(paste0("\nPART 3 OF 3: Only one threshold provided, so no further tracking necessary"), newcat = TRUE)
 }
 
-outputDetails("  Saving the data in a file with strain identifiers.\n", newcat = TRUE)
+outputDetails("  Handling novel tracking, adding to dataset.\n", newcat = TRUE)
 
 clusters_just_tp1 <- lapply(heights, function(h) {
   hx$results[[h]] %>% left_join(., tp1$flagged) %>% left_join(., tp2$flagged) %>% 
@@ -140,6 +145,9 @@ all_mixed <- isolates_base %>%
 
 # FULL STRAIN FILE ---------------------------------------------------------------------------------------------
 # note: two types of novel clusters, those that are fully novel, and those that are not
+
+outputDetails("  Saving the data in a file with strain identifiers.\n", newcat = TRUE)
+
 isolates_file <- bind_rows(isolates_base, pure_novels) %>% bind_rows(., all_mixed) %>% 
   mutate(novel = ifelse(isolate %in% setdiff(tp2$raw$isolate, tp1$raw$isolate), 1, 0)) %>% 
   rename(Strain = isolate)

@@ -103,7 +103,7 @@ trackClusters <- function(hdata, t2_comps, t2names, t1_coded, t2_coded, indicate
   multistrain <- hdata %>% filter(tp1_cl_size > 1)
   if (nrow(multistrain) > 0) { # at least one cluster with size larger than 1
     if (indicate_progress) {tc <- txtProgressBar(min = 0, max = nrow(multistrain), initial = 0, style = 3)}
-    
+  
     t2set <- lapply(1:nrow(multistrain), function(i) {
       if (indicate_progress) {setTxtProgressBar(tc, i)}
       results_i <- tibble()
@@ -114,12 +114,14 @@ trackClusters <- function(hdata, t2_comps, t2names, t1_coded, t2_coded, indicate
         results_i <- t2_comps[inds,] %>% select(-composition) %>% 
           bind_cols(cluster_i, .) %>% select(-composition)
         
-        if (nchar(cluster_i$composition) >= 2000 | (nrow(results_i) == 0) | (!last(t2names) %in% results_i$tp1_h)) {
-          # (1) too many isolates in the cluster for effective grep use
-          # (2) no matching TP2 cluster found - the order of the cluster composition is muddling this up
-          # (3) if the process is being cut off partway - not tracking to all heights (e.g. TP2 height 1634 not found)
+        if ((nrow(results_i) == 0) | (!last(t2names) %in% results_i$tp1_h)) {
+          # (1) no matching TP2 cluster found - the order of the cluster composition is muddling this up
+          # (2) if the process is being cut off partway - not tracking to all heights (e.g. TP2 height 1634 not found)
           results_i <- checkEachIsolate(cluster_i, t2_coded, t2_comps)
         }
+      }else { 
+        # (1) too many isolates in the cluster for effective grep use
+        results_i <- checkEachIsolate(cluster_i, t2_coded, t2_comps)
       }
       results_i %>% arrange(tp2_h, tp2_cl) %>% return()
     }) %>% bind_rows()

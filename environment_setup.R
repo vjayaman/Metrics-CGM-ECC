@@ -30,10 +30,3 @@ if (all(unlist(x))) {
   cat("\nNot all packages were installed successfully. Please see logfile_env.txt for details.")  
 }
 
-# ECC-SPECIFIC INPUT FILES -------------------------------------------------------------------------------------
-# placeholder source file --------------------------------------------------------------------------------------
-
-tibble(Source.1 = "Placeholder1", Source.2 = "Placeholder2", value = 0) %>% 
-  write.table(., file.path("inputs", "processed", "source_data.tsv"), 
-              row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
-

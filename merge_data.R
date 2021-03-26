@@ -1,10 +1,7 @@
 #! /usr/bin/env Rscript
 
-cat(paste0("\n||", paste0(rep("-", 29), collapse = ""), " Beginning CGM and ECC data merge ", 
-           paste0(rep("-", 28), collapse = ""), "||\n"))
-
 libs <- c("optparse","magrittr","tibble", "dplyr", "readr")
-y <- lapply(libs, require, character.only = TRUE)
+y <- suppressMessages(lapply(libs, require, character.only = TRUE))
 
 option_list <- list(
   make_option(c("-e", "--ECCs"), metavar = "file", default = "results/ECCs.tsv", help = "ECC result file"),
@@ -32,7 +29,7 @@ eccs <- readData(arg$ECCs)
 cgms <- readData(arg$CGMs)
 
 # actually assigned a cluster at TP2, not NA (185 such cases)
-strain_data <- read_tsv(arg$strains) %>% filter(TP2 == 1)
+strain_data <- suppressMessages(read_tsv(arg$strains)) %>% filter(TP2 == 1)
 
 step1 <- left_join(cgms, strain_data, by = "Strain") %>% left_join(., eccs, by = c("Strain", "TP1", "TP2"))
 
@@ -72,7 +69,5 @@ step2 %>% arrange(`TP2 cluster`) %>% group_by(`TP2 cluster`) %>% slice(1) %>%
   select(-Strain) %>% ungroup() %>% 
   writeData(fp = "results/Merged_cluster_results.tsv", df = .)
 
-cat(paste0("\n||", paste0(rep("-", 19), collapse = ""), 
-           " End of CGM and ECC data merge - see 'results' folder ", 
-           paste0(rep("-", 18), collapse = ""), "||\n"))
+cat(paste0("CGM and ECC results merged, see 'results' folder for cluster-specific and strain-specific files\n"))
 
