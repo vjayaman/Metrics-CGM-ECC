@@ -13,7 +13,7 @@ option_list <- list(
   make_option(c("-b", "--tp2"), metavar = "file", default = "tp2_clusters_init.txt", help = "TP2 cluster assignments"))
 
 arg <- parse_args(OptionParser(option_list=option_list))
-# arg$inputdir <- "new_inputs_mar25/"; arg$metadata <- "Strain_data.txt"; arg$tp1 <- "TP1_clusters.txt"; arg$tp2 <- "TP2_clusters.txt"
+
 dir.create("results", showWarnings = FALSE)
 dir.create(file.path(arg$inputdir, "processed"))
 
