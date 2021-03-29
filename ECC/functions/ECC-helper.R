@@ -1,3 +1,5 @@
+# Dillon's version
+
 epi_cohesion_calc <- function(g_cuts, epi_matrix, cpus){
   
   genome_names <- g_cuts %>% select(genome) %>% pull()

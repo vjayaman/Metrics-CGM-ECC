@@ -11,9 +11,9 @@ source("ECC/functions/classes_ecc.R")
 source("ECC/functions/collecting_eccs.R")
 source("ECC/functions/epi-helper.R")
 # Original script:
-source("ECC/functions/ECC-helper.R") # 010 took 1 hour, 1 minute, 12 seconds
+# source("ECC/functions/ECC-helper.R") # 010 took 1 hour, 1 minute, 12 seconds
 # Changes I made for efficiency:
-# source("ECC/functions/ECC-sep_singletons.R") # 010 took 9 minutes and 10 seconds
+source("ECC/functions/ECC-sep_singletons.R") # 010 took 9 minutes and 10 seconds
 
 # title: "EpiQuant - Salmonella Enteritidis Project (2019-2020)"
 # authors of work behind this: Ben Hetman, Elissa Giang, Dillon Barker
@@ -44,7 +44,7 @@ tp1 <- Timepoint$new(params$tp1, "tp1")$Process(hx)$listHeights(hx)
 tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
 
 td <- tp1$height_list %>% append(tp2$height_list)
-# x <- combos[1]
+
 lapply(combos, function(x) {
   c1 <- strsplit(x, split = "") %>% unlist() %>% 
     as.numeric() %>% as.list() %>% set_names(c("sigma", "tau", "gamma"))

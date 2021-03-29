@@ -1,4 +1,7 @@
 
+# strains <- params$strains; source_file <- params$source; sigma <- c1$sigma; tau <- c1$tau
+# gamma <- c1$gamma; cpus <- params$cpus; typing_data <- td
+
 ### Section 3: Incorporating the allele data with the epidemiological data 
 oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data) {
   cat(paste0("\nCollecting ECC values for source = ", sigma, ", temporal = ", tau, ", geo = ", gamma))
@@ -25,12 +28,17 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   
   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
   
-  # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
+  # # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
+  # eccs <- lapply(typing_data, function(typing_datum) {
+  #   g_cuts <- typing_datum %>% rownames_to_column("genome") %>% as_tibble()
+  #   epi_cohesion_calc(g_cuts, epi.matrix, cpus = cpus)
+  # })
+  
   eccs <- lapply(typing_data, function(typing_datum) {
     g_cuts <- typing_datum %>% rownames_to_column("genome") %>% as_tibble()
-    epi_cohesion_calc(g_cuts, epi.matrix, cpus = cpus)
+    epi_cohesion_sep(g_cuts, epi.matrix, cpus = cpus)
   })
-  
+
   # names(eccs) == c("TP1_T0", "TP2_T0")
   newnames <- sapply(strsplit(names(eccs), "_"), `[`, 1)
   
@@ -44,45 +52,61 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   }) %>% set_names(newnames) %>% 
     Reduce(function(...) right_join(..., by = "Strain"), .)
   
-  results <- geog_temp %>% 
-    mutate(across(c(Strain.1, Strain.2), as.character)) %>% 
-    eccAverages(., ecc_data)
+  # results <- geog_temp %>% 
+  #   mutate(across(c(Strain.1, Strain.2), as.character)) %>% 
+  #   eccAverages(., ecc_data)
+  
+  avg_raw <- strain_data %>% select(Strain, Date, Longitude, Latitude)
+  cnames <- colnames(ecc_data) %>% grep("Size|ECC", ., value = TRUE, invert = TRUE)
+  df <- ecc_data %>% select(all_of(cnames))
+  
+  avg_interim_tp1 <- df %>% rename("TPx" = grep("TP1", cnames, value = TRUE)) %>% basicAverages(., "TP1", avg_raw)
+  avg_interim_tp2 <- df %>% rename("TPx" = grep("TP2", cnames, value = TRUE)) %>% basicAverages(., "TP2", avg_raw)
+  
+  results <- left_join(ecc_data, avg_interim_tp1) %>% left_join(., avg_interim_tp2)
   
   return(results)
 }
 
-
-eccAverages <- function(pairwise_dists, ecc_data) {
-  
-  cnames <- colnames(ecc_data) %>% grep("Size|ECC", ., value = TRUE, invert = TRUE)
-  
-  tp1_base <- ecc_data %>% select(grep("Strain|TP1", cnames, value = TRUE)) %>% set_colnames(c("Strain", "TP1"))
-  tp1_data <- pairwise_dists %>% 
-    left_join(., tp1_base, by = c("Strain.1" = "Strain")) %>% rename(first_in_cl = TP1) %>% 
-    left_join(., tp1_base, by = c("Strain.2" = "Strain")) %>% rename(second_in_cl = TP1) %>% 
-    filter(first_in_cl == second_in_cl) %>% select(-second_in_cl) %>% rename(TP1 = first_in_cl)
-  
-  tp1_avg_eccs <- lapply(unique(tp1_data$TP1), function(x) {
-    tp1_data %>% filter(TP1 == x) %>% mutate(avg_geo = mean(Geog.Dist), avg_temp = mean(Temp.Dist))
-  }) %>% bind_rows() %>% 
-    select(TP1, avg_geo, avg_temp) %>% unique() %>% 
-    set_colnames(c(grep("TP1", cnames, value = TRUE), "TP1_avg_geo_ECC", "TP1_avg_temp_ECC"))
-  
-  
-  tp2_base <- ecc_data %>% select(grep("Strain|TP2", cnames, value = TRUE)) %>% set_colnames(c("Strain", "TP2"))
-  tp2_data <- pairwise_dists %>% 
-    left_join(., tp2_base, by = c("Strain.1" = "Strain")) %>% rename(first_in_cl = TP2) %>% 
-    left_join(., tp2_base, by = c("Strain.2" = "Strain")) %>% rename(second_in_cl = TP2) %>% 
-    filter(first_in_cl == second_in_cl) %>% select(-second_in_cl) %>% rename(TP2 = first_in_cl)
-  
-  tp2_avg_eccs <- lapply(unique(tp2_data$TP2), function(x) {
-    tp2_data %>% filter(TP2 == x) %>% mutate(avg_geo = mean(Geog.Dist), avg_temp = mean(Temp.Dist))
-  }) %>% bind_rows() %>% 
-    select(TP2, avg_geo, avg_temp) %>% unique() %>% 
-    set_colnames(c(grep("TP2", cnames, value = TRUE), "TP2_avg_geo_ECC", "TP2_avg_temp_ECC"))
-  
-  left_join(ecc_data, tp1_avg_eccs) %>% left_join(., tp2_avg_eccs) %>% return()
+basicAverages <- function(df, tpname, avg_raw) {
+  df %>% select("Strain", "TPx") %>% 
+    left_join(avg_raw, by = "Strain") %>% arrange("TPx") %>% group_by(TPx) %>% 
+    mutate(TPx_avg_date = mean(Date), TPx_avg_lat = mean(Latitude), TPx_avg_long = mean(Longitude)) %>% 
+    select(Strain, grep("TPx", colnames(.), value = TRUE)) %>% ungroup() %>% 
+    set_colnames(gsub("TPx", tpname, colnames(.))) %>% return()
 }
+
+# eccAverages <- function(pairwise_dists, ecc_data) {
+#   
+#   cnames <- colnames(ecc_data) %>% grep("Size|ECC", ., value = TRUE, invert = TRUE)
+#   
+#   tp1_base <- ecc_data %>% select(grep("Strain|TP1", cnames, value = TRUE)) %>% set_colnames(c("Strain", "TP1"))
+#   tp1_data <- pairwise_dists %>% 
+#     left_join(., tp1_base, by = c("Strain.1" = "Strain")) %>% rename(first_in_cl = TP1) %>% 
+#     left_join(., tp1_base, by = c("Strain.2" = "Strain")) %>% rename(second_in_cl = TP1) %>% 
+#     filter(first_in_cl == second_in_cl) %>% select(-second_in_cl) %>% rename(TP1 = first_in_cl)
+#   
+#   tp1_avg_eccs <- lapply(unique(tp1_data$TP1), function(x) {
+#     tp1_data %>% filter(TP1 == x) %>% mutate(avg_geo = mean(Geog.Dist), avg_temp = mean(Temp.Dist))
+#   }) %>% bind_rows() %>% 
+#     select(TP1, avg_geo, avg_temp) %>% unique() %>% 
+#     set_colnames(c(grep("TP1", cnames, value = TRUE), "TP1_avg_geo_ECC", "TP1_avg_temp_ECC"))
+#   
+#   
+#   tp2_base <- ecc_data %>% select(grep("Strain|TP2", cnames, value = TRUE)) %>% set_colnames(c("Strain", "TP2"))
+#   tp2_data <- pairwise_dists %>% 
+#     left_join(., tp2_base, by = c("Strain.1" = "Strain")) %>% rename(first_in_cl = TP2) %>% 
+#     left_join(., tp2_base, by = c("Strain.2" = "Strain")) %>% rename(second_in_cl = TP2) %>% 
+#     filter(first_in_cl == second_in_cl) %>% select(-second_in_cl) %>% rename(TP2 = first_in_cl)
+#   
+#   tp2_avg_eccs <- lapply(unique(tp2_data$TP2), function(x) {
+#     tp2_data %>% filter(TP2 == x) %>% mutate(avg_geo = mean(Geog.Dist), avg_temp = mean(Temp.Dist))
+#   }) %>% bind_rows() %>% 
+#     select(TP2, avg_geo, avg_temp) %>% unique() %>% 
+#     set_colnames(c(grep("TP2", cnames, value = TRUE), "TP2_avg_geo_ECC", "TP2_avg_temp_ECC"))
+#   
+#   left_join(ecc_data, tp1_avg_eccs) %>% left_join(., tp2_avg_eccs) %>% return()
+# }
 
 
 # Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
