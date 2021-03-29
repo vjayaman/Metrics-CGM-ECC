@@ -157,6 +157,8 @@ EpiTable <- function(datafile, source_matrix, source_coeff, temp_coeff, geog_coe
   
   # split into two steps, since it seems to seems to reduce memory usage  
   if (x == 0) {
+    # This is necessary (otherwise any NA values in the Source.Dist column make Total.Dist and Epi.Sym NA as well. 
+    # There is a better way to handle this; will work on that.)
     str.matrix <-
       str.matrix %>% 
       mutate(
