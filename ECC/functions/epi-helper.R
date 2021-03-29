@@ -154,14 +154,23 @@ EpiTable <- function(datafile, source_matrix, source_coeff, temp_coeff, geog_coe
     left_join(geog_temp, by = c("Strain.1", "Strain.2"))
     # left_join(temp_matrix, by = c("Strain.1", "Strain.2")) %>% 
     # left_join(geog_matrix, by = c("Strain.1", "Strain.2")) 
-    
-  # split into two steps, since it seems to seems to reduce memory usage
-  str.matrix <-
-    str.matrix %>% 
-    mutate(
-      Total.Dist = sqrt( (((Source.Dist^2)*x) + ((Temp.Dist^2)*y) + ((Geog.Dist^2)*z)) ),
-      Epi.Sym = 1 - Total.Dist
-    )
+  
+  # split into two steps, since it seems to seems to reduce memory usage  
+  if (x == 0) {
+    str.matrix <-
+      str.matrix %>% 
+      mutate(
+        Total.Dist = sqrt( ((Temp.Dist^2)*y) + ((Geog.Dist^2)*z) ),
+        Epi.Sym = 1 - Total.Dist
+      )    
+  }else {
+    str.matrix <-
+      str.matrix %>% 
+      mutate(
+        Total.Dist = sqrt( (((Source.Dist^2)*x) + ((Temp.Dist^2)*y) + ((Geog.Dist^2)*z)) ),
+        Epi.Sym = 1 - Total.Dist
+      ) 
+  }
   
   # print(head(strain_sims))
   # strain_sims <- strain_sims[, c(3,4,1,2,5,6,7,8,9)]
