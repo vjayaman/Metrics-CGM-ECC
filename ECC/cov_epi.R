@@ -10,8 +10,8 @@ assert("All packages loaded correctly", all(unlist(y)))
 source("ECC/functions/classes_ecc.R")
 source("ECC/functions/collecting_eccs.R")
 source("ECC/functions/epi-helper.R")
-source("ECC/functions/ECC-sep_singletons.R") # 010 took 9 minutes and 10 seconds
-# source("ECC/ECC-helper.R") # 010 took 1 hour, 1 minute, 12 seconds
+# source("ECC/functions/ECC-sep_singletons.R") # 010 took 9 minutes and 10 seconds
+source("ECC/ECC-helper.R") # 010 took 1 hour, 1 minute, 12 seconds
 
 # title: "EpiQuant - Salmonella Enteritidis Project (2019-2020)"
 # authors of work behind this: Ben Hetman, Elissa Giang, Dillon Barker
@@ -33,9 +33,9 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 
 params <- parse_args(OptionParser(option_list=option_list))
 
-#params <- tibble(tp1 = "inputs/processed/tp1_clusters.txt", tp2 = "inputs/processed/tp2_clusters.txt",
-#                 heights = "0", strains = "inputs/strain_data.tsv", trio = "010-001", 
-#                 source = "inputs/processed/source_data.tsv")
+# params <- tibble(tp1 = "inputs/processed/tp1_clusters.txt", tp2 = "inputs/processed/tp2_clusters.txt",
+#                 heights = "0", strains = "inputs/strain_info.txt", trio = "010-001",
+#                 source = "inputs/processed/source_data.tsv", cpus = 1)
 
 combos <- params$trio %>% strsplit(., "-") %>% unlist()
 z <- vector("list", length = length(combos)) %>% set_names(combos)
@@ -46,7 +46,7 @@ tp1 <- Timepoint$new(params$tp1, "tp1")$Process(hx)$listHeights(hx)
 tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
 
 td <- tp1$height_list %>% append(tp2$height_list)
-
+# x <- combos[1]
 lapply(combos, function(x) {
   c1 <- strsplit(x, split = "") %>% unlist() %>% 
     as.numeric() %>% as.list() %>% set_names(c("sigma", "tau", "gamma"))
