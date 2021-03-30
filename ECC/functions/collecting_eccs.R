@@ -10,15 +10,24 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   strain_data <- 
     read_tsv(strains) %>% 
     mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")),
-           Location = paste(Country, Province, City, sep = "_")
-    )
+           Location = paste(Country, Province, City, sep = "_"))
   
   source_pw <- read_tsv(source_file) %>% 
     mutate(Source.Dist = 1- value) %>% select(-value)
   
-  temp_pw <- temp_calc(strain_data)
+  a1 <- distMatrix(strain_data, "temp", "Date")
+  a2 <- transformData(a1, "temp")
+  temp_pw <- formatMatrix(strain_data, a2, "Temp.Dist")
   
-  geog_pw <- geog_calc(strain_data)
+  # assert("Modularized method and original method produce same result for temp data", 
+  #        identical(temp_calc(strain_data), temp_pw))
+  
+  b1 <- distMatrix(strain_data, "geo", c("Latitude", "Longitude"))
+  b2 <- transformData(b1, "geo")
+  geog_pw <- formatMatrix(strain_data, b2, "Geog.Dist")
+  
+  # assert("Modularized method and original method produce same result for geo data", 
+  #        identical(geog_calc(strain_data), geog_pw))
   
   geog_temp <- left_join(geog_pw, temp_pw, by = c("Strain.1", "Strain.2"))
   
@@ -28,16 +37,13 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   epi.matrix <- EpiMatrix(epi.table)
   
   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
-  
-  # # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
-  # eccs <- lapply(typing_data, function(typing_datum) {
-  #   g_cuts <- typing_datum %>% rownames_to_column("genome") %>% as_tibble()
-  #   epi_cohesion_calc(g_cuts, epi.matrix, cpus = cpus)
-  # })
-  
+  # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
   eccs <- lapply(typing_data, function(typing_datum) {
     g_cuts <- typing_datum %>% rownames_to_column("genome") %>% as_tibble()
+    # Method with singletons merged separately, for speed/efficiency
     epi_cohesion_sep(g_cuts, epi.matrix, cpus = cpus)
+    # Original method:
+    #   epi_cohesion_calc(g_cuts, epi.matrix, cpus = cpus)
   })
 
   # names(eccs) == c("TP1_T0", "TP2_T0")
@@ -53,31 +59,33 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   }) %>% set_names(newnames) %>% 
     Reduce(function(...) right_join(..., by = "Strain"), .)
   
+  # Adding basic average columns (Date, Longitude, Latitude)
+  avg_raw <- strain_data %>% select(Strain, Date, Longitude, Latitude)
+  cnames <- colnames(ecc_data) %>% grep("Size|ECC", ., value = TRUE, invert = TRUE)
+  df <- ecc_data %>% select(all_of(cnames)) %>% set_colnames(c("Strain", "TP1", "TP2"))
+  
+  avg_tp1 <- df %>% basicAverages(., as.name("TP1"), avg_raw) %>% arrange(Strain)
+  avg_tp2 <- df %>% basicAverages(., as.name("TP2"), avg_raw) %>% arrange(Strain)
+  
+  results <- left_join(ecc_data, avg_tp1) %>% left_join(., avg_tp2)
+  
+  # Adding distance averages
   # results <- geog_temp %>% 
   #   mutate(across(c(Strain.1, Strain.2), as.character)) %>% 
   #   eccAverages(., ecc_data)
   
-  avg_raw <- strain_data %>% select(Strain, Date, Longitude, Latitude)
-  cnames <- colnames(ecc_data) %>% grep("Size|ECC", ., value = TRUE, invert = TRUE)
-  df <- ecc_data %>% select(all_of(cnames))
-  
-  i <- grep("TP1", cnames, value = TRUE)
-  avg_interim_tp1 <- df %>% rename("TPx" = i) %>% basicAverages(., i, avg_raw)
-  
-  j <- grep("TP2", cnames, value = TRUE)
-  avg_interim_tp2 <- df %>% rename("TPx" = all_of(j)) %>% basicAverages(., j, avg_raw)
-  
-  results <- left_join(ecc_data, avg_interim_tp1) %>% left_join(., avg_interim_tp2)
-  
   return(results)
 }
 
-basicAverages <- function(df, tpname, avg_raw) {
-  df %>% select("Strain", "TPx") %>% 
-    left_join(avg_raw, by = "Strain") %>% arrange("TPx") %>% group_by(TPx) %>% 
-    mutate(TPx_avg_date = mean(Date), TPx_avg_lat = mean(Latitude), TPx_avg_long = mean(Longitude)) %>% 
-    select(Strain, grep("TPx", colnames(.), value = TRUE)) %>% ungroup() %>% 
-    set_colnames(gsub("TPx", tpname, colnames(.))) %>% return()
+basicAverages <- function(df, tp, avg_raw) {
+  df %>% select("Strain", all_of(tp)) %>% 
+    left_join(avg_raw, by = "Strain") %>% 
+    arrange({{tp}}) %>% 
+    group_by({{tp}}) %>% 
+    mutate(avg_date = mean(Date), avg_lat = mean(Latitude), avg_long = mean(Longitude)) %>% 
+    ungroup() %>% 
+    select(Strain, all_of(tp), grep("avg", colnames(.), value = TRUE)) %>% 
+    set_colnames(gsub("avg", paste0(as.character(tp), "_avg"), colnames(.))) %>% return()
 }
 
 # eccAverages <- function(pairwise_dists, ecc_data) {
@@ -133,5 +141,4 @@ timeTaken <- function(pt, sw) {
   }
 }
 
-# z_tp1_values <- Reduce(function(...) merge(...), sapply(z, `[`, tp1$name)) %>% as_tibble()
 
