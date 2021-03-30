@@ -92,7 +92,7 @@ writeData(processed_tp2$new_cols, file.path(arg$inputdir, "processed", "tp2_clus
 write.table(source_data, file.path(arg$inputdir, "processed", "source_data.tsv"),
             row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
 
-outputDetails(paste0("\n||", paste0(rep("-", 18), collapse = ""), " Saved formatted inputs to 'processed' in the ", 
-                     arg$inputdir, " directory", paste0(rep("-", 18), collapse = ""), "||\nStarted process at: ", Sys.time()), TRUE)
+outputDetails(paste0("\nFinished process at: ", Sys.time(), "\n||", paste0(rep("-", 14), collapse = ""), " Saved formatted inputs to 'processed' in the ", 
+                     arg$inputdir, " directory", paste0(rep("-", 15), collapse = ""), "||"), TRUE)
 
 
