@@ -38,7 +38,7 @@ f1 <- readBaseData(arg$tp1, 1, reader::get.delim(arg$tp1))
 f2 <- readBaseData(arg$tp2, 2, reader::get.delim(arg$tp2))
 colnames(f1)[1] <- colnames(f2)[1] <- "isolate"
 
-heights <- strsplit(arg$heights, split = ",") %>% unlist()
+heights <- strsplit(as.character(arg$heights), split = ",") %>% unlist()
 
 all_isolates <- unique(c(f1$isolate, f2$isolate)) %>% as_tibble() %>% 
   set_colnames("char_isolate") %>% rowid_to_column("num_isolate")
