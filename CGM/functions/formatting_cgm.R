@@ -99,6 +99,10 @@ meltedSizing <- function(df, y, ph, pc) {
                    paste0(tp, "id"), paste0(tp, "cl_size"))) %>% return()
 }
 
+checkEncoding <- function(fp) {
+  readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
+}
+
 # Given the defining filename, read in the data (need the full path from your working directory), 
 # indicate to user if file is not found
 readBaseData <- function(filename, file_number, delimiter) {
@@ -106,7 +110,8 @@ readBaseData <- function(filename, file_number, delimiter) {
     stop(paste0("Time point ", file_number, " dataset not found."))
   }else {
     read.table(file = filename, stringsAsFactors = FALSE, check.names = FALSE, 
-               header = TRUE, sep = delimiter, allowEscapes = TRUE) %>% as_tibble() %>% return()
+               header = TRUE, sep = delimiter, allowEscapes = TRUE, 
+               fileEncoding = checkEncoding(filename)) %>% as_tibble() %>% return()
   }
 }
 

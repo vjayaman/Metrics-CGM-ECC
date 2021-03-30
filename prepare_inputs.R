@@ -18,6 +18,10 @@ dir.create("results", showWarnings = FALSE)
 dir.create(file.path(arg$inputdir, "processed"))
 
 # FUNCTIONS ----------------------------------------------------------------------------------------------------
+checkEncoding <- function(fp) {
+  readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
+}
+
 # Outputs the same message in two ways, one is directed to standard output and one to a log file
 outputDetails <- function(msg, newcat = FALSE) {
   cat(msg)
@@ -54,7 +58,8 @@ outputDetails(paste0("\nWill save formatted inputs to new 'processed' directory 
 outputDetails("Reading in strain data ...", TRUE)
 
 strain_data <- file.path(arg$inputdir, arg$metadata) %>% 
-  read.table(sep = "\t", header = TRUE, fill = TRUE, quote = "") %>% as_tibble() %>% 
+  read.table(sep = "\t", header = TRUE, fill = TRUE, quote = "", 
+             fileEncoding = checkEncoding(.)) %>% as_tibble() %>% 
   select(c("Strain", "Source", "Country", "Province", "City", "Latitude", 
            "Longitude", "Day", "Month", "Year", "TP1", "TP2")) %>%
   filter(TP2 == 1) %>%
@@ -64,7 +69,7 @@ strain_data <- file.path(arg$inputdir, arg$metadata) %>%
 # Reading and processing the cluster data for TP1 and TP2, making sure they match the metadata file ------------
 # TP1 DATA -----------------------------------------------------------------------------------------------------
 time1 <- file.path(arg$inputdir, arg$tp1) %>% 
-  read.table(sep = "\t", header = TRUE) %>% as_tibble() %>% 
+  read.table(sep = "\t", header = TRUE, fileEncoding = checkEncoding(.)) %>% as_tibble() %>% 
   filter(Strain %in% strain_data$Strain) %>% arrange(Strain)
 
 outputDetails("Making table for matching TP1 clusters to integers (for metrics process) ...", TRUE)
@@ -72,7 +77,7 @@ processed_tp1 <- intClusters(time1)
 
 # TP1 DATA -----------------------------------------------------------------------------------------------------
 time2 <- file.path(arg$inputdir, arg$tp2) %>% 
-  read.table(sep = "\t", header = TRUE) %>% as_tibble() %>% 
+  read.table(sep = "\t", header = TRUE, fileEncoding = checkEncoding(.)) %>% as_tibble() %>% 
   filter(Strain %in% strain_data$Strain) %>% arrange(Strain)
 
 outputDetails("Making table for matching TP2 clusters to integers (for metrics process) ...", TRUE)

@@ -1,6 +1,7 @@
 
-# strains <- params$strains; source_file <- params$source; sigma <- c1$sigma; tau <- c1$tau
-# gamma <- c1$gamma; cpus <- params$cpus; typing_data <- td
+checkEncoding <- function(fp) {
+  readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
+}
 
 ### Section 3: Incorporating the allele data with the epidemiological data 
 oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data) {

@@ -10,7 +10,8 @@ Timepoint <- R6Class(
     }, 
     readTyping = function() {
       self$filedata <- read.table(self$filepath, header = TRUE, sep = "\t", row.names = 1, 
-                                  check.names = FALSE, quote = "", stringsAsFactors = FALSE)
+                                  check.names = FALSE, quote = "", stringsAsFactors = FALSE, 
+                                  fileEncoding = checkEncoding(self$filepath))
     }, 
     Process = function(hx) {
       self$proc <- self$filedata %>% 

@@ -18,8 +18,12 @@ writeData <- function(fp, df) {
   write.table(df, fp, row.names = FALSE, quote = FALSE, sep = "\t")
 }
 
+checkEncoding <- function(fp) {
+  readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
+}
+
 readData <- function(fp) {
-  read.table(fp, stringsAsFactors = FALSE, header = TRUE) %>% as_tibble() %>% return()
+  read.table(fp, stringsAsFactors = FALSE, header = TRUE, fileEncoding = checkEncoding(fp)) %>% as_tibble() %>% return()
 }
 
 # ------------------------------------------------------------------------------------------------------------

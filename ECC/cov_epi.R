@@ -7,8 +7,8 @@ libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr","reshape2
 y <- lapply(libs, require, character.only = TRUE)
 assert("All packages loaded correctly", all(unlist(y)))
 
-source("ECC/functions/classes_ecc.R")
 source("ECC/functions/collecting_eccs.R")
+source("ECC/functions/classes_ecc.R")
 source("ECC/functions/epi-helper.R")
 # Original script:
 # source("ECC/functions/ECC-helper.R") # 010 took 1 hour, 1 minute, 12 seconds
