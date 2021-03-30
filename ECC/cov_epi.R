@@ -20,9 +20,9 @@ source("ECC/functions/ECC-sep_singletons.R") # 010 took 9 minutes and 10 seconds
 
 option_list <- list(
   make_option(c("-a", "--source"), metavar = "file", default = "inputs/processed/source_data.tsv", help = "Source data"),
-  make_option(c("-b", "--strains"), metavar = "file", default = NULL, help = "Strain data"),
-  make_option(c("-c", "--tp1"), metavar = "file", default = NULL, help = "TP1 cluster assignments"), 
-  make_option(c("-d", "--tp2"), metavar = "file", default = NULL, help = "TP2 cluster assignments"), 
+  make_option(c("-b", "--strains"), metavar = "file", default = "inputs/strain_info.txt", help = "Strain data"),
+  make_option(c("-c", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "TP1 cluster assignments"), 
+  make_option(c("-d", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"), 
   make_option(c("-x", "--heights"), metavar = "character", default = "0", 
               help = "Comma-delimited string of heights to collect ECCs for"), 
   make_option(c("-p", "--cpus"), metavar = "numeric", default = 1, help = "CPUs"),
