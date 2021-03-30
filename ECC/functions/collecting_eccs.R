@@ -60,8 +60,11 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   cnames <- colnames(ecc_data) %>% grep("Size|ECC", ., value = TRUE, invert = TRUE)
   df <- ecc_data %>% select(all_of(cnames))
   
-  avg_interim_tp1 <- df %>% rename("TPx" = grep("TP1", cnames, value = TRUE)) %>% basicAverages(., "TP1", avg_raw)
-  avg_interim_tp2 <- df %>% rename("TPx" = grep("TP2", cnames, value = TRUE)) %>% basicAverages(., "TP2", avg_raw)
+  i <- grep("TP1", cnames, value = TRUE)
+  avg_interim_tp1 <- df %>% rename("TPx" = i) %>% basicAverages(., i, avg_raw)
+  
+  j <- grep("TP2", cnames, value = TRUE)
+  avg_interim_tp2 <- df %>% rename("TPx" = all_of(j)) %>% basicAverages(., j, avg_raw)
   
   results <- left_join(ecc_data, avg_interim_tp1) %>% left_join(., avg_interim_tp2)
   

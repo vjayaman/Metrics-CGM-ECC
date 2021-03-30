@@ -45,16 +45,17 @@ tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
 
 td <- tp1$height_list %>% append(tp2$height_list)
 
-lapply(combos, function(x) {
+collected_eccs <- lapply(combos, function(x) {
   c1 <- strsplit(x, split = "") %>% unlist() %>% 
     as.numeric() %>% as.list() %>% set_names(c("sigma", "tau", "gamma"))
   oneCombo(params$strains, params$source, c1$sigma, c1$tau, c1$gamma, params$cpus, td)
 }) %>% 
-  Reduce(function(...) merge(...), .) %>% as_tibble() %>% 
-  left_join(., tp1$proc) %>% 
-  right_join(., tp2$proc) %>% 
-  mutate(TP1 = ifelse(is.na(TP1), 0, TP1)) %>% arrange(Strain) %>% 
-  write.table(., file = "results/ECCs.tsv", col.names = TRUE, row.names = FALSE, quote = FALSE)
+  Reduce(function(...) merge(...), .) %>% as_tibble()
+
+full_set <- collected_eccs %>% left_join(., tp1$proc) %>% left_join(., tp2$proc) %>% 
+  mutate(TP1 = ifelse(is.na(TP1), 0, TP1)) %>% arrange(Strain)
+
+write.table(full_set, file = "results/ECCs.tsv", col.names = TRUE, row.names = FALSE, quote = FALSE, sep = "\t")
 
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 cat(timeTaken(pt = "ECC data collection", stopwatch))
