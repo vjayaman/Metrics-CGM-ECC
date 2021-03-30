@@ -10,20 +10,22 @@ suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/formatting
 suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/tracking_functions.R")))
 source("CGM/functions/classes_cgm.R")
 
-# option_list <- list(
-#   make_option(c("-m", "--metric_inputs"), metavar = "file", default = "new_inputs_mar25/processed/metric_inputs.Rds", 
-#               help = paste0("RData object with metric input files (for this part of the analysis, time point 1 ", 
-#                             "clusters and time point 2 clusters are required"))
-# )
+# READING IN THE INPUTS ----------------------------------------------------------------------------------------
+# Change the default values to read in your own files, or feed through terminal arguments
 option_list <- list(
-  make_option(c("-a", "--tp1"), metavar = "file", default = NULL, help = "Time point 1 file name (TP1)"),
-  make_option(c("-b", "--tp2"), metavar = "file", default = NULL, help = "Time point 2 file name (TP2)"),
-  make_option(c("-x", "--heights"), metavar = "character", default = NULL,
+  make_option(c("-a", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", 
+              help = "Time point 1 file name (TP1)"),
+  
+  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
+              help = "Time point 2 file name (TP2)"),
+  
+  make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = paste0("A string of comma-delimited numbers, e.g. '50,75,100' to ", 
                             "use as heights for metric generation (strain table outputs)")))
 
 arg <- parse_args(OptionParser(option_list=option_list))
-# arg <- tibble(tp1 = "inputs/processed/tp1_clusters.txt", tp2 = "inputs/processed/tp2_clusters.txt", heights = "0")
+
+# BASIC STARTUP MESSAGES ---------------------------------------------------------------------------------------
 outputDetails(paste0("\n||", paste0(rep("-", 32), collapse = ""), " Cluster metric generation ", 
                      paste0(rep("-", 32), collapse = ""), "||\nStarted process at: ", Sys.time()))
 cat(paste0("\nIf at any point the process cuts off with no success message, please see the log file.\n"))
@@ -158,7 +160,7 @@ isolates_file %>%
   select(Strain, novel, first_tp2_flag, tp2_h, tp2_cl, tp2_cl_size, last_tp2_flag, 
          tp1_id, tp1_h, tp1_cl, tp1_cl_size, first_tp1_flag, last_tp1_flag, add_TP1, 
          num_novs, actual_size_change, actual_growth_rate, new_growth) %>% 
-  write.table(., file.path("results","CGM_strain_results.txt"), row.names = FALSE, quote = FALSE, sep = "\t")
+  write.table(., file.path("results","CGM_strain_results.tsv"), row.names = FALSE, quote = FALSE, sep = "\t")
 
 # WRAPPING THINGS UP -------------------------------------------------------------------------------------------
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
