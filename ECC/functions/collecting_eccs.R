@@ -3,47 +3,34 @@ checkEncoding <- function(fp) {
   readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
 }
 
-### Section 3: Incorporating the allele data with the epidemiological data 
+### Incorporating the allele data with the epidemiological data 
 oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data) {
   cat(paste0("\nCollecting ECC values for source = ", sigma, ", temporal = ", tau, ", geo = ", gamma))
-  ### Section 2: Generating the EpiMatrix
-  strain_data <- 
-    read_tsv(strains) %>% 
+  ### Generating the EpiMatrix
+  strain_data <- read_tsv(strains) %>% 
     mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")),
            Location = paste(Country, Province, City, sep = "_"))
   
   source_pw <- read_tsv(source_file) %>% 
     mutate(Source.Dist = 1- value) %>% select(-value)
   
-  a1 <- distMatrix(strain_data, "temp", "Date")
-  a2 <- transformData(a1, "temp")
-  temp_pw <- formatMatrix(strain_data, a2, "Temp.Dist")
-  
-  # assert("Modularized method and original method produce same result for temp data", 
-  #        identical(temp_calc(strain_data), temp_pw))
-  
-  b1 <- distMatrix(strain_data, "geo", c("Latitude", "Longitude"))
-  b2 <- transformData(b1, "geo")
-  geog_pw <- formatMatrix(strain_data, b2, "Geog.Dist")
-  
-  # assert("Modularized method and original method produce same result for geo data", 
-  #        identical(geog_calc(strain_data), geog_pw))
-  
-  geog_temp <- left_join(geog_pw, temp_pw, by = c("Strain.1", "Strain.2"))
+  temp_pw <- generateDistances(strain_data, "temp", "Date", "Temp.Dist")
+  geog_pw <- generateDistances(strain_data, "geo", c("Latitude", "Longitude"), "Geog.Dist")
+
+  geog_temp_tr <- left_join(geog_pw$transformed, temp_pw$transformed, by = c("Strain.1", "Strain.2"))
   
   ## This generates a table of your comparisons based on your epidemiological data (source, time, geographical) 
   ## with the assigned weights of s, t and g and then computes the similarity/distance and generates a matrix
-  epi.table <- EpiTable(strain_data, source_pw, sigma, tau, gamma, geog_temp)
+  epi.table <- EpiTable(strain_data, source_pw, sigma, tau, gamma, geog_temp_tr)
   epi.matrix <- EpiMatrix(epi.table)
   
   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
   # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
   eccs <- lapply(typing_data, function(typing_datum) {
     g_cuts <- typing_datum %>% rownames_to_column("genome") %>% as_tibble()
-    # Method with singletons merged separately, for speed/efficiency
+    # Method with singletons merged separately, for speed/efficiency:
     epi_cohesion_sep(g_cuts, epi.matrix, cpus = cpus)
-    # Original method:
-    #   epi_cohesion_calc(g_cuts, epi.matrix, cpus = cpus)
+    # Original method: epi_cohesion_calc(g_cuts, epi.matrix, cpus = cpus)
   })
 
   # names(eccs) == c("TP1_T0", "TP2_T0")
@@ -70,9 +57,11 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   results <- left_join(ecc_data, avg_tp1) %>% left_join(., avg_tp2)
   
   # Adding distance averages
-  # results <- geog_temp %>% 
-  #   mutate(across(c(Strain.1, Strain.2), as.character)) %>% 
-  #   eccAverages(., ecc_data)
+  dist_avgs <- left_join(geog_pw$raw, temp_pw$raw, by = c("Strain.1", "Strain.2")) %>% 
+    mutate(across(c(Strain.1, Strain.2), as.character)) %>% 
+    eccAverages(., ecc_data)
+  
+  results <- results %>% left_join(., dist_avgs)
   
   return(results)
 }
@@ -88,37 +77,38 @@ basicAverages <- function(df, tp, avg_raw) {
     set_colnames(gsub("avg", paste0(as.character(tp), "_avg"), colnames(.))) %>% return()
 }
 
-# eccAverages <- function(pairwise_dists, ecc_data) {
-#   
-#   cnames <- colnames(ecc_data) %>% grep("Size|ECC", ., value = TRUE, invert = TRUE)
-#   
-#   tp1_base <- ecc_data %>% select(grep("Strain|TP1", cnames, value = TRUE)) %>% set_colnames(c("Strain", "TP1"))
-#   tp1_data <- pairwise_dists %>% 
-#     left_join(., tp1_base, by = c("Strain.1" = "Strain")) %>% rename(first_in_cl = TP1) %>% 
-#     left_join(., tp1_base, by = c("Strain.2" = "Strain")) %>% rename(second_in_cl = TP1) %>% 
-#     filter(first_in_cl == second_in_cl) %>% select(-second_in_cl) %>% rename(TP1 = first_in_cl)
-#   
-#   tp1_avg_eccs <- lapply(unique(tp1_data$TP1), function(x) {
-#     tp1_data %>% filter(TP1 == x) %>% mutate(avg_geo = mean(Geog.Dist), avg_temp = mean(Temp.Dist))
-#   }) %>% bind_rows() %>% 
-#     select(TP1, avg_geo, avg_temp) %>% unique() %>% 
-#     set_colnames(c(grep("TP1", cnames, value = TRUE), "TP1_avg_geo_ECC", "TP1_avg_temp_ECC"))
-#   
-#   
-#   tp2_base <- ecc_data %>% select(grep("Strain|TP2", cnames, value = TRUE)) %>% set_colnames(c("Strain", "TP2"))
-#   tp2_data <- pairwise_dists %>% 
-#     left_join(., tp2_base, by = c("Strain.1" = "Strain")) %>% rename(first_in_cl = TP2) %>% 
-#     left_join(., tp2_base, by = c("Strain.2" = "Strain")) %>% rename(second_in_cl = TP2) %>% 
-#     filter(first_in_cl == second_in_cl) %>% select(-second_in_cl) %>% rename(TP2 = first_in_cl)
-#   
-#   tp2_avg_eccs <- lapply(unique(tp2_data$TP2), function(x) {
-#     tp2_data %>% filter(TP2 == x) %>% mutate(avg_geo = mean(Geog.Dist), avg_temp = mean(Temp.Dist))
-#   }) %>% bind_rows() %>% 
-#     select(TP2, avg_geo, avg_temp) %>% unique() %>% 
-#     set_colnames(c(grep("TP2", cnames, value = TRUE), "TP2_avg_geo_ECC", "TP2_avg_temp_ECC"))
-#   
-#   left_join(ecc_data, tp1_avg_eccs) %>% left_join(., tp2_avg_eccs) %>% return()
-# }
+eccAverages <- function(pw_dists, ecc_data) {
+  # Given the cluster assignments at TP1, TP2, and the pairwise distances for all strains, 
+  # what are the pairwise distances of strains found *within* each cluster
+  clusters <- ecc_data %>% select(Strain, grep("Size|ECC", colnames(.), value = TRUE, invert = TRUE)) %>% 
+    rename(TP1 = grep("TP1", colnames(.), value = TRUE), 
+           TP2 = grep("TP2", colnames(.), value = TRUE))
+  
+  df <- left_join(pw_dists, clusters, by = c("Strain.1" = "Strain")) %>% 
+    rename(first_in_TP1 = TP1, first_in_TP2 = TP2) %>% 
+    left_join(., clusters, by = c("Strain.2" = "Strain")) %>% 
+    rename(second_in_TP1 = TP1, second_in_TP2 = TP2)
+  
+  tplist <- c("TP1", "TP2")
+  tpcases <- lapply(tplist, function(m) {
+    df %>% select(grep(setdiff(tplist, m), colnames(.), invert = TRUE)) %>% withinClusterDists(., m)  
+  }) %>% set_names(tplist)
+  
+  left_join(clusters, tpcases$TP1) %>% left_join(., tpcases$TP2) %>% select(-TP1, -TP2) %>% return()
+}
+
+withinClusterDists <- function(df, tp) {
+  tpx_case <- df %>% 
+    set_colnames(gsub(tp, "TPX", colnames(.))) %>% 
+    filter(!is.na(first_in_TPX) & !is.na(second_in_TPX)) %>% 
+    filter(first_in_TPX == second_in_TPX) %>% 
+    select(-second_in_TPX) %>% 
+    rename(TPX = first_in_TPX) %>% 
+    group_by(TPX)
+  
+  tpx_case %>% summarise(TPX_avg_geo_dists = mean(Geog.Dist), TPX_avg_temp_dists = mean(Temp.Dist)) %>% 
+    set_colnames(gsub("TPX", tp, colnames(.))) %>% return()
+}
 
 
 # Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
