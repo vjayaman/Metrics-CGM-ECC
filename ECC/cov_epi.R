@@ -10,6 +10,7 @@ assert("All packages loaded correctly", all(unlist(y)))
 source("ECC/functions/collecting_eccs.R")
 source("ECC/functions/classes_ecc.R")
 source("ECC/functions/epi-helper.R")
+source("ECC/functions/epi-helper-modular.R")
 # Original script:
 # source("ECC/functions/ECC-helper.R") # 010 took 1 hour, 1 minute, 12 seconds
 # Changes I made for efficiency:
