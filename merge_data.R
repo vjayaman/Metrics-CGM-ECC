@@ -53,6 +53,9 @@ c2 <- grep("TP2", ecccols, value = TRUE)
 t1 <- grep("TP1", colnames(step1), value = TRUE)
 t2 <- grep("TP2", colnames(step1), value = TRUE)
 
+coeffs <- substr(ecccols, 12, 16) %>% unique()
+
+
 step2 <- step1 %>% rename("TP1 cluster" = tp1_id) %>% 
   mutate("TP2 cluster" = first_tp2_flag, "TP1 cluster size" = tp1_cl_size, "TP2 cluster size" = tp2_cl_size) %>% 
   select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, 
