@@ -13,7 +13,7 @@ SOURCE=use_placeholder
 
 printf "\n\nPart 1/4:"
 if [ -f $STRAINS -a -f $TP1_CLUSTERS -a -f $TP2_CLUSTERS ]; then
-	Rscript prepare_inputs.R --inputdir $INPUTDIR --metadata $STRAINS --tp1 $TP1_CLUSTERS --tp2 $TP2_CLUSTERS --source $SOURCE
+	Rscript scripts/prepare_inputs.R --inputdir $INPUTDIR --metadata $STRAINS --tp1 $TP1_CLUSTERS --tp2 $TP2_CLUSTERS --source $SOURCE
 else
 	echo "Not all required files found for part 1."
 fi
@@ -31,7 +31,7 @@ fi
 
 printf "\n\n\nPart 2/4:"
 if [ $pdata == 1 ]; then
-	Rscript CGM/datacollection.R --tp1 $tp1_data --tp2 $tp2_data --heights 0
+	Rscript scripts/cgm_collection.R --tp1 $tp1_data --tp2 $tp2_data --heights 0
 else
 	echo "Not all required files found for part 2."
 fi
@@ -39,7 +39,7 @@ fi
 
 printf "\n\n\nPart 3/4:"
 if [ $pdata == 1 ]; then
-	Rscript ECC/cov_epi.R --source $source_data --strains $STRAINS --tp1 $tp1_data --tp2 $tp2_data --heights 0 --cpus 1 --trio "010-001"
+	Rscript scripts/ecc_collection.R --source $source_data --strains $STRAINS --tp1 $tp1_data --tp2 $tp2_data --heights 0 --cpus 1 --trio "010-001"
 else
 	echo "Not all required files found for part 3."
 fi
@@ -47,7 +47,7 @@ fi
 
 printf "\n\n\nPart 4/4:"
 if [ -f "results/ECCs.tsv" -a -f "results/CGM_strain_results.tsv" -a -f $STRAINS ]; then
-  Rscript merge_data.R --ECCs results/ECCs.tsv --CGMs results/CGM_strain_results.tsv --strains $STRAINS
+  Rscript scripts/merge_data.R --ECCs results/ECCs.tsv --CGMs results/CGM_strain_results.tsv --strains $STRAINS
 else
   echo "Not all required files found for part 4."
 fi
