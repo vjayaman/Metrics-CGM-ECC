@@ -5,8 +5,9 @@ y <- suppressMessages(lapply(libs, require, character.only = TRUE))
 
 option_list <- list(
   make_option(c("-e", "--ECCs"), metavar = "file", default = "results/ECCs.tsv", help = "ECC result file"),
-  make_option(c("-c", "--CGMs"), metavar = "file", default = "results/CGM_strain_results.txt", help = "CGM result file"),
-  make_option(c("-s", "--strains"), metavar = "file", default = "inputs/strain_info.txt", help = "Strain metadata file"))
+  make_option(c("-c", "--CGMs"), metavar = "file", default = "results/CGM_strain_results.tsv", help = "CGM result file"),
+  make_option(c("-s", "--strains"), metavar = "file", default = "results/strain_info.txt", help = "Strain metadata file"))
+  # make_option(c("-s", "--strains"), metavar = "file", default = "inputs/strain_info.txt", help = "Strain metadata file"))
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
