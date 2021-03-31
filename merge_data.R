@@ -6,8 +6,7 @@ y <- suppressMessages(lapply(libs, require, character.only = TRUE))
 option_list <- list(
   make_option(c("-e", "--ECCs"), metavar = "file", default = "results/ECCs.tsv", help = "ECC result file"),
   make_option(c("-c", "--CGMs"), metavar = "file", default = "results/CGM_strain_results.tsv", help = "CGM result file"),
-  make_option(c("-s", "--strains"), metavar = "file", default = "results/strain_info.txt", help = "Strain metadata file"))
-  # make_option(c("-s", "--strains"), metavar = "file", default = "inputs/strain_info.txt", help = "Strain metadata file"))
+  make_option(c("-s", "--strains"), metavar = "file", default = "inputs/strain_info.txt", help = "Strain metadata file"))
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
@@ -34,9 +33,11 @@ eccs <- readData(arg$ECCs)
 cgms <- readData(arg$CGMs)
 
 # actually assigned a cluster at TP2, not NA (185 such cases)
-strain_data <- suppressMessages(read_tsv(arg$strains)) %>% filter(TP2 == 1)
+strain_data <- suppressMessages(read_tsv(arg$strains)) %>% 
+  filter(TP2 == 1) %>% 
+  select(Strain, Source, City, Province, Country, Latitude, Longitude, Day, Month, Year, TP1, TP2)
 
-step1 <- left_join(cgms, strain_data) %>% left_join(., eccs)
+step1 <- left_join(cgms, eccs) %>% select(-TP1, -TP2) %>% left_join(., strain_data, by = "Strain")
 
 ecccols <- grep("ECC", colnames(step1), value = TRUE) %>% sort(decreasing = TRUE)
 
@@ -52,19 +53,29 @@ c2 <- grep("TP2", ecccols, value = TRUE)
 t1 <- grep("TP1", colnames(step1), value = TRUE)
 t2 <- grep("TP2", colnames(step1), value = TRUE)
 
+for (coeff in unique(substr(ecccols, 12, 16))) {
+  ecc_coeff <- grep(coeff, ecccols, value = TRUE)
+  col2 <- grep("TP2", ecc_coeff, value = TRUE)
+  col1 <- grep("TP1", ecc_coeff, value = TRUE)
+  
+  step1 <- step1 %>% mutate(delta = step1 %>% pull(col2) - step1 %>% pull(col1))
+  colnames(step1)[which(colnames(step1) == "delta")] <- paste0("delta_ECC_", coeff)
+}
+
 step2 <- step1 %>% rename("TP1 cluster" = tp1_id) %>% 
   mutate("TP2 cluster" = first_tp2_flag, "TP1 cluster size" = tp1_cl_size, "TP2 cluster size" = tp2_cl_size) %>% 
   select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, 
          TP1, `TP1 cluster`, tp1_cl_size, all_of(c1), grep("_avg", colnames(step1), value = TRUE), 
          TP2, `TP2 cluster`, tp2_cl_size, all_of(c2), grep("_avg", colnames(step1), value = TRUE), 
+         grep("delta", colnames(step1), value = TRUE), 
          first_tp1_flag, last_tp1_flag, first_tp2_flag, last_tp2_flag, `TP1 cluster size`, 
          `TP2 cluster size`, actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth) %>% 
   rename("TP1 cluster size (2)" = tp1_cl_size, 
          "TP2 cluster size (2)" = tp2_cl_size, 
-         # "TP1 temporal cluster average (distances)" = TP1_avg_temp_ECC, 
-         # "TP1 geo cluster average (distances)" = TP1_avg_geo_ECC, 
-         # "TP2 temporal cluster average (distances)" = TP2_avg_temp_ECC, 
-         # "TP2 geo cluster average (distances)" = TP2_avg_geo_ECC, 
+         "TP1 temp average cluster distance (days)" = TP1_avg_temp_dist, 
+         "TP1 geo average cluster distance (km)" = TP1_avg_geo_dist, 
+         "TP2 temp average cluster distance (days)" = TP2_avg_temp_dist, 
+         "TP2 geo average cluster distance (km)" = TP2_avg_geo_dist, 
          "Average TP1 date" = grep("avg_date", t1, value = TRUE), 
          "Average TP2 date" = grep("avg_date", t2, value = TRUE), 
          "Average TP1 longitude" = grep("avg_long", t1, value = TRUE), 
