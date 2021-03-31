@@ -10,7 +10,9 @@ option_list <- list(
   make_option(c("-i", "--inputdir"), metavar = "dir", default = NULL, help = "Raw inputs directory"), 
   make_option(c("-m", "--metadata"), metavar = "file", default = NULL, help = "Metadata file"),
   make_option(c("-a", "--tp1"), metavar = "file", default = NULL, help = "TP1 cluster assignments"), 
-  make_option(c("-b", "--tp2"), metavar = "file", default = NULL, help = "TP2 cluster assignments"))
+  make_option(c("-b", "--tp2"), metavar = "file", default = NULL, help = "TP2 cluster assignments"), 
+  make_option(c("-s", "--source"), metavar = "file", default = "use_placeholder", 
+              help = "Source file (place holder will be provided if this is NULL"))
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
@@ -57,7 +59,7 @@ outputDetails(paste0("\nWill save formatted inputs to new 'processed' directory 
 # Reading and processing the data in the full metadata excel file ----------------------------------------------
 outputDetails("Reading in strain data ...", TRUE)
 
-strain_data <- file.path(arg$inputdir, arg$metadata) %>% 
+strain_data <- file.path(arg$metadata) %>% 
   read.table(sep = "\t", header = TRUE, fill = TRUE, quote = "", 
              fileEncoding = checkEncoding(.)) %>% as_tibble() %>% 
   select(c("Strain", "Source", "Country", "Province", "City", "Latitude", 
@@ -68,7 +70,7 @@ strain_data <- file.path(arg$inputdir, arg$metadata) %>%
 
 # Reading and processing the cluster data for TP1 and TP2, making sure they match the metadata file ------------
 # TP1 DATA -----------------------------------------------------------------------------------------------------
-time1 <- file.path(arg$inputdir, arg$tp1) %>% 
+time1 <- file.path(arg$tp1) %>% 
   read.table(sep = "\t", header = TRUE, fileEncoding = checkEncoding(.)) %>% as_tibble() %>% 
   filter(Strain %in% strain_data$Strain) %>% arrange(Strain)
 
@@ -76,7 +78,7 @@ outputDetails("Making table for matching TP1 clusters to integers (for metrics p
 processed_tp1 <- intClusters(time1)
 
 # TP1 DATA -----------------------------------------------------------------------------------------------------
-time2 <- file.path(arg$inputdir, arg$tp2) %>% 
+time2 <- file.path(arg$tp2) %>% 
   read.table(sep = "\t", header = TRUE, fileEncoding = checkEncoding(.)) %>% as_tibble() %>% 
   filter(Strain %in% strain_data$Strain) %>% arrange(Strain)
 
@@ -85,15 +87,15 @@ processed_tp2 <- intClusters(time2)
 
 # ECC-SPECIFIC INPUT FILES -------------------------------------------------------------------------------------
 # placeholder source file --------------------------------------------------------------------------------------
-source_data <- tibble(Source.1 = "Placeholder1", Source.2 = "Placeholder2", value = 0)
-
-# metric_inputs <- list("tp1" = processed_tp1$new_cols, "tp2" = processed_tp1$new_cols,"src" = source_data, "str" = strain_data)
-# saveRDS(metric_inputs, file.path(arg$inputdir, "processed", "metric_inputs.Rds"))
+if (arg$source == "use_placeholder") {
+  source_data <- tibble(Source.1 = "Placeholder1", Source.2 = "Placeholder2", value = 0)  
+}else {
+  source_data <- file.path(arg$source) %>% 
+    read.table(sep = "\t", header = TRUE, fileEncoding = checkEncoding(.)) %>% as_tibble()
+}
 
 writeData(processed_tp1$new_cols, file.path(arg$inputdir, "processed", "tp1_clusters.txt"))
-
 writeData(processed_tp2$new_cols, file.path(arg$inputdir, "processed", "tp2_clusters.txt"))
-
 write.table(source_data, file.path(arg$inputdir, "processed", "source_data.tsv"),
             row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
 

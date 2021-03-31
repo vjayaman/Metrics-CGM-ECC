@@ -162,6 +162,6 @@ stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 
 outputDetails(paste0("\nSuccessfully collected data for all heights."), newcat = TRUE)
 timeTaken(pt = "CGM data collection", stopwatch) %>% outputDetails(., newcat = TRUE)
-outputDetails(paste0("\n||", paste0(rep("-", 28), collapse = ""), " End of cluster metric generation ", 
+outputDetails(paste0("||", paste0(rep("-", 28), collapse = ""), " End of cluster metric generation ", 
                      paste0(rep("-", 29), collapse = ""), "||\n"))
 closeAllConnections()
