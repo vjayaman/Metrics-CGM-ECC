@@ -7,10 +7,10 @@ libs <- c("optparse", "magrittr", "readr", "dplyr")
 y <- lapply(libs, require, character.only = TRUE)
 
 option_list <- list(
-  make_option(c("-i", "--inputdir"), metavar = "dir", default = "inputs/", help = "Raw inputs directory"), 
-  make_option(c("-m", "--metadata"), metavar = "file", default = "strain_info.txt", help = "Metadata file"),
-  make_option(c("-a", "--tp1"), metavar = "file", default = "tp1_clusters_init.txt", help = "TP1 cluster assignments"), 
-  make_option(c("-b", "--tp2"), metavar = "file", default = "tp2_clusters_init.txt", help = "TP2 cluster assignments"))
+  make_option(c("-i", "--inputdir"), metavar = "dir", default = NULL, help = "Raw inputs directory"), 
+  make_option(c("-m", "--metadata"), metavar = "file", default = NULL, help = "Metadata file"),
+  make_option(c("-a", "--tp1"), metavar = "file", default = NULL, help = "TP1 cluster assignments"), 
+  make_option(c("-b", "--tp2"), metavar = "file", default = NULL, help = "TP2 cluster assignments"))
 
 arg <- parse_args(OptionParser(option_list=option_list))
 

@@ -11,23 +11,22 @@ source("ECC/functions/collecting_eccs.R")
 source("ECC/functions/classes_ecc.R")
 source("ECC/functions/epi-helper.R")
 source("ECC/functions/epi-helper-modular.R")
-# Original script:
-# source("ECC/functions/ECC-helper.R") # 010 took 1 hour, 1 minute, 12 seconds
+# Original script: source("ECC/functions/ECC-helper.R") # 010 took 1hr, 1min, 12sec, on Windows
 # Changes I made for efficiency:
-source("ECC/functions/ECC-sep_singletons.R") # 010 took 9 minutes and 10 seconds
+source("ECC/functions/ECC-sep_singletons.R") # 010 took 9min, 3sec, on Windows
 
 # title: "EpiQuant - Salmonella Enteritidis Project (2019-2020)"
 # authors of work behind this: Ben Hetman, Elissa Giang, Dillon Barker
 
 option_list <- list(
-  make_option(c("-a", "--source"), metavar = "file", default = "inputs/processed/source_data.tsv", help = "Source data"),
-  make_option(c("-b", "--strains"), metavar = "file", default = "inputs/strain_info.txt", help = "Strain data"),
-  make_option(c("-c", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "TP1 cluster assignments"), 
-  make_option(c("-d", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"), 
-  make_option(c("-x", "--heights"), metavar = "character", default = "0", 
+  make_option(c("-a", "--source"), metavar = "file", default = NULL, help = "Source data"),
+  make_option(c("-b", "--strains"), metavar = "file", default = NULL, help = "Strain data"),
+  make_option(c("-c", "--tp1"), metavar = "file", default = NULL, help = "TP1 cluster assignments"), 
+  make_option(c("-d", "--tp2"), metavar = "file", default = NULL, help = "TP2 cluster assignments"), 
+  make_option(c("-x", "--heights"), metavar = "character", default = NULL, 
               help = "Comma-delimited string of heights to collect ECCs for"), 
-  make_option(c("-p", "--cpus"), metavar = "numeric", default = 1, help = "CPUs"),
-  make_option(c("-t", "--trio"), metavar = "character", default = "010-001", 
+  make_option(c("-p", "--cpus"), metavar = "numeric", default = NULL, help = "CPUs"),
+  make_option(c("-t", "--trio"), metavar = "character", default = NULL, 
               help = "source, temporal, geographic coefficients"))
 
 cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ", 

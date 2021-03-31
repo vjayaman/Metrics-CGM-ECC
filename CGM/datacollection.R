@@ -13,13 +13,9 @@ source("CGM/functions/classes_cgm.R")
 # READING IN THE INPUTS ----------------------------------------------------------------------------------------
 # Change the default values to read in your own files, or feed through terminal arguments
 option_list <- list(
-  make_option(c("-a", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", 
-              help = "Time point 1 file name (TP1)"),
-  
-  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
-              help = "Time point 2 file name (TP2)"),
-  
-  make_option(c("-x", "--heights"), metavar = "character", default = "0",
+  make_option(c("-a", "--tp1"), metavar = "file", default = NULL, help = "Time point 1 file name (TP1)"),
+  make_option(c("-b", "--tp2"), metavar = "file", default = NULL, help = "Time point 2 file name (TP2)"),
+  make_option(c("-x", "--heights"), metavar = "character", default = NULL,
               help = paste0("A string of comma-delimited numbers, e.g. '50,75,100' to ", 
                             "use as heights for metric generation (strain table outputs)")))
 
@@ -29,7 +25,7 @@ arg <- parse_args(OptionParser(option_list=option_list))
 outputDetails(paste0("\n||", paste0(rep("-", 32), collapse = ""), " Cluster metric generation ", 
                      paste0(rep("-", 32), collapse = ""), "||\nStarted process at: ", Sys.time()))
 cat(paste0("\nIf at any point the process cuts off with no success message, please see the log file.\n"))
-outputDetails(paste0("\nPART 1 OF 3: Data processing ", paste0(rep(".", 66), collapse = "")), newcat = TRUE)
+outputDetails("\nPART 1 OF 3: Data processing ", newcat = TRUE)
 
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
@@ -64,8 +60,7 @@ tp2$flag_clusters()$coded_status(novels)
 tp1$coded_status(novels)
 
 # BASE CASE (FIRST HEIGHT) -------------------------------------------------------------------------------------
-outputDetails(paste0("\nPART 2 OF 3: Tracking and flagging clusters for base case ", 
-                     paste0(rep(".", 37), collapse = "")), newcat = TRUE)
+outputDetails("\nPART 2 OF 3: Tracking and flagging clusters for base case ", newcat = TRUE)
 outputDetails(paste0("  Collecting height data for base case, height ", heights[1], "..."), newcat = TRUE)
 
 hx <- Heightdata$new(starter = heights[1], t1_comps = tp1$comps, hvals = heights)$
