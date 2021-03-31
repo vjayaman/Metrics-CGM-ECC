@@ -1,6 +1,8 @@
 Metrics-CGM-ECC
 ================
 
+Latest verified version: v1.0
+
 Merged work on the two separate projects (status before initial merge
 can be found at: <https://github.com/vjayaman/EQProject> and
 <https://github.com/vjayaman/ClusterGrowthMetrics>)
