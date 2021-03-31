@@ -53,14 +53,21 @@ c2 <- grep("TP2", ecccols, value = TRUE)
 t1 <- grep("TP1", colnames(step1), value = TRUE)
 t2 <- grep("TP2", colnames(step1), value = TRUE)
 
-coeffs <- substr(ecccols, 12, 16) %>% unique()
-
+for (coeff in unique(substr(ecccols, 12, 16))) {
+  ecc_coeff <- grep(coeff, ecccols, value = TRUE)
+  col2 <- grep("TP2", ecc_coeff, value = TRUE)
+  col1 <- grep("TP1", ecc_coeff, value = TRUE)
+  
+  step1 <- step1 %>% mutate(delta = step1 %>% pull(col2) - step1 %>% pull(col1))
+  colnames(step1)[which(colnames(step1) == "delta")] <- paste0("delta_ECC_", coeff)
+}
 
 step2 <- step1 %>% rename("TP1 cluster" = tp1_id) %>% 
   mutate("TP2 cluster" = first_tp2_flag, "TP1 cluster size" = tp1_cl_size, "TP2 cluster size" = tp2_cl_size) %>% 
   select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, 
          TP1, `TP1 cluster`, tp1_cl_size, all_of(c1), grep("_avg", colnames(step1), value = TRUE), 
          TP2, `TP2 cluster`, tp2_cl_size, all_of(c2), grep("_avg", colnames(step1), value = TRUE), 
+         grep("delta", colnames(step1), value = TRUE), 
          first_tp1_flag, last_tp1_flag, first_tp2_flag, last_tp2_flag, `TP1 cluster size`, 
          `TP2 cluster size`, actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth) %>% 
   rename("TP1 cluster size (2)" = tp1_cl_size, 
