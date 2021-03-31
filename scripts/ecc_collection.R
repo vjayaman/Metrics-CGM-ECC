@@ -1,5 +1,7 @@
 #! /usr/bin/env Rscript
 
+# Current working directory should be Metrics-CGM-ECC/
+
 msg <- file("logs/logfile_epiquant.txt", open="wt")
 sink(msg, type="message")
 
@@ -7,13 +9,13 @@ libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr","reshape2
 y <- lapply(libs, require, character.only = TRUE)
 assert("All packages loaded correctly", all(unlist(y)))
 
-source("ECC/functions/collecting_eccs.R")
-source("ECC/functions/classes_ecc.R")
-source("ECC/functions/epi-helper.R")
-source("ECC/functions/epi-helper-modular.R")
-# Original script: source("ECC/functions/ECC-helper.R") # 010 took 1hr, 1min, 12sec, on Windows
+source("ECC/collecting_eccs.R")
+source("ECC/classes_ecc.R")
+source("ECC/epi-helper.R")
+source("ECC/epi-helper-modular.R")
+# Original script: source("ECC/ECC-helper.R") # 010 took 1hr, 1min, 12sec, on Windows
 # Changes I made for efficiency:
-source("ECC/functions/ECC-sep_singletons.R") # 010 took 9min, 3sec, on Windows
+source("ECC/ECC-sep_singletons.R") # 010 took 9min, 3sec, on Windows
 
 # Title: "EpiQuant - Salmonella Enteritidis Project (2019-2020)"
 # Authors of work behind this: Ben Hetman, Elissa Giang, Dillon Barker

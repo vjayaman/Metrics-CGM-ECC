@@ -1,14 +1,16 @@
 #! /usr/bin/env Rscript
 
+# Current working directory should be Metrics-CGM-ECC/
+
 msg <- file("logs/logfile_datacollection.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("R6", "tibble", "optparse", "magrittr", "dplyr", "reshape2", "progress", "testit")
 y <- lapply(libs, require, character.only = TRUE)
 
-suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/formatting_cgm.R")))
-suppressWarnings(suppressPackageStartupMessages(source("CGM/functions/tracking_functions.R")))
-source("CGM/functions/classes_cgm.R")
+suppressWarnings(suppressPackageStartupMessages(source("CGM/formatting_cgm.R")))
+suppressWarnings(suppressPackageStartupMessages(source("CGM/tracking_functions.R")))
+source("CGM/classes_cgm.R")
 
 # READING IN THE INPUTS ----------------------------------------------------------------------------------------
 # Change the default values to read in your own files, or feed through terminal arguments
