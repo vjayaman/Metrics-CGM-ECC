@@ -26,6 +26,9 @@ readData <- function(fp) {
   read.table(fp, stringsAsFactors = FALSE, header = TRUE, fileEncoding = checkEncoding(fp)) %>% as_tibble() %>% return()
 }
 
+cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Merging CGM and ECC results ", 
+           paste0(rep("-", 31), collapse = ""), "||\n"))
+
 # ------------------------------------------------------------------------------------------------------------
 # NOW SAVING OUTPUTS AND MERGING ECCS WITH CGM DATA ----------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------
@@ -98,5 +101,6 @@ step2 %>% arrange(`TP2 cluster`) %>% group_by(`TP2 cluster`) %>% slice(1) %>%
   select(-Strain) %>% ungroup() %>% 
   writeData(fp = "results/Merged_cluster_results.tsv", df = .)
 
-cat(paste0("CGM and ECC results merged, see 'results' folder for cluster-specific and strain-specific files\n"))
-
+cat(paste0("See 'results' folder for cluster-specific and strain-specific files.\n"))
+cat(paste0("\n||", paste0(rep("-", 35), collapse = ""), " End of merging step ", 
+           paste0(rep("-", 35), collapse = ""), "||\n"))

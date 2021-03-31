@@ -15,8 +15,9 @@ source("ECC/functions/epi-helper-modular.R")
 # Changes I made for efficiency:
 source("ECC/functions/ECC-sep_singletons.R") # 010 took 9min, 3sec, on Windows
 
-# title: "EpiQuant - Salmonella Enteritidis Project (2019-2020)"
-# authors of work behind this: Ben Hetman, Elissa Giang, Dillon Barker
+# Title: "EpiQuant - Salmonella Enteritidis Project (2019-2020)"
+# Authors of work behind this: Ben Hetman, Elissa Giang, Dillon Barker
+# Responsible for changes made during and after merge with CGM process: Vasena Jayamanna
 
 option_list <- list(
   make_option(c("-a", "--source"), metavar = "file", default = NULL, help = "Source data"),

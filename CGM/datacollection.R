@@ -25,7 +25,7 @@ arg <- parse_args(OptionParser(option_list=option_list))
 outputDetails(paste0("\n||", paste0(rep("-", 32), collapse = ""), " Cluster metric generation ", 
                      paste0(rep("-", 32), collapse = ""), "||\nStarted process at: ", Sys.time()))
 cat(paste0("\nIf at any point the process cuts off with no success message, please see the log file.\n"))
-outputDetails("\nPART 1 OF 3: Data processing ", newcat = TRUE)
+outputDetails("\nStep 1 OF 3: Data processing ", newcat = TRUE)
 
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
@@ -60,7 +60,7 @@ tp2$flag_clusters()$coded_status(novels)
 tp1$coded_status(novels)
 
 # BASE CASE (FIRST HEIGHT) -------------------------------------------------------------------------------------
-outputDetails("\nPART 2 OF 3: Tracking and flagging clusters for base case ", newcat = TRUE)
+outputDetails("\nStep 2 OF 3: Tracking and flagging clusters for base case ", newcat = TRUE)
 outputDetails(paste0("  Collecting height data for base case, height ", heights[1], "..."), newcat = TRUE)
 
 hx <- Heightdata$new(starter = heights[1], t1_comps = tp1$comps, hvals = heights)$
@@ -69,7 +69,7 @@ hx <- Heightdata$new(starter = heights[1], t1_comps = tp1$comps, hvals = heights
 
 # REST OF THE HEIGHTS ------------------------------------------------------------------------------------------
 if (length(heights) > 1) {
-  outputDetails(paste0("\nPART 3 OF 3: Tracking and flagging clusters for the rest of the heights (",
+  outputDetails(paste0("\nStep 3 OF 3: Tracking and flagging clusters for the rest of the heights (",
                        length(heights) - 1, " of them) ..........."), newcat = TRUE)
   outputDetails(paste0("  This may take some time. \n  For a more detailed look at progress, ", 
                        "see the logfile in the logs directory.\n"))
@@ -97,7 +97,7 @@ if (length(heights) > 1) {
   }
   close(fcb)
 }else {
-  outputDetails(paste0("\nPART 3 OF 3: Only one threshold provided, so no further tracking necessary"), newcat = TRUE)
+  outputDetails(paste0("\nStep 3 OF 3: Only one threshold provided, so no further tracking necessary"), newcat = TRUE)
 }
 
 outputDetails("  Handling novel tracking, adding to dataset.\n", newcat = TRUE)
