@@ -51,17 +51,36 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   cnames <- colnames(ecc_data) %>% grep("Size|ECC", ., value = TRUE, invert = TRUE)
   df <- ecc_data %>% select(all_of(cnames)) %>% set_colnames(c("Strain", "TP1", "TP2"))
   
-  avg_tp1 <- df %>% basicAverages(., as.name("TP1"), avg_raw) %>% arrange(Strain)
-  avg_tp2 <- df %>% basicAverages(., as.name("TP2"), avg_raw) %>% arrange(Strain)
-  
-  results <- left_join(ecc_data, avg_tp1) %>% left_join(., avg_tp2)
+  avg_tp1 <- df %>% basicAverages(., as.name("TP1"), avg_raw) %>% arrange(Strain) %>% select(-TP1)
+  avg_tp2 <- df %>% basicAverages(., as.name("TP2"), avg_raw) %>% arrange(Strain) %>% select(-TP2)
+
   
   # Adding distance averages
-  dist_avgs <- left_join(geog_pw$raw, temp_pw$raw, by = c("Strain.1", "Strain.2")) %>% 
-    mutate(across(c(Strain.1, Strain.2), as.character)) %>% 
-    eccAverages(., ecc_data)
-  
-  results <- results %>% left_join(., dist_avgs)
+  clusters <- ecc_data %>% select(Strain, grep("Size|ECC", colnames(.), value = TRUE, invert = TRUE)) %>% 
+    rename(TP1 = grep("TP1", colnames(.), value = TRUE),
+           TP2 = grep("TP2", colnames(.), value = TRUE))
+
+  # matching to see which pairs are found in the same cluster
+  pw_dists <- left_join(geog_pw$raw, temp_pw$raw, by = c("Strain.1", "Strain.2")) %>% 
+    left_join(., clusters, by = c("Strain.1" = "Strain")) %>% 
+    rename(first_in_TP1 = TP1, first_in_TP2 = TP2) %>% 
+    left_join(., clusters, by = c("Strain.2" = "Strain")) %>% 
+    rename(second_in_TP1 = TP1, second_in_TP2 = TP2)
+
+  dist_avgs <- lapply(c("TP1", "TP2"), function(i) {
+    x1 <- grep(i, colnames(pw_dists), value = TRUE)
+    a1 <- as.name(x1[1])
+    a2 <- as.name(x1[2])  
+    pw_dists %>% filter(all_of({{a1}}) == {{a2}}) %>% 
+      rename(TPX = all_of(a1)) %>% group_by(TPX) %>% 
+      summarise(TPX_avg_geo_dist = mean(Geog.Dist), TPX_avg_temp_dist = mean(Temp.Dist)) %>% 
+      set_colnames(gsub("TPX", i, colnames(.))) %>% 
+      left_join(clusters, .) %>% select(-TP1, -TP2)
+  }) %>% Reduce(function(...) left_join(..., by = "Strain"), .)
+    
+  results <- left_join(ecc_data, avg_tp1, by = "Strain") %>% 
+    left_join(., avg_tp2, by = "Strain") %>% 
+    left_join(., dist_avgs, by = "Strain")
   
   return(results)
 }
@@ -76,40 +95,6 @@ basicAverages <- function(df, tp, avg_raw) {
     select(Strain, all_of(tp), grep("avg", colnames(.), value = TRUE)) %>% 
     set_colnames(gsub("avg", paste0(as.character(tp), "_avg"), colnames(.))) %>% return()
 }
-
-eccAverages <- function(pw_dists, ecc_data) {
-  # Given the cluster assignments at TP1, TP2, and the pairwise distances for all strains, 
-  # what are the pairwise distances of strains found *within* each cluster
-  clusters <- ecc_data %>% select(Strain, grep("Size|ECC", colnames(.), value = TRUE, invert = TRUE)) %>% 
-    rename(TP1 = grep("TP1", colnames(.), value = TRUE), 
-           TP2 = grep("TP2", colnames(.), value = TRUE))
-  
-  df <- left_join(pw_dists, clusters, by = c("Strain.1" = "Strain")) %>% 
-    rename(first_in_TP1 = TP1, first_in_TP2 = TP2) %>% 
-    left_join(., clusters, by = c("Strain.2" = "Strain")) %>% 
-    rename(second_in_TP1 = TP1, second_in_TP2 = TP2)
-  
-  tplist <- c("TP1", "TP2")
-  tpcases <- lapply(tplist, function(m) {
-    df %>% select(grep(setdiff(tplist, m), colnames(.), invert = TRUE)) %>% withinClusterDists(., m)  
-  }) %>% set_names(tplist)
-  
-  left_join(clusters, tpcases$TP1) %>% left_join(., tpcases$TP2) %>% select(-TP1, -TP2) %>% return()
-}
-
-withinClusterDists <- function(df, tp) {
-  tpx_case <- df %>% 
-    set_colnames(gsub(tp, "TPX", colnames(.))) %>% 
-    filter(!is.na(first_in_TPX) & !is.na(second_in_TPX)) %>% 
-    filter(first_in_TPX == second_in_TPX) %>% 
-    select(-second_in_TPX) %>% 
-    rename(TPX = first_in_TPX) %>% 
-    group_by(TPX)
-  
-  tpx_case %>% summarise(TPX_avg_geo_dists = mean(Geog.Dist), TPX_avg_temp_dists = mean(Temp.Dist)) %>% 
-    set_colnames(gsub("TPX", tp, colnames(.))) %>% return()
-}
-
 
 # Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
 # ("pt") and a two-element named vector with Sys.time() values named "start_time" and "end_time"
