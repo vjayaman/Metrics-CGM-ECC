@@ -33,14 +33,16 @@ can be found at: <https://github.com/vjayaman/EQProject> and
 
     (a) **Rscript environment\_setup.R**
 
-    This installs any R packages required but not found in the environment,
-and checks that they can be loaded without issue.
+    This installs any R packages required but not found in the environment, and checks that they can be loaded without issue.
 
-    Then run
 
-    (b) **Rscript prepare\_inputs.R**
+    (b) **Rscript prepare\_inputs.R** -i *\<input directory\>* -m *\<metadata filename\>* -a *\<TP1 cluster assignments - unprocessed\>* -b *\<TP2 cluster assignments - unprocessed\>*
 
-    To run, it needs at least 3 files in the *inputs/* directory: a cluster assignments file for time point 1, a cluster assignments file for time point 2, and a strain metadata file, all tab-delimited. If a source distances file is not provided, it also writes a placeholder file for this to the *inputs/processed/*. To use files with the same names and location as the sample data, run:
+    To run, it needs 3 files in the *inputs/* directory: a cluster assignments file for time point 1, a cluster assignments file for time point 2, and a strain metadata file, all tab-delimited. 
+    
+    It also writes a placeholder file for the source distances file to the newly created *inputs/processed/* directory. 
+    
+    To use files with the same names and location as the sample data, simply run:
 
         $ RScript prepare_inputs.R
     
@@ -49,21 +51,19 @@ and checks that they can be loaded without issue.
         $ Rscript prepare_inputs.R -i inputs -m strain_info.txt -a tp1_clusters_init.txt -b tp2_clusters_init.txt
 
     
-    (c) **Rscript CGM/datacollection.R -a** *\<tp1 cluster assignments\>* **-b**
-*\<tp2 cluster assignments\>* **-x** *\<comma-delimited string of
-heights\>*
+    (c) **Rscript CGM/datacollection.R** -a *\<tp1 cluster assignments\>* -b *\<tp2 cluster assignments\>* -x *\<comma-delimited string of heights, or a single height\>*
 
-    Example: `$ Rscript CGM/datacollection.R -a inputs/processed/tp1_clusters.txt -b
-inputs/processed/tp2_clusters.txt -x "0"`
+    If you do not change the filenames in *inputs/processed/*, you can run this like:
 
-    This collects the cluster growth metrics and saves them to newly created
-*results/* directory.
+        $ Rscript CGM/datacollection.R
+    
+    or to manually feed input files: 
 
-    (d) **Rscript ECC/cov\_epi.R -a** *\<source data\>* **-b** *\<strain data\>*
-**-c** *\<TP1 cluster assignments\>* **-d** *\<TP2 cluster
-assignments\>* **-x** *\<comma-delimited string of heights\>* **-t**
-*\<hyphen-delimited numeric codes for source, temporal, geographic
-coefficients\>*
+        $ Rscript CGM/datacollection.R -a inputs/processed/tp1_clusters.txt -b inputs/processed/tp2_clusters.txt -x 0
+
+    This collects the cluster growth metrics and saves them to newly created *results/* directory.
+
+    (d) **Rscript ECC/cov\_epi.R** -a *\<source data\>* -b *\<strain data\>* -c *\<TP1 cluster assignments\>* -d *\<TP2 cluster assignments\>* -x *\<comma-delimited string of heights\>* -t *\<hyphen-delimited numeric codes for source, temporal, geographic coefficients\>*
 
     Note that the source data file does not need to be provided, the script
 will use the default placeholder if this is left blank. This saves the
