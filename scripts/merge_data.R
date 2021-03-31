@@ -40,7 +40,8 @@ strain_data <- suppressMessages(read_tsv(arg$strains)) %>%
   filter(TP2 == 1) %>% 
   select(Strain, Source, City, Province, Country, Latitude, Longitude, Day, Month, Year, TP1, TP2)
 
-step1 <- left_join(cgms, eccs) %>% select(-TP1, -TP2) %>% left_join(., strain_data, by = "Strain")
+step1 <- left_join(cgms, eccs, by = "Strain") %>% select(-TP1, -TP2) %>% 
+  left_join(., strain_data, by = "Strain")
 
 ecccols <- grep("ECC", colnames(step1), value = TRUE) %>% sort(decreasing = TRUE)
 

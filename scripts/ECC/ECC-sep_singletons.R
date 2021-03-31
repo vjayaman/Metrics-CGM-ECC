@@ -1,4 +1,4 @@
-# My (Vasena's) edits - for speed improvement on Windows, where we have less control over cores 
+# Vasena's edits - for speed improvement on Windows, where we have less control over cores 
 
 epi_cohesion_sep <- function(g_cuts, epi_matrix, cpus){
   

@@ -8,9 +8,9 @@ sink(msg, type="message")
 libs <- c("R6", "tibble", "optparse", "magrittr", "dplyr", "reshape2", "progress", "testit")
 y <- lapply(libs, require, character.only = TRUE)
 
-suppressWarnings(suppressPackageStartupMessages(source("CGM/formatting_cgm.R")))
-suppressWarnings(suppressPackageStartupMessages(source("CGM/tracking_functions.R")))
-source("CGM/classes_cgm.R")
+source("scripts/CGM/formatting_cgm.R")
+source("scripts/CGM/tracking_functions.R")
+source("scripts/CGM/classes_cgm.R")
 
 # READING IN THE INPUTS ----------------------------------------------------------------------------------------
 # Change the default values to read in your own files, or feed through terminal arguments
