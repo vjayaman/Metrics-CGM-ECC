@@ -90,15 +90,22 @@ for (coeff in unique(substr(ecccols, 12, 16))) {
   step1 <- step1 %>% mutate(delta = step1 %>% pull(col2) - step1 %>% pull(col1))
   colnames(step1)[which(colnames(step1) == "delta")] <- paste0("delta_ECC_", coeff)
 }
-
+  
 step2 <- step1 %>% rename("TP1 cluster" = tp1_id) %>% 
   mutate("TP2 cluster" = first_tp2_flag, "TP1 cluster size" = tp1_cl_size, "TP2 cluster size" = tp2_cl_size) %>% 
+  
   select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, 
-         TP1, `TP1 cluster`, tp1_cl_size, all_of(tp1eccs), grep("_avg", colnames(step1), value = TRUE), 
-         TP2, `TP2 cluster`, tp2_cl_size, all_of(tp2eccs), grep("_avg", colnames(step1), value = TRUE), 
+         
+         TP1, `TP1 cluster`, tp1_cl_size, all_of(tp1eccs), 
+         TP2, `TP2 cluster`, tp2_cl_size, all_of(tp2eccs), 
+         
          grep("delta", colnames(step1), value = TRUE), 
+         grep("TP1_avg", colnames(step1), value = TRUE), 
+         grep("TP2_avg", colnames(step1), value = TRUE), 
+         
          first_tp1_flag, last_tp1_flag, first_tp2_flag, last_tp2_flag, `TP1 cluster size`, 
          `TP2 cluster size`, actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth) %>% 
+  
   rename("TP1 cluster size (2)" = tp1_cl_size, 
          "TP2 cluster size (2)" = tp2_cl_size, 
          "TP1 temp average cluster distance (days)" = TP1_avg_temp_dist, 
@@ -119,11 +126,13 @@ step2 <- step1 %>% rename("TP1 cluster" = tp1_id) %>%
          "Number of additional TP1 strains in the TP2 match" = add_TP1, 
          "Number of novels in the TP2 match" = num_novs, 
          "Actual growth rate = (TP2 size - TP1 size) / (TP1 size)" = actual_growth_rate, 
-         "Novel growth = (TP2 size) / (TP2 size - number of novels)" = new_growth)
+         "Novel growth = (TP2 size) / (TP2 size - number of novels)" = new_growth) %>% 
+  arrange(`TP2 cluster`, `TP1 cluster`, Strain)
 
 writeData(fp = "results/Merged_strain_results.tsv", df = step2)
 
-step2 %>% arrange(`TP2 cluster`) %>% group_by(`TP2 cluster`) %>% slice(1) %>% 
+step2 %>% 
+  group_by(`TP2 cluster`) %>% slice(1) %>% 
   select(-Strain) %>% ungroup() %>% 
   writeData(fp = "results/Merged_cluster_results.tsv", df = .)
 
