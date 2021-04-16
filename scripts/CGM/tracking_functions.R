@@ -136,7 +136,15 @@ trackClusters <- function(hdata, t2_comps, t2names, t1_coded, t2_coded, indicate
 # Include: cluster size change, growth rate (using actual sizes), growth rate (using number of novels), 
 # number of sneakers, number of novels
 # --------------------------------------------------------------------------------------------------------------
-oneHeight <- function(novels, q1, q2, matched) {
+oneHeight <- function(df) {
+  df %>% 
+    mutate(actual_size_change = tp2_cl_size - tp1_cl_size, 
+           actual_growth_rate = ((tp2_cl_size - tp1_cl_size) / tp1_cl_size) %>% round(., digits = 3), 
+           new_growth = (tp2_cl_size / (tp2_cl_size - num_novs)) %>% round(., digits = 3)) %>% 
+    arrange(tp1_h, tp1_cl, tp2_h, tp2_cl) %>% return()
+}
+
+findingSneakers <- function(novels, q1, q2, matched) {
   compmatches <- matched[!duplicated(matched$tp1_id),]
   
   did_not_chg <- compmatches %>% filter(tp1_cl_size == tp2_cl_size) %>% add_column(add_TP1 = 0)
@@ -164,10 +172,6 @@ oneHeight <- function(novels, q1, q2, matched) {
     left_join(kc, c2_tally, by = c("tp1_cl_size", "tp2_cl_size", "num_novs")) %>% return()
   }) %>% bind_rows()
   
-  bind_rows(did_not_chg, sneakers) %>% 
-    mutate(actual_size_change = tp2_cl_size - tp1_cl_size, 
-           actual_growth_rate = ((tp2_cl_size - tp1_cl_size) / tp1_cl_size) %>% round(., digits = 3), 
-           new_growth = (tp2_cl_size / (tp2_cl_size - num_novs)) %>% round(., digits = 3)) %>% 
-    arrange(tp1_h, tp1_cl, tp2_h, tp2_cl) %>% return()
+  bind_rows(did_not_chg, sneakers) %>% return()
 }
 

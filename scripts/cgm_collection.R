@@ -15,9 +15,9 @@ source("scripts/CGM/classes_cgm.R")
 # READING IN THE INPUTS ----------------------------------------------------------------------------------------
 # Change the default values to read in your own files, or feed through terminal arguments
 option_list <- list(
-  make_option(c("-a", "--tp1"), metavar = "file", default = NULL, help = "Time point 1 file name (TP1)"),
-  make_option(c("-b", "--tp2"), metavar = "file", default = NULL, help = "Time point 2 file name (TP2)"),
-  make_option(c("-x", "--heights"), metavar = "character", default = NULL,
+  make_option(c("-a", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "Time point 1 file name (TP1)"),
+  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "Time point 2 file name (TP2)"),
+  make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = paste0("A string of comma-delimited numbers, e.g. '50,75,100' to ", 
                             "use as heights for metric generation (strain table outputs)")))
 
@@ -102,18 +102,21 @@ if (length(heights) > 1) {
   outputDetails(paste0("\nStep 3 OF 3: Only one threshold provided, so no further tracking necessary"), newcat = TRUE)
 }
 
-outputDetails("  Handling novel tracking, adding to dataset.\n", newcat = TRUE)
+outputDetails("  Identifying and counting 'additional TP1 strains'.\n", newcat = TRUE)
 
 clusters_just_tp1 <- lapply(heights, function(h) {
-  hx$results[[h]] %>% left_join(., tp1$flagged) %>% left_join(., tp2$flagged) %>% 
+  hx$results[[h]] %>% left_join(., tp1$flagged) %>% 
+    left_join(., tp2$flagged) %>% 
     arrange(tp1_h, tp1_cl, tp2_h, tp2_cl) %>% 
-    oneHeight(novels, tp1$status, tp2$status, .) %>% return()
+    findingSneakers(novels, tp1$status, tp2$status, .) %>% return()
 }) %>% bind_rows()
 
 isolates_base <- tp1$melted %>% mutate(across(tp1_h, as.integer)) %>% 
   filter(tp1_h %in% heights) %>% 
   left_join(., clusters_just_tp1, by = c("tp1_id", "tp1_h", "tp1_cl")) %>% 
   arrange(tp1_h, tp1_cl, tp2_h, tp2_cl)
+
+outputDetails("  Handling novel tracking, adding to dataset.\n", newcat = TRUE)
 
 # NOVELS -------------------------------------------------------------------------------------------------------
 first_nov_flag <- tp2$status %>% filter(!is.na(status)) %>% group_by(isolate) %>% slice(1) %>% ungroup() %>% pull(tp2_id)
@@ -127,10 +130,10 @@ novel_asmts <- tp2$melted %>% mutate(across(tp2_h, as.integer)) %>%
 
 # Pure novel TP2 cluster
 pure_novels <- novels_only_tracking %>% filter(num_novs == tp2_cl_size) %>% 
-  mutate(tp1_cl_size = 0, add_TP1 = 0, 
-         actual_size_change = tp2_cl_size - tp1_cl_size, 
-         actual_growth_rate = ((tp2_cl_size - tp1_cl_size) / tp1_cl_size) %>% round(digits = 3), 
-         new_growth = (tp2_cl_size / (tp2_cl_size - num_novs)) %>% round(digits = 3)) %>% 
+  mutate(tp1_cl_size = 0, add_TP1 = 0) %>% 
+         # actual_size_change = tp2_cl_size - tp1_cl_size, 
+         # actual_growth_rate = ((tp2_cl_size - tp1_cl_size) / tp1_cl_size) %>% round(digits = 3), 
+         # new_growth = (tp2_cl_size / (tp2_cl_size - num_novs)) %>% round(digits = 3)) %>% 
   right_join(novel_asmts, ., by = c("tp2_h", "tp2_cl", "tp2_id")) %>% select(colnames(isolates_base))
 
 # Mixed novel TP2 clusters
@@ -145,13 +148,19 @@ all_mixed <- isolates_base %>%
 # FULL STRAIN FILE ---------------------------------------------------------------------------------------------
 # note: two types of novel clusters, those that are fully novel, and those that are not
 
-outputDetails("  Saving the data in a file with strain identifiers.\n", newcat = TRUE)
-
 isolates_file <- bind_rows(isolates_base, pure_novels) %>% bind_rows(., all_mixed) %>% 
   mutate(novel = ifelse(isolate %in% setdiff(tp2$raw$isolate, tp1$raw$isolate), 1, 0)) %>% 
   rename(Strain = isolate)
 isolates_file[,c("tp1_h", "tp2_h")] %<>% apply(., 2, padCol, padval = ph, padchr = "h")
 isolates_file[,c("tp1_cl", "tp2_cl")] %<>% apply(., 2, padCol, padval = pc, padchr = "c")
+
+outputDetails("  Incrementing all cluster sizes by 1, then calculating growth columns.\n", newcat = TRUE)
+
+isolates_file %<>% 
+  mutate(tp1_cl_size = tp1_cl_size + 1, tp2_cl_size = tp2_cl_size + 1) %>% 
+  oneHeight()
+
+outputDetails("  Saving the data in a file with strain identifiers.\n", newcat = TRUE)
 
 isolates_file %>% 
   select(Strain, novel, first_tp2_flag, tp2_h, tp2_cl, tp2_cl_size, last_tp2_flag, 
