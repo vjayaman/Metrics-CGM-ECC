@@ -143,7 +143,8 @@ mixed_novels <- novels_only_tracking %>% filter(num_novs != tp2_cl_size) %>%
 # Mixed novels clusters should inherit data from the tracked TP1 strains
 all_mixed <- isolates_base %>% 
   select(-isolate, -tp1_id, -tp1_h, -tp1_cl, -first_tp1_flag, -last_tp1_flag) %>% 
-  left_join(mixed_novels, .) %>% unique() %>% select(colnames(isolates_base))
+  unique() %>% 
+  left_join(mixed_novels, .) %>% select(colnames(isolates_base))
 
 # FULL STRAIN FILE ---------------------------------------------------------------------------------------------
 # note: two types of novel clusters, those that are fully novel, and those that are not
@@ -155,17 +156,19 @@ isolates_file[,c("tp1_h", "tp2_h")] %<>% apply(., 2, padCol, padval = ph, padchr
 isolates_file[,c("tp1_cl", "tp2_cl")] %<>% apply(., 2, padCol, padval = pc, padchr = "c")
 
 outputDetails("  Incrementing all cluster sizes by 1, then calculating growth columns.\n", newcat = TRUE)
+outputDetails("  Also adding 'type' column to CGM results table.\n", newcat = TRUE)
 
 isolates_file %<>% 
   mutate(tp1_cl_size = tp1_cl_size + 1, tp2_cl_size = tp2_cl_size + 1) %>% 
-  oneHeight()
+  oneHeight() %>% 
+  addingType(.)
 
 outputDetails("  Saving the data in a file with strain identifiers.\n", newcat = TRUE)
 
 isolates_file %>% 
   select(Strain, novel, first_tp2_flag, tp2_h, tp2_cl, tp2_cl_size, last_tp2_flag, 
          tp1_id, tp1_h, tp1_cl, tp1_cl_size, first_tp1_flag, last_tp1_flag, add_TP1, 
-         num_novs, actual_size_change, actual_growth_rate, new_growth) %>% 
+         num_novs, actual_size_change, actual_growth_rate, new_growth, type) %>% 
   write.table(., file.path("results","CGM_strain_results.tsv"), row.names = FALSE, quote = FALSE, sep = "\t")
 
 # WRAPPING THINGS UP -------------------------------------------------------------------------------------------

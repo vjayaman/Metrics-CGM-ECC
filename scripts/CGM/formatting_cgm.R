@@ -1,4 +1,22 @@
 
+addingType <- function(dfx) {
+  df <- dfx %>% add_column(type = NA)
+  # type 1: TP1 > 2, TP2 > 2, TP1 == TP2
+  inds1 <- which(df$tp1_cl_size > 2 & df$tp2_cl_size > 2 & df$tp1_cl_size == df$tp2_cl_size)
+  df$type[inds1] <- "Type1"
+  # type 2: TP1 > 2, TP2 > 2, TP2 > TP1
+  inds2 <- which(df$tp1_cl_size > 2 & df$tp2_cl_size > 2 & df$tp2_cl_size > df$tp1_cl_size)
+  df$type[inds2] <- "Type2"
+  # type 3: TP1 < 3, TP2 > 2
+  inds3 <- which(df$tp1_cl_size < 3 & df$tp2_cl_size > 2)
+  df$type[inds3] <- "Type3"
+  # type 4: TP1 < 3, TP2 < 3
+  inds4 <- which(df$tp1_cl_size < 3 & df$tp2_cl_size < 3)
+  df$type[inds4] <- "Type4"
+  assert("No clusters with unassigned type", !any(is.na(df$type)))
+  return(df)
+}
+
 # Identifying the first and last time each TPX cluster was seen in TPX - flags (for TP1 and TP2 individually)
 flaggingClusters <- function(tp_comps, tpx) {
   t_fal <- tp_comps %>% group_by(composition) %>% slice(1, n()) %>% 
@@ -137,11 +155,3 @@ convertAndSave <- function(ip, op) {
     write.table(., op, row.names = FALSE, quote = FALSE, sep = "\t")
 }
 
-# isolate column names
-# # set_colnames(c("Strain", "Novel", "First time this cluster was seen in TP2", "TP2 height", "TP2 cluster", 
-#                "TP2 cluster size", "Last time this cluster was seen in TP2", "TP1 ID", "TP1 height", "TP1 cluster",
-#                "TP1 cluster size", "First time this cluster was seen in TP1", 
-#                "Last time this cluster was seen in TP1", "Number of additional TP1 strains in the TP2 match", 
-#                "Number of novels in the TP2 match", "Actual cluster size change (TP2 size - TP1 size)", 
-#                "Actual growth rate = (TP2 size - TP1 size) / (TP1 size)", 
-#                "Novel growth = (TP2 size) / (TP2 size - number of novels)")) %>% 
