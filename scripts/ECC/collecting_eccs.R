@@ -14,7 +14,12 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   source_pw <- read_tsv(source_file) %>% 
     mutate(Source.Dist = 1- value) %>% select(-value)
   
-  temp_pw <- generateDistances(strain_data, "temp", "Date", "Temp.Dist")
+  # part1:
+  temp_pw_1 <- generateDistances(strain_data[1:7000,], "temp", "Date", "Temp.Dist")
+  temp_pw_2 <- generateDistances(strain_data[7001:14000,], "temp", "Date", "Temp.Dist")
+  # look into a method that runs the distances when given two separate vectors (then we can 
+  # avoid the extra work that comes with overlapping)
+  # temp_pw <- generateDistances(strain_data, "temp", "Date", "Temp.Dist")
   geog_pw <- generateDistances(strain_data, "geo", c("Latitude", "Longitude"), "Geog.Dist")
 
   geog_temp_tr <- left_join(geog_pw$transformed, temp_pw$transformed, by = c("Strain.1", "Strain.2"))
@@ -29,7 +34,7 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   eccs <- lapply(typing_data, function(typing_datum) {
     g_cuts <- typing_datum %>% rownames_to_column("genome") %>% as_tibble()
     # Method with singletons merged separately, for speed/efficiency:
-    epi_cohesion_sep(g_cuts, epi.matrix, cpus = cpus)
+    epi_cohesion_sep(g_cuts, epi.matrix, cpus)
     # Original method: epi_cohesion_calc(g_cuts, epi.matrix, cpus = cpus)
   })
 
@@ -46,43 +51,44 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   }) %>% set_names(newnames) %>% 
     Reduce(function(...) right_join(..., by = "Strain"), .)
   
-  # Adding basic average columns (Date, Longitude, Latitude)
-  avg_raw <- strain_data %>% select(Strain, Date, Longitude, Latitude)
-  cnames <- colnames(ecc_data) %>% grep("Size|ECC", ., value = TRUE, invert = TRUE)
-  df <- ecc_data %>% select(all_of(cnames)) %>% set_colnames(c("Strain", "TP1", "TP2"))
-  
-  avg_tp1 <- df %>% basicAverages(., as.name("TP1"), avg_raw) %>% arrange(Strain) %>% select(-TP1)
-  avg_tp2 <- df %>% basicAverages(., as.name("TP2"), avg_raw) %>% arrange(Strain) %>% select(-TP2)
-
-  
-  # Adding distance averages
-  clusters <- ecc_data %>% select(Strain, grep("Size|ECC", colnames(.), value = TRUE, invert = TRUE)) %>% 
-    rename(TP1 = grep("TP1", colnames(.), value = TRUE),
-           TP2 = grep("TP2", colnames(.), value = TRUE))
-
-  # matching to see which pairs are found in the same cluster
-  pw_dists <- left_join(geog_pw$raw, temp_pw$raw, by = c("Strain.1", "Strain.2")) %>% 
-    left_join(., clusters, by = c("Strain.1" = "Strain")) %>% 
-    rename(first_in_TP1 = TP1, first_in_TP2 = TP2) %>% 
-    left_join(., clusters, by = c("Strain.2" = "Strain")) %>% 
-    rename(second_in_TP1 = TP1, second_in_TP2 = TP2)
-
-  dist_avgs <- lapply(c("TP1", "TP2"), function(i) {
-    x1 <- grep(i, colnames(pw_dists), value = TRUE)
-    a1 <- as.name(x1[1])
-    a2 <- as.name(x1[2])  
-    pw_dists %>% filter(all_of({{a1}}) == {{a2}}) %>% 
-      rename(TPX = all_of(a1)) %>% group_by(TPX) %>% 
-      summarise(TPX_avg_geo_dist = mean(Geog.Dist), TPX_avg_temp_dist = mean(Temp.Dist)) %>% 
-      set_colnames(gsub("TPX", i, colnames(.))) %>% 
-      left_join(clusters, .) %>% select(-TP1, -TP2)
-  }) %>% Reduce(function(...) left_join(..., by = "Strain"), .)
-    
-  results <- left_join(ecc_data, avg_tp1, by = "Strain") %>% 
-    left_join(., avg_tp2, by = "Strain") %>% 
-    left_join(., dist_avgs, by = "Strain")
-  
-  return(results)
+  # # Adding basic average columns (Date, Longitude, Latitude)
+  # avg_raw <- strain_data %>% select(Strain, Date, Longitude, Latitude)
+  # cnames <- colnames(ecc_data) %>% grep("Size|ECC", ., value = TRUE, invert = TRUE)
+  # df <- ecc_data %>% select(all_of(cnames)) %>% set_colnames(c("Strain", "TP1", "TP2"))
+  # 
+  # avg_tp1 <- df %>% basicAverages(., as.name("TP1"), avg_raw) %>% arrange(Strain) %>% select(-TP1)
+  # avg_tp2 <- df %>% basicAverages(., as.name("TP2"), avg_raw) %>% arrange(Strain) %>% select(-TP2)
+  # 
+  # 
+  # # Adding distance averages
+  # clusters <- ecc_data %>% select(Strain, grep("Size|ECC", colnames(.), value = TRUE, invert = TRUE)) %>% 
+  #   rename(TP1 = grep("TP1", colnames(.), value = TRUE),
+  #          TP2 = grep("TP2", colnames(.), value = TRUE))
+  # 
+  # # matching to see which pairs are found in the same cluster
+  # pw_dists <- left_join(geog_pw$raw, temp_pw$raw, by = c("Strain.1", "Strain.2")) %>% 
+  #   left_join(., clusters, by = c("Strain.1" = "Strain")) %>% 
+  #   rename(first_in_TP1 = TP1, first_in_TP2 = TP2) %>% 
+  #   left_join(., clusters, by = c("Strain.2" = "Strain")) %>% 
+  #   rename(second_in_TP1 = TP1, second_in_TP2 = TP2)
+  # 
+  # dist_avgs <- lapply(c("TP1", "TP2"), function(i) {
+  #   x1 <- grep(i, colnames(pw_dists), value = TRUE)
+  #   a1 <- as.name(x1[1])
+  #   a2 <- as.name(x1[2])  
+  #   pw_dists %>% filter(all_of({{a1}}) == {{a2}}) %>% 
+  #     rename(TPX = all_of(a1)) %>% group_by(TPX) %>% 
+  #     summarise(TPX_avg_geo_dist = mean(Geog.Dist), TPX_avg_temp_dist = mean(Temp.Dist)) %>% 
+  #     set_colnames(gsub("TPX", i, colnames(.))) %>% 
+  #     left_join(clusters, .) %>% select(-TP1, -TP2)
+  # }) %>% Reduce(function(...) left_join(..., by = "Strain"), .)
+  #   
+  # results <- left_join(ecc_data, avg_tp1, by = "Strain") %>% 
+  #   left_join(., avg_tp2, by = "Strain") %>% 
+  #   left_join(., dist_avgs, by = "Strain")
+  # 
+  # return(results)
+  return(ecc_data)
 }
 
 basicAverages <- function(df, tp, avg_raw) {

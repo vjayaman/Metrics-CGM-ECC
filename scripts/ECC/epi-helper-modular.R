@@ -19,6 +19,7 @@ distMatrix <- function(input_data, dtype, cnames) {
       as.matrix(nrow = nrow(input_data), ncol = nrow(input_data)) %>% return()
     
   }else if (dtype == "geo") {
+    # consider using geosphere::distm() for this
     input_data %>% select(all_of(cnames)) %>% as.data.frame() %>% 
       earth.dist(dist = TRUE) %>% 
       as.matrix() %>% return()

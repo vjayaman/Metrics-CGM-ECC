@@ -30,21 +30,24 @@ epi_cohesion_sep <- function(g_cuts, epi_matrix, cpus){
   cut_cluster_members <- cut_cluster_members %>% 
     add_column(cluster_size = map_int(cut_cluster_members$members, length))
   
-  singletons <- cut_cluster_members %>% filter(cluster_size == 1) %>% 
-    mutate(across(members, unlist)) %>% mutate(mem2 = members) %>% 
-    left_join(., epi_melt_joined, by = c("members" = "Var1", "mem2" = "Var2")) %>% 
-    rename(s1 = value) %>% select(-mem2) %>% 
-    mutate(across(members, as.list))
-
-  # print("Part 3")
+  # non-singletons:
   others <- cut_cluster_members %>% filter(cluster_size != 1) %>% 
     mutate(s1 = map_dbl(members, calculate_s1))
   
-  bind_rows(singletons, others) %>% arrange(cluster) %>%
-    mutate(
-      ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))
-      # W_ECC = ECC * cluster_size
-    ) %>%
+  # print("Part 3")
+  singletons <- cut_cluster_members %>% filter(cluster_size == 1)
+  if (nrow(singletons) > 0) {
+    singletons %<>% mutate(across(members, unlist)) %>% mutate(mem2 = members) %>% 
+      left_join(., epi_melt_joined, by = c("members" = "Var1", "mem2" = "Var2")) %>% 
+      rename(s1 = value) %>% select(-mem2) %>% 
+      mutate(across(members, as.list))
+    full_set <- bind_rows(singletons, others)
+  }else {
+    full_set <- others
+  }
+
+  full_set %>% arrange(cluster) %>%
+    mutate(ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))) %>%
     select(-cut, -members, -s1) %>% 
     set_colnames(c(names(g_cuts)[2], paste0(names(g_cuts)[2], "_Size"), 
                    paste0(names(g_cuts)[2], "_ECC")))
