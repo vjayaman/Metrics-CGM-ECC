@@ -13,16 +13,16 @@ generateDistances <- function(input_data, dtype, cnames, newcol) {
 
 distMatrix <- function(input_data, dtype, cnames) {
   if (dtype == "temp") {
-    input_data %>% select(all_of(cnames)) %>% 
-      pull() %>% 
-      dist(diag = TRUE, upper = TRUE, method = "euclidean") %>% 
-      as.matrix(nrow = nrow(input_data), ncol = nrow(input_data)) %>% return()
+    dm <- input_data %>% select(all_of(cnames)) %>% pull() %>% 
+      dist(diag = FALSE, upper = FALSE, method = "euclidean")
+      # bigmemory::as.big.matrix() %>% return()
+      # dist(diag = TRUE, upper = TRUE, method = "euclidean")
+    dm %>% as.matrix(nrow = nrow(input_data), ncol = nrow(input_data)) %>% return()
     
   }else if (dtype == "geo") {
     # consider using geosphere::distm() for this
-    input_data %>% select(all_of(cnames)) %>% as.data.frame() %>% 
-      earth.dist(dist = TRUE) %>% 
-      as.matrix() %>% return()
+    dm <- input_data %>% select(all_of(cnames)) %>% as.data.frame() %>% earth.dist(dist = TRUE)
+    dm %>% as.matrix() %>% return()
   }
 }
 

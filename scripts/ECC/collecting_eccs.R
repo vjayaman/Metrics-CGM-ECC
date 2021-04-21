@@ -14,12 +14,9 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   source_pw <- read_tsv(source_file) %>% 
     mutate(Source.Dist = 1- value) %>% select(-value)
   
-  # part1:
-  temp_pw_1 <- generateDistances(strain_data[1:7000,], "temp", "Date", "Temp.Dist")
-  temp_pw_2 <- generateDistances(strain_data[7001:14000,], "temp", "Date", "Temp.Dist")
   # look into a method that runs the distances when given two separate vectors (then we can 
   # avoid the extra work that comes with overlapping)
-  # temp_pw <- generateDistances(strain_data, "temp", "Date", "Temp.Dist")
+  temp_pw <- generateDistances(strain_data, "temp", "Date", "Temp.Dist")
   geog_pw <- generateDistances(strain_data, "geo", c("Latitude", "Longitude"), "Geog.Dist")
 
   geog_temp_tr <- left_join(geog_pw$transformed, temp_pw$transformed, by = c("Strain.1", "Strain.2"))
@@ -27,6 +24,7 @@ oneCombo <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data)
   ## This generates a table of your comparisons based on your epidemiological data (source, time, geographical) 
   ## with the assigned weights of s, t and g and then computes the similarity/distance and generates a matrix
   epi.table <- EpiTable(strain_data, source_pw, sigma, tau, gamma, geog_temp_tr)
+  saveRDS(epi.table, "epitable.Rds")
   epi.matrix <- EpiMatrix(epi.table)
   
   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data

@@ -196,9 +196,67 @@ EpiTable <- function(datafile, source_matrix, source_coeff, temp_coeff, geog_coe
   str.matrix
 }  
 
+# datafile <- strain_data; source_matrix <- source_pw; source_coeff <- sigma; temp_coeff <- tau
+# geog_coeff <- gamma; geog_temp <- matched
+EpiTable2 <- function(datafile, source_matrix, source_coeff, temp_coeff, geog_coeff, geog_temp){
+  #### Read data into memory from previous outputs ####
+  
+  x <- source_coeff 
+  y <- temp_coeff
+  z <- geog_coeff
+  
+  #### Create the pairwise table for lookups ####
+  d <- expand.grid(1:nrow(datafile), 1:nrow(datafile))
+  d1 <- d[,1]
+  d2 <- d[,2]
+  
+  # split into two steps, since it seems to seems to reduce memory usage  
+  if (x == 0) {
+    strain_sims <- tibble(
+      "Strain.1" = datafile[d1, "Strain"]  %>% pull (),
+      "Strain.2" = datafile[d2, "Strain"]  %>% pull (),
+      "Date.1"   = datafile[d1, "Date"]  %>% pull (),
+      "Date.2"   = datafile[d2, "Date"]  %>% pull (),
+      "Location.1" = datafile[d1, "Location"]  %>% pull (),
+      "Location.2" = datafile[d2, "Location"] %>% pull()
+    )
+    
+    # This is necessary (otherwise any NA values in the Source.Dist column make Total.Dist and Epi.Sym NA as well. 
+    # There is a better way to handle this; will work on that.)
+    str.matrix <- strain_sims %>% 
+      left_join(geog_temp, by = c("Strain.1", "Strain.2")) %>% 
+      mutate(
+        Total.Dist = sqrt( ((Temp.Dist^2)*y) + ((Geog.Dist^2)*z) ),
+        Epi.Sym = 1 - Total.Dist
+      )    
+  }else {
+    strain_sims <- tibble(
+      "Strain.1" = datafile[d1, "Strain"]  %>% pull (),
+      "Strain.2" = datafile[d2, "Strain"]  %>% pull (),
+      "Source.1" = datafile[d1, "Source"]  %>% pull (),
+      "Source.2" = datafile[d2, "Source"]  %>% pull (),
+      "Date.1"   = datafile[d1, "Date"]  %>% pull (),
+      "Date.2"   = datafile[d2, "Date"]  %>% pull (),
+      "Location.1" = datafile[d1, "Location"]  %>% pull (),
+      "Location.2" = datafile[d2, "Location"] %>% pull()
+    )
+    
+    str.matrix <-
+      strain_sims %>% 
+      left_join(source_matrix, by = c("Source.1", "Source.2")) %>% 
+      left_join(geog_temp, by = c("Strain.1", "Strain.2")) %>% 
+      mutate(
+        Total.Dist = sqrt( (((Source.Dist^2)*x) + ((Temp.Dist^2)*y) + ((Geog.Dist^2)*z)) ),
+        Epi.Sym = 1 - Total.Dist
+      ) 
+  }
+  
+  str.matrix
+}  
+
 ##########################################################################################################
 ######## Function to return matrix of just strains and final similarity scores for building graphics #####
-
+# epi.matrix <- str.matrix
 EpiMatrix <- function(epi.matrix){
 
   # epi.matrix <- epi.matrix[,c(1,2,12)] 
@@ -214,28 +272,28 @@ EpiMatrix <- function(epi.matrix){
   epi.cast
 }
 
-##########################################################################################
-######## Function to return a heatmap of the final EPIMATRIX function ####################
-EpiHeatmap_d3 <- function(m){
-#   heatcolor<- colorRampPalette(c("darkgreen","yellowgreen","white"))(512)
-  heatcolor<- colorRampPalette(c("white","yellowgreen","darkgreen"))(512)
-  d3heatmap(m, dendrogram = 'both', colors=rev(heatcolor), Rowv = T, 
-            reorderfun = function(d, w) rev(reorder(d, w)),
-            revC=TRUE, hclustfun = function(x) hclust(x,method = 'single'))
-}
-
-EpiHeatmap_pdf <- function(m){
-  heatcolor<- colorRampPalette(c("white","yellowgreen","darkgreen"))(512)
-  # heatcolor<- colorRampPalette(c("#efedf5", "#bcbddc", "#756bb1"))(512)
-  # heatcolor<- colorRampPalette(c('#eff3ff','#bdd7e7','#6baed6','#3182bd','#08519c'))(512)
-  plot <- heatmap.2(m, col=rev(heatcolor), Rowv = T, Colv = 'Rowv', trace='none',
-            srtCol = 45, key.title = NA, key.ylab=NA,
-            revC=T, margins = c(10,10), keysize = 1.3, key = T,
-            xlab=NULL, ylab=NULL, 
-            labRow = NA, labCol = NA,
-            hclustfun = function(x) hclust(x,method = 'single'))
-  # data <- m[plot$rowInd, plot$colInd]
-  # return(list(plot, data))
+# ##########################################################################################
+# ######## Function to return a heatmap of the final EPIMATRIX function ####################
+# EpiHeatmap_d3 <- function(m){
+# #   heatcolor<- colorRampPalette(c("darkgreen","yellowgreen","white"))(512)
+#   heatcolor<- colorRampPalette(c("white","yellowgreen","darkgreen"))(512)
+#   d3heatmap(m, dendrogram = 'both', colors=rev(heatcolor), Rowv = T, 
+#             reorderfun = function(d, w) rev(reorder(d, w)),
+#             revC=TRUE, hclustfun = function(x) hclust(x,method = 'single'))
+# }
+# 
+# EpiHeatmap_pdf <- function(m){
+#   heatcolor<- colorRampPalette(c("white","yellowgreen","darkgreen"))(512)
+#   # heatcolor<- colorRampPalette(c("#efedf5", "#bcbddc", "#756bb1"))(512)
+#   # heatcolor<- colorRampPalette(c('#eff3ff','#bdd7e7','#6baed6','#3182bd','#08519c'))(512)
+#   plot <- heatmap.2(m, col=rev(heatcolor), Rowv = T, Colv = 'Rowv', trace='none',
+#             srtCol = 45, key.title = NA, key.ylab=NA,
+#             revC=T, margins = c(10,10), keysize = 1.3, key = T,
+#             xlab=NULL, ylab=NULL, 
+#             labRow = NA, labCol = NA,
+#             hclustfun = function(x) hclust(x,method = 'single'))
+#   # data <- m[plot$rowInd, plot$colInd]
+#   # return(list(plot, data))
 }
 
 
