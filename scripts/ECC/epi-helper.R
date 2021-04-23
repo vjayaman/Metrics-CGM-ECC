@@ -1,91 +1,91 @@
-
-##########################################################################################
-######## Function for generating time data from input datafile ###########################
-temp_calc <- function(input_data){
-  #### import data from data file ####
-  timedata <- input_data %>% 
-    # mutate(date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
-    select(Date) %>% 
-    pull() %>% 
-    dist(diag=TRUE, upper=TRUE, method = 'euclidean') %>% 
-    as.matrix(nrow = nrow(input_data), ncol=nrow(input_data)) %>% 
-    add(10) %>% 
-    log10()
-    
-  #timedata <- read.delim(file="datafile.txt", header=TRUE, sep="\t")
-  
-  #### Create a new column to contain the concatenated temporal data ####
-  # timedata$date <- NA
-  # timedata$date <- as.Date(paste(timedata$Year, timedata$Month, timedata$Day, sep = "-"))
-  #### Create an empty matrix and populate it with the pairwise distances ####
-  # time_matrix <- matrix(data = NA, nrow=nrow(timedata), ncol=nrow(timedata))
-  # time_matrix <- as.matrix(dist(x=timedata$date, diag=TRUE, upper=TRUE, method = 'euclidean'), nrow=nrow(timedata), ncol=nrow(timedata))
-
-  #Make 10 days the startpoint for dropping off in similarity - i.e. 10 days = 100% similar still
-  # time_matrix[time_matrix < 10] <- 10
-  # time_matrix <- time_matrix + 10
-  #### Convert all the distances to a log value and normalize them to [0:1] ####
-  # timedata <- log(time_matrix, base = 10) 
-  timedata[timedata == -Inf ] <- 0
-  
-  if(max(timedata) == 0){
-    timedata <- 0
-  } else {
-    timedata <- ((timedata-min(timedata)) / (max(timedata)-min(timedata)))
-  }
-  
-  #### Import row and column names from the original datafile and melt data for easy reading ####
-  matrix_names <- input_data %>% select(Strain) %>% pull()
-  rownames(timedata) <- matrix_names
-  colnames(timedata) <- matrix_names
-  
-  time_melt <- 
-    timedata %>% 
-    melt(varnames = c("Strain.1", "Strain.2"), value.name = "Temp.Dist") %>% 
-    as_tibble()
-  
-  time_melt
-}  
-
-##########################################################################################
-######## Function for generating geography data from input datafile ######################
-geog_calc <- function(geogdata){
-  
-  #### Read data table from project folder - this contains locations and their GPS Coordinates ####  
-
-  #### Create a matrix containing the pair-wise distances (in km) between all the locations using the fossil package ####
-  geog_matrix <-
-    geogdata %>% 
-    select(Latitude, Longitude) %>%
-    as.data.frame() %>% 
-    earth.dist(dist=TRUE) %>% 
-    as.matrix() %>%
-    add(10) %>%
-    log10()
-  
-  #### Calculate the maximum distance in the matrix and divide all values by it to arrive at a max distance of 1 ####
-  # geog_matrix[geog_matrix < 10] <- 10
-  # geog_matrix <- geog_matrix + 10
-  # geog_matrix <- log10(geog_matrix)
-  
-  if(max(geog_matrix) == 1){
-      geog_matrix[1:nrow(geog_matrix), 1:nrow(geog_matrix)] <- 0
-    } else {
-      geog_matrix <- ((geog_matrix-min(geog_matrix)) / (max(geog_matrix)-min(geog_matrix)))
-    }
-  #### Import row and column names from the original datafile ####
-  matrix_names <- geogdata %>% select(Strain) %>% pull()
-  colnames(geog_matrix) <- matrix_names
-  rownames(geog_matrix) <- matrix_names
-  
-  #### Create a melted pairwise distance table for easier readability ####
-  geog_melt <- 
-    geog_matrix %>% 
-    melt(varnames = c("Strain.1", "Strain.2"), value.name = "Geog.Dist") %>%
-    as_tibble()
-  
-  geog_melt
-}
+# 
+# ##########################################################################################
+# ######## Function for generating time data from input datafile ###########################
+# temp_calc <- function(input_data){
+#   #### import data from data file ####
+#   timedata <- input_data %>% 
+#     # mutate(date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
+#     select(Date) %>% 
+#     pull() %>% 
+#     dist(diag=TRUE, upper=TRUE, method = 'euclidean') %>% 
+#     as.matrix(nrow = nrow(input_data), ncol=nrow(input_data)) %>% 
+#     add(10) %>% 
+#     log10()
+#     
+#   #timedata <- read.delim(file="datafile.txt", header=TRUE, sep="\t")
+#   
+#   #### Create a new column to contain the concatenated temporal data ####
+#   # timedata$date <- NA
+#   # timedata$date <- as.Date(paste(timedata$Year, timedata$Month, timedata$Day, sep = "-"))
+#   #### Create an empty matrix and populate it with the pairwise distances ####
+#   # time_matrix <- matrix(data = NA, nrow=nrow(timedata), ncol=nrow(timedata))
+#   # time_matrix <- as.matrix(dist(x=timedata$date, diag=TRUE, upper=TRUE, method = 'euclidean'), nrow=nrow(timedata), ncol=nrow(timedata))
+# 
+#   #Make 10 days the startpoint for dropping off in similarity - i.e. 10 days = 100% similar still
+#   # time_matrix[time_matrix < 10] <- 10
+#   # time_matrix <- time_matrix + 10
+#   #### Convert all the distances to a log value and normalize them to [0:1] ####
+#   # timedata <- log(time_matrix, base = 10) 
+#   timedata[timedata == -Inf ] <- 0
+#   
+#   if(max(timedata) == 0){
+#     timedata <- 0
+#   } else {
+#     timedata <- ((timedata-min(timedata)) / (max(timedata)-min(timedata)))
+#   }
+#   
+#   #### Import row and column names from the original datafile and melt data for easy reading ####
+#   matrix_names <- input_data %>% select(Strain) %>% pull()
+#   rownames(timedata) <- matrix_names
+#   colnames(timedata) <- matrix_names
+#   
+#   time_melt <- 
+#     timedata %>% 
+#     melt(varnames = c("Strain.1", "Strain.2"), value.name = "Temp.Dist") %>% 
+#     as_tibble()
+#   
+#   time_melt
+# }  
+# 
+# ##########################################################################################
+# ######## Function for generating geography data from input datafile ######################
+# geog_calc <- function(geogdata){
+#   
+#   #### Read data table from project folder - this contains locations and their GPS Coordinates ####  
+# 
+#   #### Create a matrix containing the pair-wise distances (in km) between all the locations using the fossil package ####
+#   geog_matrix <-
+#     geogdata %>% 
+#     select(Latitude, Longitude) %>%
+#     as.data.frame() %>% 
+#     earth.dist(dist=TRUE) %>% 
+#     as.matrix() %>%
+#     add(10) %>%
+#     log10()
+#   
+#   #### Calculate the maximum distance in the matrix and divide all values by it to arrive at a max distance of 1 ####
+#   # geog_matrix[geog_matrix < 10] <- 10
+#   # geog_matrix <- geog_matrix + 10
+#   # geog_matrix <- log10(geog_matrix)
+#   
+#   if(max(geog_matrix) == 1){
+#       geog_matrix[1:nrow(geog_matrix), 1:nrow(geog_matrix)] <- 0
+#     } else {
+#       geog_matrix <- ((geog_matrix-min(geog_matrix)) / (max(geog_matrix)-min(geog_matrix)))
+#     }
+#   #### Import row and column names from the original datafile ####
+#   matrix_names <- geogdata %>% select(Strain) %>% pull()
+#   colnames(geog_matrix) <- matrix_names
+#   rownames(geog_matrix) <- matrix_names
+#   
+#   #### Create a melted pairwise distance table for easier readability ####
+#   geog_melt <- 
+#     geog_matrix %>% 
+#     melt(varnames = c("Strain.1", "Strain.2"), value.name = "Geog.Dist") %>%
+#     as_tibble()
+#   
+#   geog_melt
+# }
 
 ##########################################################################################################
 ######## Function to return table of all the epi-similarities and final strain similarity ################
@@ -294,6 +294,6 @@ EpiMatrix <- function(epi.matrix){
 #             hclustfun = function(x) hclust(x,method = 'single'))
 #   # data <- m[plot$rowInd, plot$colInd]
 #   # return(list(plot, data))
-}
+# }
 
 
