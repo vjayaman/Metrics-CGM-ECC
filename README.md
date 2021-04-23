@@ -5,7 +5,9 @@ Merged work on the two separate projects (status before initial merge
 can be found at: <https://github.com/vjayaman/EQProject> and
 <https://github.com/vjayaman/ClusterGrowthMetrics>)
 
-## Method 1 (WIP):
+(For latest WIP - not ready for use - see the different branches)
+
+## Method 1:
 
 1. Download latest (development) version from **main** branch
 
