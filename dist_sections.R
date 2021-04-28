@@ -1,4 +1,90 @@
 # ---------------------------------------------------------------------------------------------------
+source("ztest.R")
+# Note: dr stands for data representative
+newECCS <- function(strain_data, sigma, tau, gamma, cpus, typing_data) {
+
+  assignments <- strain_data %>% select(Date, Latitude, Longitude, Location) %>% 
+    unique() %>% rownames_to_column("dr")
+  
+  # Temporal distances - all possible date pair distances
+  date_assignments <- assignments %>% select(dr, Date)
+  dm_temp <- pairwiseDists(date_assignments, "temp", "Date", c("dr1", "dr2", "Temp.Dist"))
+  
+  # Geographical distances - all possible lat-long pair distances
+  geo_assignments <- assignments %>% select(dr, Latitude, Longitude)
+  dm_geo <- pairwiseDists(geo_assignments, "geo", c("Latitude", "Longitude"), c("dr1", "dr2", "Geog.Dist"))
+  
+  drs <- merge.data.table(dm_temp, dm_geo)
+  
+  # This step brings the duplicated strain pairwise calculations back in
+  # unnecessary use of memory, esp since they're NA since we removed them earlier
+  # epi.table <- EpiTable(strain_data, source_pw, sigma, tau, gamma, matched)
+  epi.table <- drs %>% 
+    mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) ), Epi.Sym = 1 - Total.Dist) %>% 
+    select(dr1, dr2, Total.Dist) %>% as_tibble()
+  # inner_join(dr_matches, ., by = c("dr" = "dr1")) %>%
+  # rename(Strain.1 = Strain) %>% select(-dr) %>%
+  # inner_join(dr_matches, ., by = c("dr" = "dr2")) %>%
+  # rename(Strain.2 = Strain) %>% as_tibble() %>% select(Strain.1, Strain.2, Total.Dist)
+  
+  # epi.matrix <- EpiMatrix(epi.table)
+  epi.matrix <- dcast(epi.table, formula = dr1 ~ dr2, value.var = "Total.Dist")
+  epi.matrix <- as.matrix(epi.matrix[,2:ncol(epi.matrix)]) 
+  rownames(epi.matrix) <- colnames(epi.matrix)
+  
+  dr_matches <- strain_data %>% left_join(., assignments) %>% select(Strain, dr)
+  # drcounts <- dr_matches %>% select(dr) %>% group_by(dr) %>% count() %>% ungroup()
+  # 
+  # new_td_1 <- td[[1]] %>% rownames_to_column("Strain") %>% as_tibble() %>% 
+  #   left_join(., dr_matches) %>% select(-Strain) %>% group_by(T0) %>% count(dr) %>% ungroup()
+  # 
+  # new_td_2 <- td[[2]] %>% rownames_to_column("Strain") %>% as_tibble() %>% 
+  #   left_join(., dr_matches) %>% select(-Strain) %>% group_by(T0) %>% count(dr) %>% ungroup()
+  # # left_join(., dr_matches) %>% select(dr, T0) %>% left_join(., drcounts) %>% unique()
+  # 
+  # g_cuts <- new_td_1
+  # # epi_matrix <- epi.matrix
+  # 
+  # tmp <- g_cuts %>% filter(T0 == 1)
+  # cluster1 <- epi.table %>% filter(dr1 %in% tmp$dr, dr2 %in% tmp$dr)
+  
+  x1 <- td[[2]] %>% rownames_to_column("Strain") %>% as_tibble() %>% filter(T0 == 1)
+  cluster1 <- dr_matches %>% filter(Strain %in% x1$Strain)
+  c1 <- cluster1 %>% select(dr) %>% group_by(dr) %>% count() %>% ungroup()
+  d1 <- epi.table %>% filter(dr1 %in% c1$dr, dr2 %in% c1$dr)
+
+  e1 <- left_join(d1, c1, by = c("dr1" = "dr")) %>% rename(n1 = n) %>% 
+    left_join(., c1, by = c("dr2" = "dr")) %>% rename(n2 = n) %>% 
+    mutate(npairs = n1 * n2, 
+           Total.Sim = 1 - Total.Dist) %>% 
+    mutate(value = npairs * Total.Sim)
+    
+  
+  
+  
+  
+  
+  # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
+  # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
+  # eccs <- lapply(typing_data, function(typing_datum) {
+  #   g_cuts <- typing_datum %>% rownames_to_column("genome") %>% as_tibble()
+  # Method with singletons merged separately, for speed/efficiency:
+  # create similarity values from epi distance matrix:
+  epi_melt <- melt(as.matrix(1-epi_matrix)) %>%
+    mutate(across(c(Var1, Var2), as.character)) %>% as.data.table()
+  
+  g_cuts %<>% filter(T0 == 1)
+  
+  z2 <- epi_cohesion_new(g_cuts, epi_melt)
+  # epi_cohes_cal_na(g_cuts, epi.matrix, cpus)
+  # Original method: epi_cohesion_calc(g_cuts, epi.matrix, cpus = cpus)
+  # })
+  
+  a <- readRDS("eccs.Rds")
+  assert("Newly generated match the original", all(identical(eccs[[1]], a[[1]]), identical(eccs[[2]], a[[2]])))
+}
+
+# ---------------------------------------------------------------------------------------------------
 # source("tmp.R")
 # newECCS <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data) {
 #   strain_data <- read_tsv(strains) %>%
@@ -75,88 +161,91 @@
 # }
 
 # ---------------------------------------------------------------------------------------------------
-source("tmp.R")
-# Note: dr stands for data representative
-newECCS <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data) {
-  strain_data <- read_tsv(strains) %>%
-    mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")),
-           Location = paste(Country, Province, City, sep = "_"))
-  
-  source_pw <- read_tsv(source_file) %>%
-    mutate(Source.Dist = 1- value) %>% select(-value)
-  
-  assignments <- strain_data %>% select(Source, Date, Latitude, Longitude, Location) %>%
-    unique() %>% rownames_to_column("dr")
-  assignments %<>% select(Date) %>% unique() %>% rownames_to_column("Ddr") %>% left_join(assignments, .)
-  assignments %<>% select(Latitude, Longitude) %>% unique() %>% rownames_to_column("Ldr") %>%
-    left_join(assignments, .) %>%
-    mutate(across(c(Ddr, Ldr), as.double))
-  
-  # Temporal distances - all possible date pair distances
-  date_assignments <- assignments %>% select(Ddr, Date) %>% unique()
-  dm_temp <- pairwiseDists(date_assignments, "temp", "Date", c("Ddr1", "Ddr2", "Temp.Dist"))
-  
-  # Geographical distances - all possible lat-long pair distances
-  geo_assignments <- assignments %>% select(Ldr, Latitude, Longitude) %>% unique()
-  dm_geo <- pairwiseDists(geo_assignments, "geo", c("Latitude", "Longitude"), c("Ldr1", "Ldr2", "Geog.Dist"))
-  
-  temp_formatted <- assignments %>% 
-    left_join(., dm_temp, by = c("Ddr" = "Ddr1")) %>%
-    select(dr, Ddr2, Temp.Dist) %>% rename(dr1 = dr) %>%
-    left_join(assignments, ., by = c("Ddr" = "Ddr2")) %>%
-    rename(dr2 = dr) %>% select(dr1, dr2, Temp.Dist) %>% as.data.table()
-  
-  geo_formatted <- assignments %>% left_join(., dm_geo, by = c("Ldr" = "Ldr1")) %>%
-    select(dr, Ldr2, Geog.Dist) %>% rename(dr1 = dr) %>%
-    left_join(assignments, ., by = c("Ldr" = "Ldr2")) %>%
-    rename(dr2 = dr) %>% select(dr1, dr2, Geog.Dist) %>% as.data.table()
-  
-  drs <- merge.data.table(temp_formatted, geo_formatted) %>% arrange(dr1, dr2)
-  dr_matches <- strain_data %>% left_join(., assignments) %>% select(Strain, dr)
-
-  # This step brings the duplicated strain pairwise calculations back in
-  # unnecessary use of memory, esp since they're NA since we removed them earlier
-  # epi.table <- EpiTable(strain_data, source_pw, sigma, tau, gamma, matched)
-  epi.table <- drs %>% 
-    mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) ), Epi.Sym = 1 - Total.Dist) %>% 
-    select(dr1, dr2, Total.Dist) %>% as_tibble()
-    # inner_join(dr_matches, ., by = c("dr" = "dr1")) %>%
-    # rename(Strain.1 = Strain) %>% select(-dr) %>%
-    # inner_join(dr_matches, ., by = c("dr" = "dr2")) %>%
-    # rename(Strain.2 = Strain) %>% as_tibble() %>% select(Strain.1, Strain.2, Total.Dist)
-  
-  # epi.matrix <- EpiMatrix(epi.table)
-  epi.matrix <- dcast(epi.table, formula = dr1 ~ dr2, value.var = "Total.Dist")
-  epi.matrix <- as.matrix(epi.matrix[,2:ncol(epi.matrix)]) 
-  rownames(epi.matrix) <- colnames(epi.matrix)
-
-  drcounts <- dr_matches %>% select(dr) %>% group_by(dr) %>% count() %>% ungroup()
-  
-  new_td_1 <- td[[1]] %>% rownames_to_column("Strain") %>% as_tibble() %>% 
-    left_join(., dr_matches) %>% 
-    select(dr, T0) %>% left_join(., drcounts) %>% unique()
-  
-  new_td_2 <- td[[2]] %>% rownames_to_column("Strain") %>% as_tibble() %>% 
-    left_join(., dr_matches) %>% 
-    select(dr, T0) %>% left_join(., drcounts) %>% unique()
-  
-  # g_cuts <- new_td_2 %>% rename(genome = dr)
-  # epi_matrix <- epi.matrix
-  
-  # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
-  # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
-  eccs <- lapply(typing_data, function(typing_datum) {
-    g_cuts <- typing_datum %>% rownames_to_column("genome") %>% as_tibble()
-    # Method with singletons merged separately, for speed/efficiency:
-    epi_cohesion_sep(g_cuts, epi.matrix, cpus)
-    # epi_cohes_cal_na(g_cuts, epi.matrix, cpus)
-    # Original method: epi_cohesion_calc(g_cuts, epi.matrix, cpus = cpus)
-  })
-
-  a <- readRDS("eccs.Rds")
-  assert("Newly generated match the original", all(identical(eccs[[1]], a[[1]]), identical(eccs[[2]], a[[2]])))
-}
-
+# source("tmp.R")
+# # Note: dr stands for data representative
+# newECCS <- function(strain_data, sigma, tau, gamma, cpus, typing_data) {
+#   # strain_data <- read_tsv(strains) %>%
+#   #   mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")),
+#   #          Location = paste(Country, Province, City, sep = "_"))
+#   
+#   # source_pw <- read_tsv(source_file) %>%
+#   #   mutate(Source.Dist = 1- value) %>% select(-value)
+#   
+#   assignments <- strain_data %>% select(Date, Latitude, Longitude, Location) %>% 
+#     unique() %>% rownames_to_column("dr")
+#   
+#   assignments %<>% select(Date) %>% unique() %>% rownames_to_column("Ddr") %>% left_join(assignments, .)
+#   assignments %<>% select(Latitude, Longitude) %>% unique() %>% rownames_to_column("Ldr") %>%
+#     left_join(assignments, .) %>%
+#     mutate(across(c(Ddr, Ldr), as.double))
+#   
+#   # Temporal distances - all possible date pair distances
+#   date_assignments <- assignments %>% select(Ddr, Date) %>% unique()
+#   dm_temp <- pairwiseDists(date_assignments, "temp", "Date", c("Ddr1", "Ddr2", "Temp.Dist"))
+#   
+#   # Geographical distances - all possible lat-long pair distances
+#   geo_assignments <- assignments %>% select(Ldr, Latitude, Longitude) %>% unique()
+#   dm_geo <- pairwiseDists(geo_assignments, "geo", c("Latitude", "Longitude"), c("Ldr1", "Ldr2", "Geog.Dist"))
+#   
+#   temp_formatted <- assignments %>% 
+#     left_join(., dm_temp, by = c("Ddr" = "Ddr1")) %>%
+#     select(dr, Ddr2, Temp.Dist) %>% rename(dr1 = dr) %>%
+#     left_join(assignments, ., by = c("Ddr" = "Ddr2")) %>%
+#     rename(dr2 = dr) %>% select(dr1, dr2, Temp.Dist) %>% as.data.table()
+#   
+#   geo_formatted <- assignments %>% left_join(., dm_geo, by = c("Ldr" = "Ldr1")) %>%
+#     select(dr, Ldr2, Geog.Dist) %>% rename(dr1 = dr) %>%
+#     left_join(assignments, ., by = c("Ldr" = "Ldr2")) %>%
+#     rename(dr2 = dr) %>% select(dr1, dr2, Geog.Dist) %>% as.data.table()
+#   
+#   drs <- merge.data.table(temp_formatted, geo_formatted) %>% arrange(dr1, dr2)
+# 
+#   # This step brings the duplicated strain pairwise calculations back in
+#   # unnecessary use of memory, esp since they're NA since we removed them earlier
+#   # epi.table <- EpiTable(strain_data, source_pw, sigma, tau, gamma, matched)
+#   epi.table <- drs %>% 
+#     mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) ), Epi.Sym = 1 - Total.Dist) %>% 
+#     select(dr1, dr2, Total.Dist) %>% as_tibble()
+#     # inner_join(dr_matches, ., by = c("dr" = "dr1")) %>%
+#     # rename(Strain.1 = Strain) %>% select(-dr) %>%
+#     # inner_join(dr_matches, ., by = c("dr" = "dr2")) %>%
+#     # rename(Strain.2 = Strain) %>% as_tibble() %>% select(Strain.1, Strain.2, Total.Dist)
+#   
+#   # epi.matrix <- EpiMatrix(epi.table)
+#   epi.matrix <- dcast(epi.table, formula = dr1 ~ dr2, value.var = "Total.Dist")
+#   epi.matrix <- as.matrix(epi.matrix[,2:ncol(epi.matrix)]) 
+#   rownames(epi.matrix) <- colnames(epi.matrix)
+# 
+#   dr_matches <- strain_data %>% left_join(., assignments) %>% select(Strain, dr)
+#   drcounts <- dr_matches %>% select(dr) %>% group_by(dr) %>% count() %>% ungroup()
+#   
+#   new_td_1 <- td[[1]] %>% rownames_to_column("Strain") %>% as_tibble() %>% 
+#     left_join(., dr_matches) %>% select(-Strain) %>% group_by(T0) %>% count(dr) %>% ungroup()
+#   
+#   new_td_2 <- td[[2]] %>% rownames_to_column("Strain") %>% as_tibble() %>% 
+#     left_join(., dr_matches) %>% select(-Strain) %>% group_by(T0) %>% count(dr) %>% ungroup()
+#     # left_join(., dr_matches) %>% select(dr, T0) %>% left_join(., drcounts) %>% unique()
+#   
+#   g_cuts <- new_td_1 %>% rename(genome = dr)
+#   epi_matrix <- epi.matrix
+#   
+#   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
+#   # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
+#   # eccs <- lapply(typing_data, function(typing_datum) {
+#   #   g_cuts <- typing_datum %>% rownames_to_column("genome") %>% as_tibble()
+#     # Method with singletons merged separately, for speed/efficiency:
+#   # create similarity values from epi distance matrix:
+#   epi_melt <- melt(as.matrix(1-epi_matrix)) %>%
+#     mutate(across(c(Var1, Var2), as.character)) %>% as.data.table()
+#   
+#   z2 <- epi_cohesion_new(g_cuts, epi_melt)
+#     # epi_cohes_cal_na(g_cuts, epi.matrix, cpus)
+#     # Original method: epi_cohesion_calc(g_cuts, epi.matrix, cpus = cpus)
+#   # })
+# 
+#   a <- readRDS("eccs.Rds")
+#   assert("Newly generated match the original", all(identical(eccs[[1]], a[[1]]), identical(eccs[[2]], a[[2]])))
+# }
 # -----------------------------------------------------------------------------------------------
 # # source("tmp.R")
 # newECCSRmDup <- function(strains, source_file, sigma, tau, gamma, cpus, typing_data) {

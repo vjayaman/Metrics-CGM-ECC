@@ -4,7 +4,6 @@ epi_cohesion_sep <- function(g_cuts, epi_matrix, cpus){
   
   genome_names <- g_cuts %>% select(genome) %>% pull()
 
-  epi_matrix <- epi.matrix
   epi_melt <- melt(as.matrix(1-epi_matrix)) # create similarity values from epi distance matrix
   
   epi_melt_joined <- 
