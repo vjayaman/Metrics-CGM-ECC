@@ -26,13 +26,15 @@ epi_cohesion_sep <- function(g_cuts, epi_matrix, cpus){
       members = list(cur_data()$genome)
     )
   
-  cut_cluster_members %>% 
+  sums <- cut_cluster_members %>% 
     mutate(
       s1 = map_dbl(members, calculate_s1),
       cluster_size = map_int(members, length),
       ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))
     ) %>% 
-    ungroup() %>% 
+    ungroup()
+  
+  sums %>% 
     select(-cut, -members, -s1) %>% 
     set_colnames(c(names(g_cuts)[2], paste0(names(g_cuts)[2], "_Size"), 
                    paste0(names(g_cuts)[2], "_ECC")))

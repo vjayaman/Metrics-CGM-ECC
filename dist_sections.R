@@ -8,19 +8,13 @@ newECCS <- function(strain_data, sigma, tau, gamma, cpus, typing_data) {
     unique() %>% rownames_to_column("dr")
   
   # Temporal distances - all possible date pair distances
-  dm_temp <- assignments %>% select(dr, Date) %>% 
-    pairwiseDists(., "temp", "Date", c("dr1", "dr2", "Temp.Dist"))
+  dm_temp <- assignments %>% select(dr, Date) %>% pairwiseDists(., "temp", "Date", c("dr1", "dr2", "Temp.Dist"))
   
   # Geographical distances - all possible lat-long pair distances
   dm_geo <- assignments %>% select(dr, Latitude, Longitude) %>% 
     pairwiseDists(., "geo", c("Latitude", "Longitude"), c("dr1", "dr2", "Geog.Dist"))
   
-  drs <- merge.data.table(dm_temp, dm_geo)
-  
-  # Total distances - base for ECCs: 
-  #     total distance = sqrt( (temporal coeff)*(temporal distances)^2 + (geo coeff)*(geographical distances)^2)
-  # removed (for now): Epi.Sym = 1 - Total.Dist
-  epi_table <- drs %>% 
+  epi_table <- merge.data.table(dm_temp, dm_geo) %>% 
     mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>% 
     select(dr1, dr2, Total.Dist) %>% as_tibble()
   
@@ -36,33 +30,18 @@ newECCS <- function(strain_data, sigma, tau, gamma, cpus, typing_data) {
   dr_matches <- strain_data %>% left_join(., assignments) %>% select(Strain, dr)
 
   # From this part on we're testing for a single cluster - cluster 1 at TP1 (with 202 strains, but 122 drs)
-  dr_td1 <- td[[1]] %>% rownames_to_column("Strain") %>% as_tibble() %>% 
-    left_join(., dr_matches) %>% mutate(across(dr, as.numeric)) %>% 
-    filter(T0 == 1) %>% select(-Strain)
-
+  cluster_assignments <- td[[1]] %>% rownames_to_column("Strain") %>% as_tibble()
+  dr_td1 <- cluster_assignments %>% left_join(., dr_matches) %>% 
+    mutate(across(dr, as.character)) %>% select(-Strain)
+  
+  # cluster_size <- nrow(dr_td1)
+  
   # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
-  g_cuts <- dr_td1 %>% count(dr) %>% left_join(dr_td1, .) %>% unique() %>% mutate(across(dr, as.character))
-
-  # # cluster1 <- epi_table %>% filter(dr1 %in% tmp$dr, dr2 %in% tmp$dr)
-  # x1 <- td[[2]] %>% rownames_to_column("Strain") %>% as_tibble() %>% filter(T0 == 1)
-  # cluster1 <- dr_matches %>% filter(Strain %in% x1$Strain)
-  # c1 <- cluster1 %>% select(dr) %>% group_by(dr) %>% count() %>% ungroup()
-  # d1 <- epi_table %>% filter(dr1 %in% c1$dr, dr2 %in% c1$dr)
-  # 
-  # e1 <- left_join(d1, c1, by = c("dr1" = "dr")) %>% rename(n1 = n) %>%
-  #   left_join(., c1, by = c("dr2" = "dr")) %>% rename(n2 = n) %>%
-  #   mutate(npairs = n1 * n2, Total.Sim = 1 - Total.Dist) %>% mutate(value = npairs * Total.Sim)
-  
-  epi_melt <- epi_melt_all %>% filter(Var1 %in% g_cuts$dr, Var2 %in% g_cuts$dr)
-  
-  
+  g_cuts <- dr_td1 %>% group_by(T0) %>% count(dr) %>% ungroup() %>% 
+    left_join(dr_td1, .) %>% unique() %>% mutate(across(dr, as.character))
+  # epi_melt <- epi_melt_all %>% filter(Var1 %in% g_cuts$dr, Var2 %in% g_cuts$dr)
+  epi_melt <- epi_melt_all
   z2 <- epi_cohesion_new(g_cuts, epi_melt)
-  # epi_cohes_cal_na(g_cuts, epi_matrix, cpus)
-  # Original method: epi_cohesion_calc(g_cuts, epi_matrix, cpus = cpus)
-  # })
-  
-  a <- readRDS("eccs.Rds")
-  assert("Newly generated match the original", all(identical(eccs[[1]], a[[1]]), identical(eccs[[2]], a[[2]])))
 }
 
 # ---------------------------------------------------------------------------------------------------

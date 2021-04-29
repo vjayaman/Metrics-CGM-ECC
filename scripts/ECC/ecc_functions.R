@@ -1,16 +1,20 @@
 
 # EPI-HELPER-MODULAR -----------------------------------------------------------------------------
-
+# assignments <- assignments %>% select(dr, Date)
+# type <- "temp"; cnames <- "Date"; newnames <- c("dr1", "dr2", "Temp.Dist")
 pairwiseDists <- function(assignments, type, cnames, newnames) {
-  assignments %>% 
-    distMatrix(., type, cnames) %>% 
-    transformData(., type) %>% 
+  dm <- assignments %>% distMatrix(., type, cnames)
+  # formattedDM <- dm %>% 
+  #   as.data.frame() %>% rownames_to_column("dr1") %>% as.data.table() %>% 
+  #   melt.data.table(., id.vars = "dr1", variable.name = "dr2", 
+  #                   value.name = newnames[3], variable.factor = FALSE) %>% as_tibble()
+  transformed <- transformData(dm, type) %>% 
     as.data.frame() %>% rownames_to_column("dr1") %>% as.data.table() %>% 
     melt.data.table(., id.vars = "dr1", variable.name = "dr2", value.name = newnames[3]) %>%
     as_tibble() %>% 
     mutate(dr2 = as.character(dr2)) %>% 
-    # mutate(across(c(dr1, dr2), as.numeric)) %>% 
-    as.data.table() %>% set_colnames(newnames) %>% return()
+    as.data.table() %>% set_colnames(newnames)
+  return(transformed)
 }
 
 distMatrix <- function(input_data, dtype, cnames) {
@@ -113,43 +117,88 @@ epi_cohesion_sep <- function(g_cuts, epi_matrix, cpus){
 # ECC-SEP-SINGLETONS -----------------------------------------------------------------------------
 # Vasena's edits - for speed improvement on Windows, where we have less control over cores 
 
+# workingEachCluster <- function(g_cuts, epi_melt, strain_drs, cs) {
+#   
+#   genome_names <- g_cuts %>% select(dr) %>% pull()
+#   
+#   epi_melt_joined <-
+#     expand_grid(genome_names, genome_names, .name_repair = function(x) {c("Var1", "Var2")}) %>%
+#     left_join(., epi_melt, by = c("Var1", "Var2")) %>% filter(!is.na(value)) %>% as.data.table()
+#   
+#   epi_melt_joined <- left_join(epi_melt_joined, strain_drs, by = c("Var1" = "dr")) %>% 
+#     select(-Var1) %>% rename(Var1 = Strain) %>% 
+#     left_join(., strain_drs, by = c("Var2" = "dr")) %>% 
+#     select(-Var2) %>% rename(Var2 = Strain) %>% 
+#     select(Var1, Var2, value) %>% arrange(Var1, Var2)
+#   
+#   full_cuts <- g_cuts %>% left_join(., strain_drs) %>% select(T0, Strain)
+#   
+#   calculate_s1 <- function(k) {
+#     epi_melt_joined %>% 
+#       filter(Var1 %in% k & Var2 %in% k) %>%
+#       select(value) %>% pull() %>% sum()
+#   }
+#   
+#   # print("Starting Calculation")
+#   cut_cluster_members <-
+#     full_cuts %>% 
+#     pivot_longer(-Strain, names_to = "cut", values_to = "cluster") %>%
+#     group_by(cut, cluster) %>%
+#     summarise(members = list(cur_data()$Strain), .groups = "drop") %>% 
+#     mutate(cluster_size = map_int(members, length))
+#   
+#   sums <- cut_cluster_members %>% 
+#     mutate(
+#       s1 = map_dbl(members, calculate_s1),
+#       ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))
+#     ) %>% 
+#     ungroup()
+#   
+#   sums %>% 
+#     select(-cut, -members, -s1) %>% 
+#     set_colnames(c(names(g_cuts)[2], paste0(names(g_cuts)[2], "_Size"), 
+#                    paste0(names(g_cuts)[2], "_ECC")))
+# }
+
+
 eachCluster <- function(g_cuts, epi_melt) {
+  
   genome_names <- g_cuts %>% select(dr) %>% pull()
 
   epi_melt_joined <-
     expand_grid(genome_names, genome_names, .name_repair = function(x) {c("Var1", "Var2")}) %>%
     left_join(., epi_melt, by = c("Var1", "Var2")) %>% filter(!is.na(value)) %>% as.data.table()
-
-  drcounts <- g_cuts %>% select(-T0)
   
-  v1counts <- left_join(drcounts, epi_melt, by = c("dr" = "Var1")) %>% rename(Var1 = dr, n1 = n)
-
-  allcounts <- left_join(drcounts, v1counts, by = c("dr" = "Var2")) %>% 
-    rename(Var2 = dr, n2 = n) %>% 
-    select(Var1, Var2, n1, n2, value) %>%
-    rename(nonrepeated = value) %>%
-    mutate(cases = n1 * n2) %>%
-    mutate(value = nonrepeated * cases) %>% as.data.table()
+  drcounts <- g_cuts #g_cuts %>% select(dr, n)
+  sizes <- lapply(unique(drcounts$T0), function(i) {
+    drcounts %>% filter(T0 == i) %>% pull(n) %>% sum() %>% tibble(cluster = i, cluster_size = .) %>% return()
+  }) %>% bind_rows()
+  
+  # allcounts <- left_join(epi_melt, drcounts, by = c("Var1"="dr")) %>% 
+  #   mutate(value2 = value * n) %>% select(-n) %>%
+  #   left_join(., drcounts, by = c("Var2" = "dr")) %>%
+  #   mutate(value3 = value2 * n) %>% select(-n) %>%
+  #   select(Var1, Var2, value3) %>%
+  #   rename(value = value3)
 
   calculate_s1 <- function(k) {
-    allcounts %>% 
+    epi_melt_joined %>%
       filter(Var1 %in% k & Var2 %in% k) %>%
-      select(value) %>% pull() %>% sum()
+      select(value) %>% 
+      pull() %>% 
+      sum()
   }
-
-  # print("Starting Calculation")
+  
   cut_cluster_members <-
     g_cuts %>% select(-n) %>%
     pivot_longer(-dr, names_to = "cut", values_to = "cluster") %>%
     group_by(cut, cluster) %>%
-    summarise(members = list(cur_data()$dr), .groups = "drop")
-
-  # print("Part 2")
-  cut_cluster_members <- cut_cluster_members %>%
-    add_column(cluster_size = map_int(cut_cluster_members$members, length))
-
+    summarise(members = list(cur_data()$dr), .groups = "drop") %>% 
+    left_join(., sizes)
+  
   # non-singletons:
-  others <- cut_cluster_members %>% #filter(cluster_size > 1) %>%
+  k <- cut_cluster_members %>% filter(cluster_size > 1) %>% slice(1) %>% pull(members) %>% unlist()
+  others <- cut_cluster_members %>% filter(cluster_size > 1) %>%
     mutate(s1 = map_dbl(members, calculate_s1))
 
   # print("Part 3")
@@ -165,21 +214,20 @@ eachCluster <- function(g_cuts, epi_melt) {
   }
 
   cval <- full_set$cut %>% unique()
-  csize <- g_cuts %>% filter(T0 == 1) %>% pull(n) %>% sum()
-  
+
   full_set %>% arrange(cluster) %>%
-    mutate(cluster_size = csize) %>% 
     mutate(ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))) %>%
     select(-cut, -members, -s1) %>%
     set_colnames(c(cval, paste0(cval, "_Size"), paste0(cval, "_ECC")))
 }
 
 epi_cohesion_new <- function(g_cuts, epi_melt){
-  x <- g_cuts %>% pull(T0) %>% unique()
-  z <- lapply(x, function(i) {
-    print(i)
-    g_cuts %>% filter(T0 == i) %>% eachCluster(., epi_melt)
-  }) %>% bind_rows()
+  # x <- g_cuts %>% pull(T0) %>% unique()
+  # z <- lapply(x, function(i) {
+    # print(i)
+    # g_cuts %>% filter(T0 == i) %>% 
+      eachCluster(g_cuts, epi_melt) %>% return()
+  # }) %>% bind_rows()
 }
 
 # EPI-HELPER -------------------------------------------------------------------------------------

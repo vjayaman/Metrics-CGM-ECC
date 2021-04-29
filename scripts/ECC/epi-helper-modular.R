@@ -4,6 +4,7 @@
 # assert("New method results == original method results (temp)", 
 #        identical(temp_calc(strain_data), temp_pw$transformed))
 
+# input_data <- strain_data; dtype <- "temp"; cnames <- "Date"; newcol <- "Temp.Dist"
 generateDistances <- function(input_data, dtype, cnames, newcol) {
   dm <- distMatrix(input_data, dtype, cnames)
   raw <- formatMatrix(input_data, dm, newcol)
