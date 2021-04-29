@@ -38,7 +38,7 @@ epi_cohesion_sep <- function(g_cuts, epi_matrix, cpus){
                    paste0(names(g_cuts)[2], "_ECC")))
 
     
-  # # print("Starting Calculation")
+  # print("Starting Calculation")
   # 
   # cut_cluster_members <-
   #   g_cuts %>%
