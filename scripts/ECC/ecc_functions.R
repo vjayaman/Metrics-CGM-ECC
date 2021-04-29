@@ -176,7 +176,6 @@ eachCluster <- function(g_cuts, epi_melt) {
 
 epi_cohesion_new <- function(g_cuts, epi_melt){
   x <- g_cuts %>% pull(T0) %>% unique()
-  x <- x[1:6]
   z <- lapply(x, function(i) {
     print(i)
     g_cuts %>% filter(T0 == i) %>% eachCluster(., epi_melt)
