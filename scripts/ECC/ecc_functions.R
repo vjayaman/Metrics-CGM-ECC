@@ -162,26 +162,25 @@ epi_cohesion_sep <- function(g_cuts, epi_matrix, cpus){
 
 
 
-eachCluster <- function(g_cuts, epi_melt, strain_drs, cs) {
+eachCluster <- function(g_cuts, epi_melt) {
   
-  genome_names <- g_cuts %>% select(dr) %>% pull() %>% unique()
+  dr_names <- g_cuts %>% select(dr) %>% pull() %>% unique()
+  dr_assignments <- g_cuts %>% set_colnames(c("cluster", "dr", "n"))
   
   epi_melt_joined <-
-    expand_grid(genome_names, genome_names, .name_repair = function(x) {c("Var1", "Var2")}) %>%
-    left_join(., epi_melt, by = c("Var1", "Var2")) %>% filter(!is.na(value)) %>% as.data.table()
+    expand_grid(dr_names, dr_names, .name_repair = function(x) {c("Var1", "Var2")}) %>%
+    left_join(., epi_melt, by = c("Var1", "Var2")) %>% as.data.table()
   
-  sizes <- g_cuts[,1] %>% pull() %>% unique() %>% 
-    lapply(., function(h) {
-      g_cuts %>% set_colnames(c("cluster", "dr", "n")) %>% 
-        filter(cluster == h) %>% pull(n) %>% sum() %>% tibble(cluster = h, cluster_size = .)
-    }) %>% bind_rows()
+  sizes <- lapply(unique(dr_assignments$cluster), function(h) {
+    dr_assignments %>% filter(cluster == h) %>% pull(n) %>% sum() %>% tibble(cluster = h, cluster_size = .)
+  }) %>% bind_rows()
   
   calculate_s1 <- function(i) {
     k <- cut_cluster_members %>% filter(cluster == i) %>% pull(members) %>% unlist()
-    matches <- g_cuts %>% filter(T0 == i)
+    matches <- dr_assignments %>% filter(cluster == i)
     epi_melt_joined %>% filter(Var1 %in% k & Var2 %in% k) %>% 
-      left_join(., matches, by = c("Var1" = "dr")) %>% rename(n1 = n) %>% select(-T0) %>% 
-      left_join(., matches, by = c("Var2" = "dr")) %>% rename(n2 = n) %>% select(-T0) %>% 
+      left_join(., matches, by = c("Var1" = "dr")) %>% rename(n1 = n) %>% select(-cluster) %>% 
+      left_join(., matches, by = c("Var2" = "dr")) %>% rename(n2 = n) %>% select(-cluster) %>% 
       mutate(value2 = value * n1 * n2) %>%
       select(value2) %>% pull() %>% sum()
   }
@@ -194,18 +193,16 @@ eachCluster <- function(g_cuts, epi_melt, strain_drs, cs) {
     summarise(members = list(cur_data()$dr), .groups = "drop") %>%
     left_join(., sizes)
   
+  th <- names(g_cuts)[1]
   
-  sums <- cut_cluster_members %>%
+  cut_cluster_members %>%
     mutate(
       s1 = map_dbl(cluster, calculate_s1),
       ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))
     ) %>%
-    ungroup()
-  
-  sums %>%
+    ungroup() %>% 
     select(-cut, -members, -s1) %>%
-    set_colnames(c(names(g_cuts)[2], paste0(names(g_cuts)[2], "_Size"),
-                   paste0(names(g_cuts)[2], "_ECC")))
+    set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC")))
 }
 
 # eachCluster <- function(g_cuts, epi_melt) {
@@ -279,12 +276,7 @@ eachCluster <- function(g_cuts, epi_melt, strain_drs, cs) {
 # }
 
 epi_cohesion_new <- function(g_cuts, epi_melt){
-  # x <- g_cuts %>% pull(T0) %>% unique()
-  # z <- lapply(x, function(i) {
-    # print(i)
-    # g_cuts %>% filter(T0 == i) %>% 
-      eachCluster(g_cuts, epi_melt) %>% return()
-  # }) %>% bind_rows()
+  eachCluster(g_cuts, epi_melt) %>% return()
 }
 
 # EPI-HELPER -------------------------------------------------------------------------------------
