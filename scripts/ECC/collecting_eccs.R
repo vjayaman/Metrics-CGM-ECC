@@ -27,6 +27,8 @@ oneCombo <- function(strain_data, source_file, sigma, tau, gamma, cpus, typing_d
   # saveRDS(epi.table, "epitable.Rds")
   epi.matrix <- EpiMatrix(epi.table)
   
+  # typing_datum <- typing_data[[1]]
+
   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
   # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
   eccs <- lapply(typing_data, function(typing_datum) {

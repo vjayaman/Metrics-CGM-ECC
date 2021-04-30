@@ -30,17 +30,17 @@ newECCS <- function(strain_data, sigma, tau, gamma, cpus, typing_data) {
   dr_matches <- strain_data %>% left_join(., assignments) %>% select(Strain, dr)
 
   # From this part on we're testing for a single cluster - cluster 1 at TP1 (with 202 strains, but 122 drs)
-  cluster_assignments <- td[[1]] %>% rownames_to_column("Strain") %>% as_tibble()
-  dr_td1 <- cluster_assignments %>% left_join(., dr_matches) %>% 
-    mutate(across(dr, as.character)) %>% select(-Strain)
   
-  # cluster_size <- nrow(dr_td1)
+  dr_td1 <- td[[1]] %>% rownames_to_column("Strain") %>% as_tibble() %>% 
+    left_join(., dr_matches) %>% 
+    mutate(across(dr, as.character)) %>% select(-Strain)
   
   # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
   g_cuts <- dr_td1 %>% group_by(T0) %>% count(dr) %>% ungroup() %>% 
     left_join(dr_td1, .) %>% unique() %>% mutate(across(dr, as.character))
   # epi_melt <- epi_melt_all %>% filter(Var1 %in% g_cuts$dr, Var2 %in% g_cuts$dr)
   epi_melt <- epi_melt_all
+  
   z2 <- epi_cohesion_new(g_cuts, epi_melt)
 }
 
