@@ -5,7 +5,7 @@ Merged work on the two separate projects (status before initial merge
 can be found at: <https://github.com/vjayaman/EQProject> and
 <https://github.com/vjayaman/ClusterGrowthMetrics>)
 
-(For latest WIP - not ready for use - see the different branches)
+(For latest WIP - not ready for use - see *Method 3* below)
 
 ## Method 1 (Working development branch):
 
@@ -90,3 +90,15 @@ file:
     As with the other files, the input arguments for this can be left blank to use the default file names.
     
         $ Rscript merge_data.R -e results/ECCs.tsv -c results/CGM_strain_results.txt -s inputs/strain_info.txt
+
+## Method 3 (Not ready for use):
+        - the branch `dist_mat_memory` contains the refactored and latest version, which deals with issues relating to large input datasets (> 35000 samples, for example)
+        - before, a distance matrix of the required size couldn't be held in memory ("R cannot allocate vector of size ...")
+        - this has been dealt with, but I would like to do more testing to be sure the results of this latest method consistently match those of the original method
+        - since we cannot actually run the original method on very large datasets, I'm verifying results using subsampling of the clusters
+        - this should take a day or so
+        - I can stitch the new method back into the pipeline then
+        - and then finish fine-tuning the output changes mentioned in the last meeting
+        - and then this will be merged back into the main branch
+        - after someone else has verified that everything still runs for them as expected
+        - this will be tagged as *v2.0* 
