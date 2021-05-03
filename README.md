@@ -93,23 +93,15 @@ file:
 
 ## Method 3 (Not ready for use):
 
-* the branch `dist_mat_memory` contains the refactored and latest version, which deals with issues relating to large input datasets (> 35000 samples, for example)
+* The branch `dist_mat_memory` contains the refactored and latest version, which deals with issues relating to large input datasets (> 35000 samples, for example).
 
-* before, a distance matrix of the required size couldn't be held in memory ("R cannot allocate vector of size ...")
+* Before, a distance matrix of the required size couldn't be held in memory ("R cannot allocate vector of size ...").
 
-* this has been dealt with, but I would like to do more testing to be sure the results of this latest method consistently match those of the original method
+* This has been dealt with, but I would like to do more testing to be sure the results of this latest method consistently match those of the original method.
 
-* since we cannot actually run the original method on very large datasets, I'm verifying results using subsampling of the clusters
+* Since we cannot actually run the original method on very large datasets, I'm verifying results using subsampling of the clusters, this should take a day or so.
 
-* this should take a day or so
+* I can stitch the new method back into the pipeline then and then finish fine-tuning the output tables changes mentioned in the last meeting.
 
-* I can stitch the new method back into the pipeline then
-
-- and then finish fine-tuning the output tables changes mentioned in the last meeting
-
-- and then this will be merged back into the main branch
-
-- after someone else has verified that everything still runs for them as expected
-
-- this will be tagged as *v2.0* 
+* This will be merged back into the main branch, and after someone else has verified that everything still runs for them as expected, this will be tagged as *v2.0*.
 
