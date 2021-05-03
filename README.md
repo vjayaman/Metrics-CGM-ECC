@@ -7,7 +7,7 @@ can be found at: <https://github.com/vjayaman/EQProject> and
 
 (For latest WIP - not ready for use - see the different branches)
 
-## Method 1:
+## Method 1 (Working development branch):
 
 1. Download latest (development) version from **main** branch
 
