@@ -11,7 +11,7 @@ Testing work will be compiled and added to
 
 (For latest WIP - not ready for use - see *Method 3* below)
 
-## Method 1 (Working development branch):
+## Method 1 (Working development version):
 
 1. Download latest (development) version from **main** branch
 
@@ -31,7 +31,7 @@ Testing work will be compiled and added to
 
         .../Metrics-CGM-ECC/$ bash run_process.sh
 
-## Method 2 (Stable):
+## Method 2 (Stable, verified version):
 
 1. Download version [v1.0](https://github.com/vjayaman/Metrics-CGM-ECC/releases/tag/v1.0)
 
@@ -95,7 +95,7 @@ file:
     
         $ Rscript merge_data.R -e results/ECCs.tsv -c results/CGM_strain_results.txt -s inputs/strain_info.txt
 
-## Method 3 (Not ready for use):
+## Method 3 (Latest version, not ready for use):
 
 * The branch `dist_mat_memory` contains the refactored and latest version, which deals with issues relating to large input datasets (> 35000 samples, for example).
 
