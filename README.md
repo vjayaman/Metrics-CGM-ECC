@@ -2,8 +2,12 @@ Metrics-CGM-ECC
 ================
 
 Merged work on the two separate projects (status before initial merge
-can be found at: <https://github.com/vjayaman/EQProject> and
-<https://github.com/vjayaman/ClusterGrowthMetrics>)
+can be found at: 
+        - <https://github.com/vjayaman/EQProject> and 
+        - <https://github.com/vjayaman/ClusterGrowthMetrics>)
+
+Testing work will be compiled and added to 
+        - <https://github.com/vjayaman/Testing-Metrics-CGM-ECC>
 
 (For latest WIP - not ready for use - see *Method 3* below)
 
