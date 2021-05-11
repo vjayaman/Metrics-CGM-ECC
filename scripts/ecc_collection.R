@@ -22,7 +22,6 @@ checkEncoding <- function(fp) {
   readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
 }
 
-
 option_list <- list(
   make_option(c("-a", "--source"), metavar = "file", default = NULL, help = "Source data"),
   make_option(c("-b", "--strains"), metavar = "file", default = NULL, help = "Strain data"),
@@ -40,7 +39,7 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 
 params <- parse_args(OptionParser(option_list=option_list))
 
-combos <- params$trio %>% strsplit(., "-") %>% unlist()
+combos <- params$duo %>% strsplit(., "-") %>% unlist()
 z <- vector("list", length = length(combos)) %>% set_names(combos)
 
 hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
@@ -55,13 +54,16 @@ strain_data <- read_tsv(params$strains) %>%
          Location = paste(Country, Province, City, sep = "_")) %>% 
   filter(Strain %in% rownames(typing_data[[2]]))
 
-source_pw <- read_tsv(params$source) %>% mutate(Source.Dist = 1- value) %>% select(-value)
+# source_pw <- read_tsv(params$source) %>% mutate(Source.Dist = 1- value) %>% select(-value)
   
 collected_eccs <- lapply(combos, function(x) {
   c1 <- strsplit(x, split = "") %>% unlist() %>% 
-    as.numeric() %>% as.list() %>% set_names(c("sigma", "tau", "gamma"))
-  oneCombo(params$strains, params$source, c1$sigma, c1$tau, c1$gamma, params$cpus, typing_data)
-}) %>% 
+    as.numeric() %>% as.list() %>% set_names(c("tau", "gamma"))
+  epiCollection(strain_data, tau = c1$tau, gamma = c1$gamma, typing_data)
+})# %>% 
+
+saveRDS(collected_eccs, "collected_eccs.Rds")
+
   Reduce(function(...) merge(...), .) %>% as_tibble()
 
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())

@@ -1,6 +1,6 @@
 
 ### Incorporating the allele data with the epidemiological data 
-oneCombo <- function(strain_data, tau, gamma, typing_data) {
+epiCollection <- function(strain_data, tau, gamma, typing_data) {
   cat(paste0("\nCollecting ECC values for temporal = ", tau, ", geo = ", gamma))
   
   # Note: dr stands for data representative
@@ -55,7 +55,11 @@ oneCombo <- function(strain_data, tau, gamma, typing_data) {
     g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>% 
       unique() %>% mutate(across(dr, as.character))
     
-    epi_cohesion_new(g_cuts, epi_melt) %>% return()
+    td_i <- epi_cohesion_new(g_cuts, epi_melt) %>% 
+      set_colnames(c(paste0("TP", i, "_", colnames(.))))
+    colnames(td_i) %<>% gsub("ECC", paste0("ECC.", 1, ".", 0), x = .)
+    
+    return(td_i)
   })
   
   return(eccs)
