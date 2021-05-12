@@ -12,9 +12,7 @@ option_list <- list(
   make_option(c("-i", "--inputdir"), metavar = "dir", default = NULL, help = "Raw inputs directory"), 
   make_option(c("-m", "--metadata"), metavar = "file", default = NULL, help = "Metadata file"),
   make_option(c("-a", "--tp1"), metavar = "file", default = NULL, help = "TP1 cluster assignments"), 
-  make_option(c("-b", "--tp2"), metavar = "file", default = NULL, help = "TP2 cluster assignments"), 
-  make_option(c("-s", "--source"), metavar = "file", default = "use_placeholder", 
-              help = "Source file (place holder will be provided if this is NULL"))
+  make_option(c("-b", "--tp2"), metavar = "file", default = NULL, help = "TP2 cluster assignments"))
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
@@ -88,18 +86,8 @@ outputDetails("Making table for matching TP2 clusters to integers (for metrics p
 processed_tp2 <- intClusters(time2)
 
 # ECC-SPECIFIC INPUT FILES -------------------------------------------------------------------------------------
-# placeholder source file --------------------------------------------------------------------------------------
-if (arg$source == "use_placeholder") {
-  source_data <- tibble(Source.1 = "Placeholder1", Source.2 = "Placeholder2", value = 0)  
-}else {
-  source_data <- file.path(arg$source) %>% 
-    read.table(sep = "\t", header = TRUE, fileEncoding = checkEncoding(.)) %>% as_tibble()
-}
-
 writeData(processed_tp1$new_cols, file.path(arg$inputdir, "processed", "tp1_clusters.txt"))
 writeData(processed_tp2$new_cols, file.path(arg$inputdir, "processed", "tp2_clusters.txt"))
-write.table(source_data, file.path(arg$inputdir, "processed", "source_data.tsv"),
-            row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
 
 outputDetails(paste0("\nFinished process at: ", Sys.time(), "\n||", paste0(rep("-", 14), collapse = ""), " Saved formatted inputs to 'processed' in the ", 
                      arg$inputdir, " directory", paste0(rep("-", 15), collapse = ""), "||"), TRUE)

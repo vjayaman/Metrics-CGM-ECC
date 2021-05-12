@@ -22,16 +22,20 @@ checkEncoding <- function(fp) {
   readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
 }
 
+mergeECCs <- function(eccs, tpx, typing_data) {
+  sapply(eccs, "[", tpx) %>% Reduce(function(...) merge(...), .) %>% 
+    as.data.table() %>% merge.data.table(as.data.table(typing_data), .) %>% return()
+}
+
 option_list <- list(
-  make_option(c("-a", "--source"), metavar = "file", default = NULL, help = "Source data"),
   make_option(c("-b", "--strains"), metavar = "file", default = NULL, help = "Strain data"),
   make_option(c("-c", "--tp1"), metavar = "file", default = NULL, help = "TP1 cluster assignments"),
   make_option(c("-d", "--tp2"), metavar = "file", default = NULL, help = "TP2 cluster assignments"),
   make_option(c("-x", "--heights"), metavar = "character", default = NULL,
               help = "Comma-delimited string of heights to collect ECCs for"),
   make_option(c("-p", "--cpus"), metavar = "numeric", default = NULL, help = "CPUs"),
-  make_option(c("-t", "--trio"), metavar = "character", default = NULL,
-              help = "source, temporal, geographic coefficients"))
+  make_option(c("-t", "--duo"), metavar = "character", default = NULL,
+              help = "temporal, geographic coefficients"))
 
 cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ", 
            paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
@@ -53,26 +57,19 @@ strain_data <- read_tsv(params$strains) %>%
   mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")), 
          Location = paste(Country, Province, City, sep = "_")) %>% 
   filter(Strain %in% rownames(typing_data[[2]]))
-
-# source_pw <- read_tsv(params$source) %>% mutate(Source.Dist = 1- value) %>% select(-value)
   
 collected_eccs <- lapply(combos, function(x) {
   c1 <- strsplit(x, split = "") %>% unlist() %>% 
     as.numeric() %>% as.list() %>% set_names(c("tau", "gamma"))
   epiCollection(strain_data, tau = c1$tau, gamma = c1$gamma, typing_data)
-})# %>% 
+})
 
-saveRDS(collected_eccs, "collected_eccs.Rds")
+full_set <- mergeECCs(collected_eccs, 1, tp1$proc) %>% 
+  merge.data.table(., mergeECCs(collected_eccs, 2, tp2$proc), by = "Strain", all.y = TRUE) %>% 
+  mutate(TP1 = ifelse(is.na(TP1), 0, TP1))
 
-  Reduce(function(...) merge(...), .) %>% as_tibble()
-
-stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
-timeTaken(pt = "ECC data collection", stopwatch) %>% outputDetails(., newcat = TRUE)
-
-full_set <- collected_eccs %>% left_join(., tp1$proc) %>% left_join(., tp2$proc) %>% 
-  mutate(TP1 = ifelse(is.na(TP1), 0, TP1)) %>% arrange(Strain)
-
-write.table(full_set, file = "results/ECCs.tsv", col.names = TRUE, row.names = FALSE, quote = FALSE, sep = "\t")
+write.table(full_set, file = "results/ECCs.tsv", col.names = TRUE, 
+            row.names = FALSE, quote = FALSE, sep = "\t")
 
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 cat(timeTaken(pt = "ECC data collection", stopwatch))

@@ -57,7 +57,7 @@ epiCollection <- function(strain_data, tau, gamma, typing_data) {
     
     td_i <- epi_cohesion_new(g_cuts, epi_melt) %>% 
       set_colnames(c(paste0("TP", i, "_", colnames(.))))
-    colnames(td_i) %<>% gsub("ECC", paste0("ECC.", 1, ".", 0), x = .)
+    colnames(td_i) %<>% gsub("ECC", paste0("ECC.", tau, ".", gamma), x = .)
     
     return(td_i)
   })
