@@ -150,28 +150,34 @@ findingSneakers <- function(novels, q1, q2, matched) {
   did_not_chg <- compmatches %>% filter(tp1_cl_size == tp2_cl_size) %>% add_column(add_TP1 = 0)
   chg <- compmatches %>% filter(tp1_cl_size != tp2_cl_size)
   
-  # identifying the number of additional TP1 strains (sneakers) that show up in the TP2 cluster 
-  # that each TP1 cluster was first tracked to
-  sneakers <- lapply(1:nrow(chg), function(j) {
-    kc <- chg %>% slice(j) # key cluster j
-    tbl1 <- q1 %>% filter(tp1_id == kc$tp1_id) %>% mutate(status = "tp1_cl_size")
-    tbl2 <- q2 %>% filter(tp2_id == kc$tp2_id)
-    # number of novels in the TP2 cluster it kc was tracked to
-    x2 <- tbl2 %>% filter(status == "novs") %>% nrow()
-    # number of sneakers in the TP2 cluster it kc was tracked to
-    x3 <- tbl2 %>% filter(!(isolate %in% tbl1$isolate) & is.na(status)) %>% 
-      mutate(status = "additional_TP1") %>% nrow()
+  if (nrow(chg) > 0) {
+    # identifying the number of additional TP1 strains (sneakers) that show up in the TP2 cluster 
+    # that each TP1 cluster was first tracked to
+    sneakers <- lapply(1:nrow(chg), function(j) {
+      kc <- chg %>% slice(j) # key cluster j
+      tbl1 <- q1 %>% filter(tp1_id == kc$tp1_id) %>% mutate(status = "tp1_cl_size")
+      tbl2 <- q2 %>% filter(tp2_id == kc$tp2_id)
+      # number of novels in the TP2 cluster it kc was tracked to
+      x2 <- tbl2 %>% filter(status == "novs") %>% nrow()
+      # number of sneakers in the TP2 cluster it kc was tracked to
+      x3 <- tbl2 %>% filter(!(isolate %in% tbl1$isolate) & is.na(status)) %>% 
+        mutate(status = "additional_TP1") %>% nrow()
+      
+      c2_tally <- tibble(tp1_cl_size = nrow(tbl1), num_novs = x2, add_TP1 = x3, 
+                         tp2_cl_size = sum(nrow(tbl1), x2, x3))
+      
+      assert(paste0("oneHeight(): Novels check failed for ", kc$tp1_id), kc$num_novs == c2_tally$num_novs)
+      assert(paste0("Composition not calculated properly for ", kc$tp2_id, 
+                    " when tracking ", kc$tp1_id), c2_tally$tp2_cl_size == kc$tp2_cl_size)
+      
+      left_join(kc, c2_tally, by = c("tp1_cl_size", "tp2_cl_size", "num_novs")) %>% return()
+    }) %>% bind_rows()
     
-    c2_tally <- tibble(tp1_cl_size = nrow(tbl1), num_novs = x2, add_TP1 = x3, 
-                       tp2_cl_size = sum(nrow(tbl1), x2, x3))
-    
-    assert(paste0("oneHeight(): Novels check failed for ", kc$tp1_id), kc$num_novs == c2_tally$num_novs)
-    assert(paste0("Composition not calculated properly for ", kc$tp2_id, 
-                  " when tracking ", kc$tp1_id), c2_tally$tp2_cl_size == kc$tp2_cl_size)
-    
-    left_join(kc, c2_tally, by = c("tp1_cl_size", "tp2_cl_size", "num_novs")) %>% return()
-  }) %>% bind_rows()
+    results <- bind_rows(did_not_chg, sneakers)
+  }else {
+    results <- did_not_chg
+  }
   
-  bind_rows(did_not_chg, sneakers) %>% return()
+  results %>% return()
 }
 

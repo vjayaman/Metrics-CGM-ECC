@@ -149,7 +149,17 @@ all_mixed <- isolates_base %>%
 # FULL STRAIN FILE ---------------------------------------------------------------------------------------------
 # note: two types of novel clusters, those that are fully novel, and those that are not
 
-isolates_file <- bind_rows(isolates_base, pure_novels) %>% bind_rows(., all_mixed) %>% 
+if (nrow(pure_novels) > 0) {
+  isolates_file <- bind_rows(isolates_base, pure_novels)  
+}else {
+  isolates_file <- isolates_base
+}
+
+if (nrow(all_mixed) > 0) {
+  isolates_file %<>% bind_rows(., all_mixed)
+}
+ 
+isolates_file %<>% 
   mutate(novel = ifelse(isolate %in% setdiff(tp2$raw$isolate, tp1$raw$isolate), 1, 0)) %>% 
   rename(Strain = isolate)
 isolates_file[,c("tp1_h", "tp2_h")] %<>% apply(., 2, padCol, padval = ph, padchr = "h")
