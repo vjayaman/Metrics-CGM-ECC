@@ -1,13 +1,13 @@
 
 # EPI-HELPER-MODULAR -----------------------------------------------------------------------------
-pairwiseDists <- function(assignments, type, cnames, newnames) {
-  dm <- assignments %>% distMatrix(., type, cnames)
-  transformed <- transformData(dm, type) %>% 
-    as.data.frame() %>% rownames_to_column("dr1") %>% as.data.table() %>% 
-    melt.data.table(., id.vars = "dr1", variable.name = "dr2", value.name = newnames[3]) %>%
-    as_tibble() %>% 
-    mutate(dr2 = as.character(dr2)) %>% 
-    as.data.table() %>% set_colnames(newnames)
+pairwiseDists <- function(dm, type, newnames) {
+  # dm <- assignments %>% distMatrix(., type, cnames)
+  transformed <- transformData(dm, type) %>% formatData(., newnames)
+    # as.data.frame() %>% rownames_to_column("dr1") %>% as.data.table() %>% 
+    # melt.data.table(., id.vars = "dr1", variable.name = "dr2", value.name = newnames[3]) %>%
+    # as_tibble() %>% 
+    # mutate(dr2 = as.character(dr2)) %>% 
+    # as.data.table() %>% set_colnames(newnames)
   return(transformed)
 }
 
@@ -48,6 +48,15 @@ transformData <- function(dm, dtype) {
   return(logdata)
 }
 
+formatData <- function(dm, newnames) {
+  dm %>% 
+    as.data.frame() %>% rownames_to_column("dr1") %>% as.data.table() %>% 
+    melt.data.table(., id.vars = "dr1", variable.name = "dr2", value.name = newnames[3]) %>%
+    as_tibble() %>% 
+    mutate(dr2 = as.character(dr2)) %>% 
+    as.data.table() %>% set_colnames(newnames) %>% return()
+}
+
 epi_cohesion_new <- function(g_cuts, epi_melt) {
   
   dr_names <- g_cuts %>% select(dr) %>% pull() %>% unique()
@@ -61,9 +70,13 @@ epi_cohesion_new <- function(g_cuts, epi_melt) {
     dr_assignments %>% filter(cluster == h) %>% pull(n) %>% sum() %>% tibble(cluster = h, cluster_size = .)
   }) %>% bind_rows()
   
+  
   calculate_s1 <- function(i) {
+    
     k <- cut_cluster_members %>% filter(cluster == i) %>% pull(members) %>% unlist()
+  
     matches <- dr_assignments %>% filter(cluster == i)
+    
     epi_melt_joined %>% filter(Var1 %in% k & Var2 %in% k) %>% 
       left_join(., matches, by = c("Var1" = "dr")) %>% rename(n1 = n) %>% select(-cluster) %>% 
       left_join(., matches, by = c("Var2" = "dr")) %>% rename(n2 = n) %>% select(-cluster) %>% 

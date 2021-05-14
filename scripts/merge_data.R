@@ -4,9 +4,9 @@ libs <- c("optparse","magrittr","tibble", "dplyr", "readr", "testit", "data.tabl
 y <- suppressMessages(lapply(libs, require, character.only = TRUE))
 
 option_list <- list(
-  make_option(c("-e", "--ECCs"), metavar = "file", default = NULL, help = "ECC result file"),
-  make_option(c("-c", "--CGMs"), metavar = "file", default = NULL, help = "CGM result file"),
-  make_option(c("-s", "--strains"), metavar = "file", default = NULL, help = "Strain metadata file"))
+  make_option(c("-e", "--ECCs"), metavar = "file", default = "results/ECCs.tsv", help = "ECC result file"),
+  make_option(c("-c", "--CGMs"), metavar = "file", default = "results/CGM_strain_results.tsv", help = "CGM result file"),
+  make_option(c("-s", "--strains"), metavar = "file", default = "inputs/strain_info.txt", help = "Strain metadata file"))
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
@@ -34,6 +34,25 @@ inheritCol <- function(vec) {
   return(vec)
 }
 
+checkTypes <- function(df) {
+  # verify types
+  x <- df %>% select(tp1_cl_size, tp2_cl_size, type) %>% as_tibble() %>% 
+    rownames_to_column("id") %>% mutate(across(id, as.integer))
+  
+  x1 <- x %>% filter(tp1_cl_size > 2, tp2_cl_size > 2, tp1_cl_size == tp2_cl_size)
+  x2 <- x %>% filter(tp1_cl_size > 2, tp2_cl_size > 2, tp2_cl_size > tp1_cl_size)
+  x3 <- x %>% filter(tp1_cl_size < 3, tp2_cl_size > 2)
+  x4 <- x %>% filter(tp1_cl_size < 3, tp2_cl_size < 3)
+  
+  assert("Assigned types are correct", all(
+    unique(x1$type) == "Type1", 
+    unique(x2$type) == "Type2", 
+    unique(x3$type) == "Type3", 
+    unique(x4$type) == "Type4"))
+  
+  return(identical(sort(c(x1$id, x2$id, x3$id, x4$id)), x$id))
+}
+
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Merging CGM and ECC results ", 
            paste0(rep("-", 31), collapse = ""), "||\n"))
 
@@ -46,7 +65,8 @@ cgms <- readData(arg$CGMs)
 # actually assigned a cluster at TP2, not NA (just in case we don't have typing data for some strains)
 strain_data <- suppressMessages(read_tsv(arg$strains)) %>% 
   filter(TP2 == 1) %>% 
-  select(Strain, Source, City, Province, Country, Latitude, Longitude, Day, Month, Year, TP1, TP2) %>% 
+  mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
+  select(Strain, Source, City, Province, Country, Latitude, Longitude, Date, Day, Month, Year, TP1, TP2) %>% 
   as.data.table()
 
 step1 <- merge.data.table(cgms, eccs, by = "Strain") %>% select(-TP1, -TP2) %>% 
@@ -59,19 +79,92 @@ ecccols <- grep("ECC", colnames(step1), value = TRUE) %>% sort(decreasing = TRUE
 tp1eccs <- grep("TP1", ecccols, value = TRUE)
 tp2eccs <- grep("TP2", ecccols, value = TRUE)
 
-step1 %>% 
+assert("No clusters with unassigned type", checkTypes(step1))
+
+# adding basic delta ECC columns
+step2a <- step1 %>% as_tibble()
+for (i in 1:(length(ecccols)/2)) {
+  a <- tp1eccs[i] %>% strsplit(., split = "ECC") %>% unlist() %>% extract2(2) %>% 
+    substr(., 2, nchar(.)) %>% paste0("delta_ECC_", .)
+  z <- pull(step2a, tp2eccs[i]) - pull(step2a, tp1eccs[i])
+  step2a[a] <- z
+}
+
+
+getAverage <- function(df, grp, avg, newname) {
+  df %>% group_by({{grp}}) %>% summarise(avg_col = mean({{avg}})) %>% 
+    rename_at(2, ~newname)
+}
+
+# adding average lat and long columns
+step3 <- step2a %>% 
+  left_join(., getAverage(step2a, tp1_cl, Latitude, "avg_lat_1"), by = "tp1_cl") %>% 
+  left_join(., getAverage(step2a, tp1_cl, Longitude, "avg_long_1"), by = "tp1_cl") %>% 
+  left_join(., getAverage(step2a, tp2_cl, Latitude, "avg_lat_2"), by = "tp2_cl") %>% 
+  left_join(., getAverage(step2a, tp2_cl, Longitude, "avg_long_2"), by = "tp2_cl")
+
+# adding average date columns
+step4a <- step3 %>% select(Strain, tp1_cl, tp2_cl, Date)
+tp1avg_date <- getAverage(step4a, tp1_cl, Date, "tp1_avg_date")
+tp2avg_date <- getAverage(step4a, tp2_cl, Date, "tp2_avg_date")
+
+step5 <- step3 %>% left_join(., tp1avg_date, by = "tp1_cl") %>% left_join(., tp2avg_date, by = "tp2_cl")
+
+dist_avgs <- grep("avg", colnames(step5), value = TRUE) %>% grep("dist", ., value = TRUE) %>% sort()
+
+step4 <- step5 %>% 
   select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, 
-         TP1, tp1_cl, TP1_T0_Size, tp1eccs, 
-         TP2, tp2_cl, TP2_T0_Size, tp2eccs, 
-         
-         first_tp1_flag, last_tp1_flag, 
-         first_tp2_flag, last_tp2_flag, 
-         tp1_cl_size, tp2_cl_size, 
-         actual_size_change, 
-         add_TP1, num_novs, 
-         actual_growth_rate, 
-         new_growth
-         )
+         TP1, tp1_cl, TP1_T0_Size, tp1eccs, TP2, tp2_cl, TP2_T0_Size, tp2eccs, 
+         delta_ECC_1.0, delta_ECC_0.1, tp1_avg_date, 
+         grep("(?=.*TP1)(?=.*temp)", dist_avgs, value = TRUE, perl = TRUE), 
+         avg_lat_1, avg_long_1, 
+         grep("(?=.*TP1)(?=.*geog)", dist_avgs, value = TRUE, perl = TRUE), 
+         tp2_avg_date,
+         grep("(?=.*TP2)(?=.*temp)", dist_avgs, value = TRUE, perl = TRUE), 
+         avg_lat_2, avg_long_2, 
+         grep("(?=.*TP2)(?=.*geog)", dist_avgs, value = TRUE, perl = TRUE), 
+         first_tp1_flag, last_tp1_flag, first_tp2_flag, last_tp2_flag, tp1_cl_size, tp2_cl_size, 
+         actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth, type, novel) %>% 
+  arrange(tp2_cl, tp1_cl, Strain) %>% as_tibble() %>% 
+  rename("TP1 cluster" = tp1_cl, 
+         "TP1 cluster size (1)" = TP1_T0_Size, 
+         "TP2 cluster" = tp2_cl, 
+         "TP2 cluster size (1)" = TP2_T0_Size, 
+         "Average TP1 date" = tp1_avg_date, 
+         "TP1 temp average cluster distance (days)" = TP1_T0_avg_temp_dist, 
+         "Average TP1 latitude"	= avg_lat_1, 
+         "Average TP1 longitude" = avg_long_1, 
+         "TP1 geo average cluster distance (km)" = TP1_T0_avg_geog_dist, 
+         "Average TP2 date" = tp2_avg_date, 
+         "TP2 temp average cluster distance (days)" = TP2_T0_avg_temp_dist, 
+         "Average TP2 latitude" = avg_lat_2, 
+         "Average TP2 longitude" = avg_long_2, 
+         "TP2 geo average cluster distance (km)" = TP2_T0_avg_geog_dist, 
+         "First time this cluster was seen in TP1" = first_tp1_flag, 
+         "Last time this cluster was seen in TP1" = last_tp1_flag, 
+         "First time this cluster was seen in TP2" = first_tp2_flag, 
+         "Last time this cluster was seen in TP2" = last_tp2_flag, 
+         "TP1 cluster size (2)"	= tp1_cl_size, 
+         "TP2 cluster size (2)"	= tp2_cl_size, 
+         "Actual cluster size (TP2 size – TP1 size)" = actual_size_change, 
+         "Number of additional TP1 strains in the TP2 match" = add_TP1, 
+         "Number of novels in the TP2 match" = num_novs, 
+         "Actual growth rate = (TP2 size – TP1 size) / (TP1 size)" = actual_growth_rate, 
+         "Novel growth = (TP2 size) / (TP2 size – number of novels)" = new_growth)
+
+
+
+
+
+# type modifications for ECCs
+# type 1 - no modifications required
+# type 2
+step3a <- step3 %>% filter(type == "Type2") %>% filter(novel == 1)
+# type 3
+step3a$TP1_T0_Size <- step3a$tp1_cl_size - 1
+
+# type 4
+
 
 # # Clusters that are completely novel at TP2 should have a value of 1
 # completely_novel <- which(step1$novel == step1$tp2_cl_size)
@@ -110,6 +203,12 @@ step1 %>%
 #   colnames(step1)[which(colnames(step1) == "delta")] <- paste0("delta_ECC_", coeff)
 # }
   
+# # sorts into TP1 first, then TP2
+# eccnames <- grep("ECC", colnames(full_set), value = TRUE) %>% sort()
+# tmp <- full_set %>% as_tibble() %>% select(all_of(eccnames))
+# cnames <- lapply(combos, function(i) gsub("", ".", i) %>% substr(., 1, nchar(.)-1)) %>% unlist()
+# newnames <- grep(cnames[1], eccnames, value = TRUE)
+
 step2 <- step1 %>% rename("TP1 cluster" = tp1_id) %>% 
   mutate("TP2 cluster" = first_tp2_flag, "TP1 cluster size" = tp1_cl_size, "TP2 cluster size" = tp2_cl_size) %>% 
   

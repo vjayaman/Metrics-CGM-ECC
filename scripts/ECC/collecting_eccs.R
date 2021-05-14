@@ -9,19 +9,24 @@ epiCollection <- function(strain_data, tau, gamma, typing_data) {
     unique() %>% rownames_to_column("dr")
     
   # Temporal distances - all possible date pair distances
-  dm_temp <- assignments %>% select(dr, Date) %>% 
-    pairwiseDists(., "temp", "Date", c("dr1", "dr2", "Temp.Dist"))
+  # pairwiseDists <- function(dm, type, cnames, newnames) {
+  dm_temp <- assignments %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
+  formatted_temp <- dm_temp %>% formatData(., c("dr1", "dr2", "Temp.Dist"))
+  transformed_temp <- dm_temp %>% pairwiseDists(., "temp", c("dr1", "dr2", "Temp.Dist"))
     
   # Geographical distances - all possible lat-long pair distances
-  dm_geo <- assignments %>% select(dr, Latitude, Longitude) %>% 
-    pairwiseDists(., "geo", c("Latitude", "Longitude"), c("dr1", "dr2", "Geog.Dist"))
-    
-  epi_table <- merge.data.table(dm_temp, dm_geo) %>% 
+  dm_geo <- assignments %>% select(dr, Latitude, Longitude) %>% distMatrix(., "geo", c("Latitude", "Longitude"))
+  formatted_geo <- dm_geo %>% formatData(., c("dr1", "dr2", "Geog.Dist"))
+  transformed_geo <- dm_geo %>% pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
+
+  actual_dists <- merge.data.table(formatted_temp, formatted_geo)
+  
+  epi_table <- merge.data.table(transformed_temp, transformed_geo) %>% 
     mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>% 
     select(dr1, dr2, Total.Dist) %>% as.data.table()
     
-  rm(dm_geo)
-  rm(dm_temp)
+  rm(transformed_geo)
+  rm(transformed_temp)
   
   epi_matrix <- dcast(epi_table, formula = dr1 ~ dr2, value.var = "Total.Dist")
   epi_matrix <- as.matrix(epi_matrix[,2:ncol(epi_matrix)]) 
@@ -46,35 +51,76 @@ epiCollection <- function(strain_data, tau, gamma, typing_data) {
   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
   # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
   eccs <- lapply(1:length(typing_data), function(i) {
-    dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>% 
-      left_join(., dr_matches, by = "Strain") %>% 
+    dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
+      left_join(., dr_matches, by = "Strain") %>%
       mutate(across(dr, as.character)) %>% select(-Strain)
-    
+
     # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
     tallied_reps <- dr_td1 %>% group_by(T0) %>% count(dr) %>% ungroup()
-    g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>% 
+    g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>%
       unique() %>% mutate(across(dr, as.character))
     
     td_i <- epi_cohesion_new(g_cuts, epi_melt) %>% 
       set_colnames(c(paste0("TP", i, "_", colnames(.))))
     colnames(td_i) %<>% gsub("ECC", paste0("ECC.", tau, ".", gamma), x = .)
     
-    return(td_i)
+    clusters <- dr_td1 %>% select(-dr) %>% unique() %>% pull()
+    
+    a <- averageDists(clusters, g_cuts, formatted_temp, "Temp.Dist", colnames(td_i)[1])
+    # b <- validateAvgDists(clusters, typing_data[[1]], strain_data, "Date", "temp", "Temp.Dist")
+    # assert("Average Temp.Dist values are the same for both methods", identical(a$avg.temp.dist, b))
+    
+    d <- averageDists(clusters, g_cuts, formatted_geo, "Geog.Dist", colnames(td_i)[1])
+    # f <- validateAvgDists(clusters, typing_data[[1]], strain_data, c("Latitude", "Longitude"), "geo", "Geog.Dist")
+    # assert("Average Geog.Dist values are the same for both methods", identical(d$avg.geog.dist, f))
+  
+    left_join(td_i, a) %>% left_join(., d) %>% return()
   })
   
   return(eccs)
 }
 
-# basicAverages <- function(df, tp, avg_raw) {
-#   df %>% select("Strain", all_of(tp)) %>% 
-#     left_join(avg_raw, by = "Strain") %>% 
-#     arrange({{tp}}) %>% 
-#     group_by({{tp}}) %>% 
-#     mutate(avg_date = mean(Date), avg_lat = mean(Latitude), avg_long = mean(Longitude)) %>% 
-#     ungroup() %>% 
-#     select(Strain, all_of(tp), grep("avg", colnames(.), value = TRUE)) %>% 
-#     set_colnames(gsub("avg", paste0(as.character(tp), "_avg"), colnames(.))) %>% return()
-# }
+# note that we sum the values for both directions e.g. (192, 346) and (346, 192)
+# and then divide by the total number of pairs (counting both directions)
+# this gives the same result as if we had used only one direction
+#   - if we did this, we would divide by 2 in the numerator and the denominator --> would cancel
+averageDists <- function(clusters, g_cuts, formatted_vals, cname, newname) {
+  
+  x <- gsub("\\.", "_", cname) %>% tolower() %>% paste0(newname, "_avg_", .)
+  
+  lapply(clusters, function(cluster_x) {
+    onecluster <- g_cuts %>% set_colnames(c("Threshold", "dr", "n")) %>%
+      filter(Threshold == cluster_x) %>% select(-Threshold)
+    
+    set1 <- formatted_vals %>% filter(dr1 %in% onecluster$dr, dr2 %in% onecluster$dr)
+    
+    set2 <- set1 %>%
+      left_join(., onecluster, by = c("dr1" = "dr")) %>% rename(n1 = n) %>%
+      left_join(., onecluster, by = c("dr2" = "dr")) %>% rename(n2 = n) %>%
+      mutate(num_pairs = n1 * n2)
+    
+    total <- (set2[, ..cname] * set2$num_pairs) %>% pull() %>% sum()
+    (total / sum(set2$num_pairs)) %>% return()
+    
+  }) %>% unlist() %>% tibble(clusters, .) %>% set_colnames(c(newname, x)) %>% return()
+}
+
+validateAvgDists <- function(clusters, td, strain_data, cnames, type, newname) {
+  
+  lapply(clusters, function(cluster_x) {
+    strains <- td %>% rownames_to_column("Strain") %>% as_tibble() %>% 
+      set_colnames(c("Strain", "Threshold")) %>% 
+      filter(Threshold == cluster_x) %>% pull(Strain)
+    
+    dm_avgs <- strain_data %>% 
+      select(Strain, all_of(cnames)) %>% 
+      filter(Strain %in% strains) %>% 
+      distMatrix(., type, cnames) %>% 
+      formatData(., c("Strain.1", "Strain.2", newname))
+    
+    (sum(dm_avgs[,..newname]) / nrow(dm_avgs)) %>% return()
+  }) %>% unlist() %>% return()
+}
 
 # Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
 # ("pt") and a two-element named vector with Sys.time() values named "start_time" and "end_time"
@@ -96,4 +142,13 @@ timeTaken <- function(pt, sw) {
   }
 }
 
-
+# basicAverages <- function(df, tp, avg_raw) {
+#   df %>% select("Strain", all_of(tp)) %>% 
+#     left_join(avg_raw, by = "Strain") %>% 
+#     arrange({{tp}}) %>% 
+#     group_by({{tp}}) %>% 
+#     mutate(avg_date = mean(Date), avg_lat = mean(Latitude), avg_long = mean(Longitude)) %>% 
+#     ungroup() %>% 
+#     select(Strain, all_of(tp), grep("avg", colnames(.), value = TRUE)) %>% 
+#     set_colnames(gsub("avg", paste0(as.character(tp), "_avg"), colnames(.))) %>% return()
+# }

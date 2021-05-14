@@ -28,13 +28,13 @@ mergeECCs <- function(eccs, tpx, typing_data) {
 }
 
 option_list <- list(
-  make_option(c("-b", "--strains"), metavar = "file", default = NULL, help = "Strain data"),
-  make_option(c("-c", "--tp1"), metavar = "file", default = NULL, help = "TP1 cluster assignments"),
-  make_option(c("-d", "--tp2"), metavar = "file", default = NULL, help = "TP2 cluster assignments"),
-  make_option(c("-x", "--heights"), metavar = "character", default = NULL,
+  make_option(c("-b", "--strains"), metavar = "file", default = "inputs/strain_info.txt", help = "Strain data"),
+  make_option(c("-c", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "TP1 cluster assignments"),
+  make_option(c("-d", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
+  make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = "Comma-delimited string of heights to collect ECCs for"),
-  make_option(c("-p", "--cpus"), metavar = "numeric", default = NULL, help = "CPUs"),
-  make_option(c("-t", "--duo"), metavar = "character", default = NULL,
+  make_option(c("-p", "--cpus"), metavar = "numeric", default = 1, help = "CPUs"),
+  make_option(c("-t", "--duo"), metavar = "character", default = "01-10",
               help = "temporal, geographic coefficients"))
 
 cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ", 
