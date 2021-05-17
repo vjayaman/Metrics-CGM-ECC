@@ -19,9 +19,10 @@ epiCollection <- function(strain_data, tau, gamma, typing_data) {
   formatted_geo <- dm_geo %>% formatData(., c("dr1", "dr2", "Geog.Dist"))
   transformed_geo <- dm_geo %>% pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
 
-  actual_dists <- merge.data.table(formatted_temp, formatted_geo)
+  # actual_dists <- merge.data.table(formatted_temp, formatted_geo)
   
-  epi_table <- merge.data.table(transformed_temp, transformed_geo) %>% 
+  transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
+  epi_table <- transformed_dists %>% 
     mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>% 
     select(dr1, dr2, Total.Dist) %>% as.data.table()
     
@@ -64,17 +65,22 @@ epiCollection <- function(strain_data, tau, gamma, typing_data) {
       set_colnames(c(paste0("TP", i, "_", colnames(.))))
     colnames(td_i) %<>% gsub("ECC", paste0("ECC.", tau, ".", gamma), x = .)
     
-    clusters <- dr_td1 %>% select(-dr) %>% unique() %>% pull()
+    # clusters <- dr_td1 %>% select(-dr) %>% unique() %>% pull()
+    # formatted_vals <- formatted_temp
+    # cname <- "Temp.Dist"
+    # newname <- colnames(td_i)[i]
     
-    a <- averageDists(clusters, g_cuts, formatted_temp, "Temp.Dist", colnames(td_i)[1])
-    # b <- validateAvgDists(clusters, typing_data[[1]], strain_data, "Date", "temp", "Temp.Dist")
-    # assert("Average Temp.Dist values are the same for both methods", identical(a$avg.temp.dist, b))
+    # a <- averageDists(clusters, g_cuts, formatted_temp, "Temp.Dist", colnames(td_i)[i])
+    # # b <- validateAvgDists(clusters, typing_data[[1]], strain_data, "Date", "temp", "Temp.Dist")
+    # # assert("Average Temp.Dist values are the same for both methods", identical(a$avg.temp.dist, b))
+    # 
+    # d <- averageDists(clusters, g_cuts, formatted_geo, "Geog.Dist", colnames(td_i)[i])
+    # # f <- validateAvgDists(clusters, typing_data[[1]], strain_data, c("Latitude", "Longitude"), "geo", "Geog.Dist")
+    # # assert("Average Geog.Dist values are the same for both methods", identical(d$avg.geog.dist, f))
+    # 
+    # left_join(td_i, a) %>% left_join(., d) %>% return()
     
-    d <- averageDists(clusters, g_cuts, formatted_geo, "Geog.Dist", colnames(td_i)[1])
-    # f <- validateAvgDists(clusters, typing_data[[1]], strain_data, c("Latitude", "Longitude"), "geo", "Geog.Dist")
-    # assert("Average Geog.Dist values are the same for both methods", identical(d$avg.geog.dist, f))
-  
-    left_join(td_i, a) %>% left_join(., d) %>% return()
+    return(td_i)
   })
   
   return(eccs)
@@ -88,7 +94,9 @@ averageDists <- function(clusters, g_cuts, formatted_vals, cname, newname) {
   
   x <- gsub("\\.", "_", cname) %>% tolower() %>% paste0(newname, "_avg_", .)
   
-  lapply(clusters, function(cluster_x) {
+  lapply(1:length(clusters), function(i) {
+    print(paste0(i, "/", length(clusters)))
+    cluster_x <- clusters[i]
     onecluster <- g_cuts %>% set_colnames(c("Threshold", "dr", "n")) %>%
       filter(Threshold == cluster_x) %>% select(-Threshold)
     

@@ -53,6 +53,15 @@ checkTypes <- function(df) {
   return(identical(sort(c(x1$id, x2$id, x3$id, x4$id)), x$id))
 }
 
+getAverage <- function(df, grp, avg, newname) {
+  df %>% group_by({{grp}}) %>% summarise(avg_col = mean({{avg}})) %>% 
+    rename_at(2, ~newname)
+}
+
+# getDistCols <- function(cnames, x, y) {
+#   grep(paste0("(?=.*", x, ")(?=.*", y, ")"), cnames, value = TRUE, perl = TRUE) %>% return()
+# }
+
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Merging CGM and ECC results ", 
            paste0(rep("-", 31), collapse = ""), "||\n"))
 
@@ -90,12 +99,6 @@ for (i in 1:(length(ecccols)/2)) {
   step2a[a] <- z
 }
 
-
-getAverage <- function(df, grp, avg, newname) {
-  df %>% group_by({{grp}}) %>% summarise(avg_col = mean({{avg}})) %>% 
-    rename_at(2, ~newname)
-}
-
 # adding average lat and long columns
 step3 <- step2a %>% 
   left_join(., getAverage(step2a, tp1_cl, Latitude, "avg_lat_1"), by = "tp1_cl") %>% 
@@ -104,42 +107,55 @@ step3 <- step2a %>%
   left_join(., getAverage(step2a, tp2_cl, Longitude, "avg_long_2"), by = "tp2_cl")
 
 # adding average date columns
-step4a <- step3 %>% select(Strain, tp1_cl, tp2_cl, Date)
-tp1avg_date <- getAverage(step4a, tp1_cl, Date, "tp1_avg_date")
-tp2avg_date <- getAverage(step4a, tp2_cl, Date, "tp2_avg_date")
+step4 <- step3 %>% 
+  left_join(., getAverage(step3, tp1_cl, Date, "avg_date1"), by = "tp1_cl") %>% 
+  left_join(., getAverage(step3, tp2_cl, Date, "avg_date_2"), by = "tp2_cl")
 
-step5 <- step3 %>% left_join(., tp1avg_date, by = "tp1_cl") %>% left_join(., tp2avg_date, by = "tp2_cl")
 
-dist_avgs <- grep("avg", colnames(step5), value = TRUE) %>% grep("dist", ., value = TRUE) %>% sort()
+# # type modifications for ECCs
+# 
+# # type 1 - no modifications required
+# # type 2
+# step5a <- step4 %>% filter(type == "Type2")# %>% filter(novel == 1)
+# # type 3
+# step3a$TP1_T0_Size <- step3a$tp1_cl_size - 1
+# 
+# # type 4
+# 
+# 
+# 
+# dist_avgs <- grep("avg", colnames(step4), value = TRUE) %>% grep("dist", ., value = TRUE) %>% sort()
 
-step4 <- step5 %>% 
+step6 <- step4 %>% 
   select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, 
-         TP1, tp1_cl, TP1_T0_Size, tp1eccs, TP2, tp2_cl, TP2_T0_Size, tp2eccs, 
-         delta_ECC_1.0, delta_ECC_0.1, tp1_avg_date, 
-         grep("(?=.*TP1)(?=.*temp)", dist_avgs, value = TRUE, perl = TRUE), 
+         TP1, tp1_cl, TP1_T0_Size, all_of(tp1eccs), TP2, tp2_cl, TP2_T0_Size, all_of(tp2eccs), 
+         # delta_ECC_1.0, 
+         delta_ECC_0.1, avg_date1, 
+         # getDistCols(dist_avgs, "TP1", "temp"), 
          avg_lat_1, avg_long_1, 
-         grep("(?=.*TP1)(?=.*geog)", dist_avgs, value = TRUE, perl = TRUE), 
-         tp2_avg_date,
-         grep("(?=.*TP2)(?=.*temp)", dist_avgs, value = TRUE, perl = TRUE), 
+         # getDistCols(dist_avgs, "TP1", "geog"), 
+         avg_date_2, 
+         # getDistCols(dist_avgs, "TP2", "temp"), 
          avg_lat_2, avg_long_2, 
-         grep("(?=.*TP2)(?=.*geog)", dist_avgs, value = TRUE, perl = TRUE), 
+         # getDistCols(dist_avgs, "TP2", "geog"), 
          first_tp1_flag, last_tp1_flag, first_tp2_flag, last_tp2_flag, tp1_cl_size, tp2_cl_size, 
-         actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth, type, novel) %>% 
-  arrange(tp2_cl, tp1_cl, Strain) %>% as_tibble() %>% 
+         actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth, type, novel)
+
+step7 <- step6 %>% 
   rename("TP1 cluster" = tp1_cl, 
          "TP1 cluster size (1)" = TP1_T0_Size, 
          "TP2 cluster" = tp2_cl, 
          "TP2 cluster size (1)" = TP2_T0_Size, 
-         "Average TP1 date" = tp1_avg_date, 
-         "TP1 temp average cluster distance (days)" = TP1_T0_avg_temp_dist, 
+         "Average TP1 date" = avg_date1, 
+         # "TP1 temp average cluster distance (days)" = TP1_T0_avg_temp_dist, 
          "Average TP1 latitude"	= avg_lat_1, 
          "Average TP1 longitude" = avg_long_1, 
-         "TP1 geo average cluster distance (km)" = TP1_T0_avg_geog_dist, 
-         "Average TP2 date" = tp2_avg_date, 
-         "TP2 temp average cluster distance (days)" = TP2_T0_avg_temp_dist, 
+         # "TP1 geo average cluster distance (km)" = TP1_T0_avg_geog_dist, 
+         "Average TP2 date" = avg_date_2, 
+         # "TP2 temp average cluster distance (days)" = TP2_T0_avg_temp_dist, 
          "Average TP2 latitude" = avg_lat_2, 
          "Average TP2 longitude" = avg_long_2, 
-         "TP2 geo average cluster distance (km)" = TP2_T0_avg_geog_dist, 
+         # "TP2 geo average cluster distance (km)" = TP2_T0_avg_geog_dist, 
          "First time this cluster was seen in TP1" = first_tp1_flag, 
          "Last time this cluster was seen in TP1" = last_tp1_flag, 
          "First time this cluster was seen in TP2" = first_tp2_flag, 
@@ -150,20 +166,9 @@ step4 <- step5 %>%
          "Number of additional TP1 strains in the TP2 match" = add_TP1, 
          "Number of novels in the TP2 match" = num_novs, 
          "Actual growth rate = (TP2 size – TP1 size) / (TP1 size)" = actual_growth_rate, 
-         "Novel growth = (TP2 size) / (TP2 size – number of novels)" = new_growth)
+         "Novel growth = (TP2 size) / (TP2 size – number of novels)" = new_growth) %>% 
+    arrange(`TP2 cluster`, `TP1 cluster`, Strain)
 
-
-
-
-
-# type modifications for ECCs
-# type 1 - no modifications required
-# type 2
-step3a <- step3 %>% filter(type == "Type2") %>% filter(novel == 1)
-# type 3
-step3a$TP1_T0_Size <- step3a$tp1_cl_size - 1
-
-# type 4
 
 
 # # Clusters that are completely novel at TP2 should have a value of 1
@@ -193,63 +198,12 @@ step3a$TP1_T0_Size <- step3a$tp1_cl_size - 1
 # 
 # # Replacing NAs in the TP1 id column with a blank character
 # step1[,grep("tp1_id", colnames(step1))] %<>% apply(., 2, repNA, i = "") %>% as_tibble()
-# 
-# for (coeff in unique(substr(ecccols, 12, 16))) {
-#   ecc_coeff <- grep(coeff, ecccols, value = TRUE)
-#   col2 <- grep("TP2", ecc_coeff, value = TRUE)
-#   col1 <- grep("TP1", ecc_coeff, value = TRUE)
-#   
-#   step1 <- step1 %>% mutate(delta = step1 %>% pull(col2) - step1 %>% pull(col1))
-#   colnames(step1)[which(colnames(step1) == "delta")] <- paste0("delta_ECC_", coeff)
-# }
-  
-# # sorts into TP1 first, then TP2
-# eccnames <- grep("ECC", colnames(full_set), value = TRUE) %>% sort()
-# tmp <- full_set %>% as_tibble() %>% select(all_of(eccnames))
-# cnames <- lapply(combos, function(i) gsub("", ".", i) %>% substr(., 1, nchar(.)-1)) %>% unlist()
-# newnames <- grep(cnames[1], eccnames, value = TRUE)
 
-step2 <- step1 %>% rename("TP1 cluster" = tp1_id) %>% 
-  mutate("TP2 cluster" = first_tp2_flag, "TP1 cluster size" = tp1_cl_size, "TP2 cluster size" = tp2_cl_size) %>% 
-  
-  select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, 
-         
-         TP1, `TP1 cluster`, tp1_cl_size, all_of(tp1eccs), 
-         TP2, `TP2 cluster`, tp2_cl_size, all_of(tp2eccs), 
-         
-         # grep("delta", colnames(step1), value = TRUE), 
-         # grep("TP1_avg", colnames(step1), value = TRUE), 
-         # grep("TP2_avg", colnames(step1), value = TRUE), 
-         
-         first_tp1_flag, last_tp1_flag, first_tp2_flag, last_tp2_flag, `TP1 cluster size`, 
-         `TP2 cluster size`, actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth) %>% 
-  
-  rename("TP1 cluster size (2)" = tp1_cl_size, 
-         "TP2 cluster size (2)" = tp2_cl_size, 
-         # "TP1 temp average cluster distance (days)" = TP1_avg_temp_dist, 
-         # "TP1 geo average cluster distance (km)" = TP1_avg_geo_dist, 
-         # "TP2 temp average cluster distance (days)" = TP2_avg_temp_dist, 
-         # "TP2 geo average cluster distance (km)" = TP2_avg_geo_dist, 
-         # "Average TP1 date" = grep("avg_date", tp1cnames, value = TRUE), 
-         # "Average TP2 date" = grep("avg_date", tp2cnames, value = TRUE), 
-         # "Average TP1 longitude" = grep("avg_long", tp1cnames, value = TRUE), 
-         # "Average TP2 longitude" = grep("avg_long", tp2cnames, value = TRUE), 
-         # "Average TP1 latitude" = grep("avg_lat", tp1cnames, value = TRUE), 
-         # "Average TP2 latitude" = grep("avg_lat", tp2cnames, value = TRUE), 
-         "First time this cluster was seen in TP1" = first_tp1_flag, 
-         "Last time this cluster was seen in TP1" = last_tp1_flag, 
-         "First time this cluster was seen in TP2" = first_tp2_flag, 
-         "Last time this cluster was seen in TP2" = last_tp2_flag, 
-         "Actual cluster size change (TP2 size - TP1 size)" = actual_size_change, 
-         "Number of additional TP1 strains in the TP2 match" = add_TP1, 
-         "Number of novels in the TP2 match" = num_novs, 
-         "Actual growth rate = (TP2 size - TP1 size) / (TP1 size)" = actual_growth_rate, 
-         "Novel growth = (TP2 size) / (TP2 size - number of novels)" = new_growth) %>% 
-  arrange(`TP2 cluster`, `TP1 cluster`, Strain)
 
-writeData(fp = "results/Merged_strain_results.tsv", df = step2)
 
-step2 %>% 
+writeData(fp = "results/Merged_strain_results.tsv", df = step7)
+
+step7 %>% 
   group_by(`TP2 cluster`) %>% slice(1) %>% 
   select(-Strain) %>% ungroup() %>% 
   writeData(fp = "results/Merged_cluster_results.tsv", df = .)
