@@ -106,7 +106,7 @@ file:
 	* the average distance columns (from the ECC results) is much too slow - and memory intensive for sizeable datasets --> need a better method than going cluster by cluster and merging each time
 	* need to bring back in the original clusters given (if they were not numbers in initial input) as another column or two (since they are represented by numbers during analysis)
 	* need to use quosures so the deltaECC columns can be made without referring to the specific parameters
-	* and any other minor modifications that I overlooked from before
+	* and any modifications that I overlooked from before (including the more detailed input parameter file)
 
 * I can stitch the new method back into the pipeline then and then finish fine-tuning the output tables changes mentioned in the last meeting.
 
