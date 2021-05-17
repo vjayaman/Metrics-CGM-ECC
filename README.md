@@ -2,10 +2,16 @@ Metrics-CGM-ECC
 ================
 
 Merged work on the two separate projects (status before initial merge
-can be found at: <https://github.com/vjayaman/EQProject> and
-<https://github.com/vjayaman/ClusterGrowthMetrics>)
+can be found at: 
+* <https://github.com/vjayaman/EQProject> and 
+* <https://github.com/vjayaman/ClusterGrowthMetrics>)
 
-## Method 1 (WIP):
+Testing work will be compiled and added to 
+* <https://github.com/vjayaman/Testing-Metrics-CGM-ECC>
+
+(For latest WIP - not ready for use - see *Method 3* below)
+
+## Method 1 (Working development version):
 
 1. Download latest (development) version from **main** branch
 
@@ -25,7 +31,7 @@ can be found at: <https://github.com/vjayaman/EQProject> and
 
         .../Metrics-CGM-ECC/$ bash run_process.sh
 
-## Method 2 (Stable):
+## Method 2 (Stable, verified version):
 
 1. Download version [v1.0](https://github.com/vjayaman/Metrics-CGM-ECC/releases/tag/v1.0)
 
@@ -88,3 +94,18 @@ file:
     As with the other files, the input arguments for this can be left blank to use the default file names.
     
         $ Rscript merge_data.R -e results/ECCs.tsv -c results/CGM_strain_results.txt -s inputs/strain_info.txt
+
+## Method 3 (Latest version, not ready for use):
+
+* The branch `dist_mat_memory` contains the refactored and latest version, which deals with issues relating to large input datasets (> 35000 samples, for example).
+
+* Before, a distance matrix of the required size couldn't be held in memory ("R cannot allocate vector of size ...").
+
+* This has been dealt with, but I would like to do more testing to be sure the results of this latest method consistently match those of the original method.
+
+* Since we cannot actually run the original method on very large datasets, I'm verifying results using subsampling of the clusters, this should take a day or so.
+
+* I can stitch the new method back into the pipeline then and then finish fine-tuning the output tables changes mentioned in the last meeting.
+
+* This will be merged back into the main branch, and after someone else has verified that everything still runs for them as expected, this will be tagged as *v2.0*.
+
