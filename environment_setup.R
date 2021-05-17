@@ -7,7 +7,6 @@ required_packages <- c("R6", "testit", "optparse", "magrittr", "dplyr", "tibble"
                        "fossil", "tidyr", "purrr", "progress", "reader", "data.table")
 
 not_installed <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
-
 install.packages(not_installed, quiet = TRUE)
 
 # Testing packages were installed correctly:
