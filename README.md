@@ -101,9 +101,12 @@ file:
 
 * Before, a distance matrix of the required size couldn't be held in memory ("R cannot allocate vector of size ...").
 
-* This has been dealt with, but I would like to do more testing to be sure the results of this latest method consistently match those of the original method.
-
-* Since we cannot actually run the original method on very large datasets, I'm verifying results using subsampling of the clusters, this should take a day or so.
+* This has been dealt with, but there are still a few bugs/issues that need to be addressed:
+	* Type handling has been done for the CGM part, but ECC inheritance needs to be re-done (more efficiently)
+	* the average distance columns (from the ECC results) is much too slow - and memory intensive for sizeable datasets --> need a better method than going cluster by cluster and merging each time
+	* need to bring back in the original clusters given (if they were not numbers in initial input) as another column or two (since they are represented by numbers during analysis)
+	* need to use quosures so the deltaECC columns can be made without referring to the specific parameters
+	* and any other minor modifications that I overlooked from before
 
 * I can stitch the new method back into the pipeline then and then finish fine-tuning the output tables changes mentioned in the last meeting.
 
