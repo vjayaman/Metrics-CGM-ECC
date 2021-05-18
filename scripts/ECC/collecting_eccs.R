@@ -63,21 +63,11 @@ epiCollection <- function(strain_data, tau, gamma, typing_data) {
     td_i <- epi_cohesion_new(g_cuts, epi_melt) %>% 
       set_colnames(c(paste0("TP", i, "_", colnames(.))))
     colnames(td_i) %<>% gsub("ECC", paste0("ECC.", tau, ".", gamma), x = .)
-    # saveRDS(td_i, "latter_td.Rds")
-    # beepr::beep(3)
     
-    a2 <- avgDists(g_cuts, dm_temp, "Temp.Dist", colnames(td_i)[i])
-
-    
-    xz <- dr_td1 %>% select(-dr) %>% unique() %>% pull()
-    
-    Sys.time()
-    b1 <- averageDists(xz, g_cuts, formatted_geo, "Geog.Dist", colnames(td_i)[1])
-    Sys.time()
+    a2 <- avgDists(g_cuts, dm_temp, "Temp.Dist", colnames(td_i)[1])
     b2 <- avgDists(g_cuts, dm_geo, "Geog.Dist", colnames(td_i)[1])
-    Sys.time()
     
-    return(td_i)
+    left_join(td_i, a2) %>% left_join(., b2) %>% return()
   })
   
   return(eccs)
@@ -105,57 +95,6 @@ avgDists <- function(g_cuts, dm, cname, newname) {
   }) %>% unlist() %>% tibble(clusters, .) %>% set_colnames(c(newname, x))
 }
 
-# note that we sum the values for both directions e.g. (192, 346) and (346, 192)
-# and then divide by the total number of pairs (counting both directions)
-# this gives the same result as if we had used only one direction
-#   - if we did this, we would divide by 2 in the numerator and the denominator --> would cancel
-averageDists <- function(clusters, g_cuts, formatted_vals, cname, newname) {
-
-  x <- gsub("\\.", "_", cname) %>% tolower() %>% paste0(newname, "_avg_", .)
-  all_clusters <- g_cuts %>% set_colnames(c("Threshold", "dr", "n"))
-
-  dist_avgs <- lapply(1:length(clusters), function(j) {
-    if (j %% 50 == 0) {
-      print(paste0(j, "/", length(clusters)))
-    }
-    cluster_x <- clusters[j]
-
-    onecluster <- all_clusters %>% filter(Threshold == cluster_x) %>% select(-Threshold)
-
-    set2 <- formatted_vals %>%
-      left_join(onecluster, ., by = c("dr" = "dr1")) %>%
-      rename(dr1 = dr, n1 = n) %>%
-      left_join(onecluster, ., by = c("dr" = "dr2")) %>%
-      rename(dr2 = dr, n2 = n) %>%
-      mutate(num_pairs = n1 * n2) %>%
-      select(dr1, dr2, Geog.Dist, n1, n2, num_pairs) %>%
-      as.data.table()
-
-    total <- (set2[, ..cname] * set2$num_pairs) %>% pull() %>% sum()
-    (total / sum(set2$num_pairs)) %>% return()
-
-  }) %>% unlist() %>% tibble(clusters, .) %>% set_colnames(c(newname, x))
-  # saveRDS(dist_avgs, "distavgs.Rds")
-  dist_avgs %>% return()
-}
-
-validateAvgDists <- function(clusters, td, strain_data, cnames, type, newname) {
-  
-  lapply(clusters, function(cluster_x) {
-    strains <- td %>% rownames_to_column("Strain") %>% as_tibble() %>% 
-      set_colnames(c("Strain", "Threshold")) %>% 
-      filter(Threshold == cluster_x) %>% pull(Strain)
-    
-    dm_avgs <- strain_data %>% 
-      select(Strain, all_of(cnames)) %>% 
-      filter(Strain %in% strains) %>% 
-      distMatrix(., type, cnames) %>% 
-      formatData(., c("Strain.1", "Strain.2", newname))
-    
-    (sum(dm_avgs[,..newname]) / nrow(dm_avgs)) %>% return()
-  }) %>% unlist() %>% return()
-}
-
 # Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
 # ("pt") and a two-element named vector with Sys.time() values named "start_time" and "end_time"
 timeTaken <- function(pt, sw) {
@@ -175,14 +114,3 @@ timeTaken <- function(pt, sw) {
     paste0("\nThe ", pt, " process took ", round(z), " second(s).") %>% return()
   }
 }
-
-# basicAverages <- function(df, tp, avg_raw) {
-#   df %>% select("Strain", all_of(tp)) %>% 
-#     left_join(avg_raw, by = "Strain") %>% 
-#     arrange({{tp}}) %>% 
-#     group_by({{tp}}) %>% 
-#     mutate(avg_date = mean(Date), avg_lat = mean(Latitude), avg_long = mean(Longitude)) %>% 
-#     ungroup() %>% 
-#     select(Strain, all_of(tp), grep("avg", colnames(.), value = TRUE)) %>% 
-#     set_colnames(gsub("avg", paste0(as.character(tp), "_avg"), colnames(.))) %>% return()
-# }
