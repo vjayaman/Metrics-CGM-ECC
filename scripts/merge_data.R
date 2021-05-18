@@ -69,10 +69,6 @@ replaceDistName <- function(x) {
   }
 }
 
-# distCols <- function(x, y, cnames) {
-#   grep(paste0("(?=.*", x, ")(?=.*", y, ")"), cnames, perl = TRUE, value = TRUE) %>% return()
-# }
-
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Merging CGM and ECC results ", 
            paste0(rep("-", 31), collapse = ""), "||\n"))
 
@@ -90,7 +86,8 @@ strain_data <- suppressMessages(read_tsv(arg$strains)) %>%
   as.data.table()
 
 step1 <- merge.data.table(cgms, eccs, by = "Strain") %>% select(-TP1, -TP2) %>% 
-  merge.data.table(., strain_data, by = "Strain")
+  merge.data.table(., strain_data, by = "Strain") %>% 
+  rename(found_in_TP1 = TP1, found_in_TP2 = TP2)
 
 tp1cnames <- grep("TP1", colnames(step1), value = TRUE)
 tp2cnames <- grep("TP2", colnames(step1), value = TRUE)
@@ -100,6 +97,74 @@ tp1eccs <- grep("TP1", ecccols, value = TRUE)
 tp2eccs <- grep("TP2", ecccols, value = TRUE)
 
 assert("No clusters with unassigned type", checkTypes(step1))
+
+
+# TYPE MODIFICATIONS FOR ECCs --------------------------------------------------------------------
+
+# dim(step1): 35,627 by 41
+
+# Type I modifications: TP1 > 2, TP2 >2, TP1 = TP2
+# ○	None required
+# ○	we can use the ECC stats for TP1 & TP2, we can use the cluster averages for TP1 & TP2
+
+# cases1 <- step1 %>% filter(type == "Type1")
+# nrow(cases1) == 8
+
+# Type II modifications: TP1 > 2, TP2 > 2, TP2 > TP1
+# ○	Main problem is that the novel strains in TP2 don’t have TP1 data
+# ○	TP1, no modification required
+# ○	TP2: 
+#   - no change for strains also in TP1; 
+#   - for novel strains in TP2: 
+#     - in TP1, needs to have the cluster size and ECC stats from the TP1 strains they cluster with in TP2, 
+#     - need to have the TP1 cluster number
+
+cases2 <- step1 %>% filter(type == "Type2")
+
+tp2clusters <- cases2$first_tp2_flag %>% unique()
+cnames <- grep("tp1|TP1", colnames(cases2), value = TRUE) %>% grep("found_in", ., value = TRUE, invert = TRUE)
+
+for (k in 1:length(tp2clusters)) {
+  to_inherit <- cases2 %>% filter(first_tp2_flag == tp2clusters[k]) %>% 
+    filter(!is.na(tp1_id)) %>%
+    select(all_of(cnames)) %>% unique()
+  
+  if (nrow(to_inherit) == 1) {
+    new_rows <- cases2[first_tp2_flag == tp2clusters[k] & is.na(tp1_id),] %>% 
+      select(-cnames) %>% bind_cols(., to_inherit)
+    
+    cases2 <- cases2[ !(first_tp2_flag == tp2clusters[k] & is.na(tp1_id)) ] %>% bind_rows(., new_rows)  
+  }else {
+    stop("TP2 cluster created from merging of two separate TP1 clusters at same time")
+  }  
+}
+
+step1 <- step1[ type != "Type2" ] %>% bind_rows(cases2)
+
+
+# Type III modifications: TP1 < 3, TP2 > 2
+# ○	Main problem is that TP1 cluster doesn’t have ECC stats, 
+#   - impacts the change vector calculation; 
+#   - also, if TP1 = 0 then cluster size for bubble plot & the cluster growth have no data 
+#     - (no bubble for TP1 & “Inf” growth rate)
+# ○	TP1 needs to have a size of 1 
+#   - (+ 1 adjustment for every cluster) so that the denominator is not 0 for cluster growth
+#   - (initially wanted ECC bubbles of size at least 1, NOW not doing cluster size increment for the ECCs)
+
+cases3 <- step1 %>% filter(type == "Type3")
+
+
+
+# Type IV modifications: TP1 < 3, TP2 < 3
+# ○	Main problem is that TP1 and TP2 are both small and do not have ECC stats 
+#   since they are singletons or non-existent
+# ○	Force TP1 and TP2 ECC stats to blanks
+# ○	Filter these strains prior to analysis & give a ECC blanks
+# ○	Eventually, include in analysis but maybe do not include them in EpiMatrix calculation
+
+# END OFTYPE MODIFICATIONS FOR ECCs --------------------------------------------------------------
+
+
 
 # adding basic delta ECC columns
 step2a <- step1 %>% as_tibble()
@@ -122,19 +187,6 @@ step4 <- step3 %>%
   left_join(., getAverage(step3, tp1_cl, Date, "avg_date1"), by = "tp1_cl") %>% 
   left_join(., getAverage(step3, tp2_cl, Date, "avg_date_2"), by = "tp2_cl")
 
-
-# # type modifications for ECCs
-# 
-# # type 1 - no modifications required
-# # type 2
-# step5a <- step4 %>% filter(type == "Type2")# %>% filter(novel == 1)
-# # type 3
-# step3a$TP1_T0_Size <- step3a$tp1_cl_size - 1
-# 
-# # type 4
-# 
-# 
-# 
 dist_avgs <- grep("avg", colnames(step4), value = TRUE) %>% grep("dist", ., value = TRUE) %>% sort()
 
 step6 <- step4 %>% 
