@@ -159,8 +159,11 @@ cases3 <- step1 %>% filter(type == "Type3")
 # ○	Main problem is that TP1 and TP2 are both small and do not have ECC stats 
 #   since they are singletons or non-existent
 # ○	Force TP1 and TP2 ECC stats to blanks
-# ○	Filter these strains prior to analysis & give a ECC blanks
+# ○	Filter these strains prior to analysis & give ECC blanks
 # ○	Eventually, include in analysis but maybe do not include them in EpiMatrix calculation
+
+cases4 <- step1 %>% filter(type == "Type4")
+
 
 # END OFTYPE MODIFICATIONS FOR ECCs --------------------------------------------------------------
 
