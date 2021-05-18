@@ -34,7 +34,7 @@ option_list <- list(
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = "Comma-delimited string of heights to collect ECCs for"),
   make_option(c("-p", "--cpus"), metavar = "numeric", default = 1, help = "CPUs"),
-  make_option(c("-t", "--duo"), metavar = "character", default = "01-10",
+  make_option(c("-t", "--duo"), metavar = "character", default = "01",
               help = "temporal, geographic coefficients"))
 
 cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ", 

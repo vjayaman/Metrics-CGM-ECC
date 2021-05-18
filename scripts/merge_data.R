@@ -10,9 +10,7 @@ option_list <- list(
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
-repNA <- function(vec_x, i) {
-  ifelse(is.na(vec_x), i, vec_x)
-}
+# repNA <- function(vec_x, i) {ifelse(is.na(vec_x), i, vec_x)}
 
 writeData <- function(fp, df) {
   write.table(df, fp, row.names = FALSE, quote = FALSE, sep = "\t")
@@ -27,12 +25,12 @@ readData <- function(fp) {
     as.data.table() %>% return()
 }
 
-inheritCol <- function(vec) {
-  x <- vec %>% pull() %>% na.omit() %>% unique()
-  assert("There are more than one ECC assigned to this cluster - incorrect merge!", length(x) == 1)
-  vec <- x
-  return(vec)
-}
+# inheritCol <- function(vec) {
+#   x <- vec %>% pull() %>% na.omit() %>% unique()
+#   assert("There are more than one ECC assigned to this cluster - incorrect merge!", length(x) == 1)
+#   vec <- x
+#   return(vec)
+# }
 
 checkTypes <- function(df) {
   # verify types
@@ -58,8 +56,21 @@ getAverage <- function(df, grp, avg, newname) {
     rename_at(2, ~newname)
 }
 
-# getDistCols <- function(cnames, x, y) {
-#   grep(paste0("(?=.*", x, ")(?=.*", y, ")"), cnames, value = TRUE, perl = TRUE) %>% return()
+getDistCols <- function(cnames, x, y, returnVal = TRUE) {
+  grep(paste0("(?=.*", x, ")(?=.*", y, ")"), cnames, value = returnVal, perl = TRUE) %>% return()
+}
+
+replaceDistName <- function(x) {
+  a1 <- ifelse(grepl("TP1", x), "TP1", "TP2")
+  if (grepl("temp", x)) {
+    paste0(a1, " temp average cluster distance (days)") %>% return()
+  }else {
+    paste0(a1, " geo average cluster distance (km)") %>% return()
+  }
+}
+
+# distCols <- function(x, y, cnames) {
+#   grep(paste0("(?=.*", x, ")(?=.*", y, ")"), cnames, perl = TRUE, value = TRUE) %>% return()
 # }
 
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Merging CGM and ECC results ", 
@@ -124,22 +135,29 @@ step4 <- step3 %>%
 # 
 # 
 # 
-# dist_avgs <- grep("avg", colnames(step4), value = TRUE) %>% grep("dist", ., value = TRUE) %>% sort()
+dist_avgs <- grep("avg", colnames(step4), value = TRUE) %>% grep("dist", ., value = TRUE) %>% sort()
 
 step6 <- step4 %>% 
   select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, 
-         TP1, tp1_cl, TP1_T0_Size, all_of(tp1eccs), TP2, tp2_cl, TP2_T0_Size, all_of(tp2eccs), 
-         # delta_ECC_1.0, 
-         delta_ECC_0.1, avg_date1, 
-         # getDistCols(dist_avgs, "TP1", "temp"), 
+         TP1, tp1_cl, TP1_T0_Size, 
+         all_of(tp1eccs), 
+         TP2, tp2_cl, TP2_T0_Size, 
+         all_of(tp2eccs), 
+         grep("delta_ECC", colnames(step4), value = TRUE),
+         avg_date1, 
+         getDistCols(dist_avgs, "TP1", "temp", TRUE),
          avg_lat_1, avg_long_1, 
-         # getDistCols(dist_avgs, "TP1", "geog"), 
+         getDistCols(dist_avgs, "TP1", "geog", TRUE),
          avg_date_2, 
-         # getDistCols(dist_avgs, "TP2", "temp"), 
+         getDistCols(dist_avgs, "TP2", "temp", TRUE),
          avg_lat_2, avg_long_2, 
-         # getDistCols(dist_avgs, "TP2", "geog"), 
+         getDistCols(dist_avgs, "TP2", "geog", TRUE),
          first_tp1_flag, last_tp1_flag, first_tp2_flag, last_tp2_flag, tp1_cl_size, tp2_cl_size, 
-         actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth, type, novel)
+         actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth, type) %>% 
+  rename_with(., replaceDistName, getDistCols(colnames(.), "TP1", "temp")) %>% 
+  rename_with(., replaceDistName, getDistCols(colnames(.), "TP2", "temp")) %>% 
+  rename_with(., replaceDistName, getDistCols(colnames(.), "TP1", "geo")) %>% 
+  rename_with(., replaceDistName, getDistCols(colnames(.), "TP2", "geo"))
 
 step7 <- step6 %>% 
   rename("TP1 cluster" = tp1_cl, 
@@ -147,15 +165,11 @@ step7 <- step6 %>%
          "TP2 cluster" = tp2_cl, 
          "TP2 cluster size (1)" = TP2_T0_Size, 
          "Average TP1 date" = avg_date1, 
-         # "TP1 temp average cluster distance (days)" = TP1_T0_avg_temp_dist, 
          "Average TP1 latitude"	= avg_lat_1, 
          "Average TP1 longitude" = avg_long_1, 
-         # "TP1 geo average cluster distance (km)" = TP1_T0_avg_geog_dist, 
          "Average TP2 date" = avg_date_2, 
-         # "TP2 temp average cluster distance (days)" = TP2_T0_avg_temp_dist, 
          "Average TP2 latitude" = avg_lat_2, 
          "Average TP2 longitude" = avg_long_2, 
-         # "TP2 geo average cluster distance (km)" = TP2_T0_avg_geog_dist, 
          "First time this cluster was seen in TP1" = first_tp1_flag, 
          "Last time this cluster was seen in TP1" = last_tp1_flag, 
          "First time this cluster was seen in TP2" = first_tp2_flag, 
