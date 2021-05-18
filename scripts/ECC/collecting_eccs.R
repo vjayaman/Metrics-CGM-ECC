@@ -1,4 +1,3 @@
-
 ### Incorporating the allele data with the epidemiological data 
 epiCollection <- function(strain_data, tau, gamma, typing_data) {
   cat(paste0("\nCollecting ECC values for temporal = ", tau, ", geo = ", gamma))
@@ -64,21 +63,19 @@ epiCollection <- function(strain_data, tau, gamma, typing_data) {
     td_i <- epi_cohesion_new(g_cuts, epi_melt) %>% 
       set_colnames(c(paste0("TP", i, "_", colnames(.))))
     colnames(td_i) %<>% gsub("ECC", paste0("ECC.", tau, ".", gamma), x = .)
+    # saveRDS(td_i, "latter_td.Rds")
+    # beepr::beep(3)
     
-    # clusters <- dr_td1 %>% select(-dr) %>% unique() %>% pull()
-    # formatted_vals <- formatted_temp
-    # cname <- "Temp.Dist"
-    # newname <- colnames(td_i)[i]
+    a2 <- avgDists(g_cuts, dm_temp, "Temp.Dist", colnames(td_i)[i])
+
     
-    # a <- averageDists(clusters, g_cuts, formatted_temp, "Temp.Dist", colnames(td_i)[i])
-    # # b <- validateAvgDists(clusters, typing_data[[1]], strain_data, "Date", "temp", "Temp.Dist")
-    # # assert("Average Temp.Dist values are the same for both methods", identical(a$avg.temp.dist, b))
-    # 
-    # d <- averageDists(clusters, g_cuts, formatted_geo, "Geog.Dist", colnames(td_i)[i])
-    # # f <- validateAvgDists(clusters, typing_data[[1]], strain_data, c("Latitude", "Longitude"), "geo", "Geog.Dist")
-    # # assert("Average Geog.Dist values are the same for both methods", identical(d$avg.geog.dist, f))
-    # 
-    # left_join(td_i, a) %>% left_join(., d) %>% return()
+    xz <- dr_td1 %>% select(-dr) %>% unique() %>% pull()
+    
+    Sys.time()
+    b1 <- averageDists(xz, g_cuts, formatted_geo, "Geog.Dist", colnames(td_i)[1])
+    Sys.time()
+    b2 <- avgDists(g_cuts, dm_geo, "Geog.Dist", colnames(td_i)[1])
+    Sys.time()
     
     return(td_i)
   })
@@ -90,27 +87,56 @@ epiCollection <- function(strain_data, tau, gamma, typing_data) {
 # and then divide by the total number of pairs (counting both directions)
 # this gives the same result as if we had used only one direction
 #   - if we did this, we would divide by 2 in the numerator and the denominator --> would cancel
-averageDists <- function(clusters, g_cuts, formatted_vals, cname, newname) {
-  
+avgDists <- function(g_cuts, dm, cname, newname) {
   x <- gsub("\\.", "_", cname) %>% tolower() %>% paste0(newname, "_avg_", .)
+  all_clusters <- g_cuts %>% set_colnames(c("Threshold", "dr", "n"))
+  clusters <- unique(all_clusters$Threshold)
   
-  lapply(1:length(clusters), function(i) {
-    print(paste0(i, "/", length(clusters)))
-    cluster_x <- clusters[i]
-    onecluster <- g_cuts %>% set_colnames(c("Threshold", "dr", "n")) %>%
-      filter(Threshold == cluster_x) %>% select(-Threshold)
-    
-    set1 <- formatted_vals %>% filter(dr1 %in% onecluster$dr, dr2 %in% onecluster$dr)
-    
-    set2 <- set1 %>%
-      left_join(., onecluster, by = c("dr1" = "dr")) %>% rename(n1 = n) %>%
-      left_join(., onecluster, by = c("dr2" = "dr")) %>% rename(n2 = n) %>%
-      mutate(num_pairs = n1 * n2)
-    
+  lapply(clusters, function(cl) {
+    f2 <- all_clusters %>% filter(Threshold == cl)
+    dists <- dm[f2$dr, f2$dr]
+    if (is.null(dim(dists))) {
+      return(0)
+    }else {
+      dists <- dists * f2$n[col(dists)]
+      dists <- dists * f2$n[row(dists)]
+      return(sum(dists) / (sum(f2$n)^2))
+    }
+  }) %>% unlist() %>% tibble(clusters, .) %>% set_colnames(c(newname, x))
+}
+
+# note that we sum the values for both directions e.g. (192, 346) and (346, 192)
+# and then divide by the total number of pairs (counting both directions)
+# this gives the same result as if we had used only one direction
+#   - if we did this, we would divide by 2 in the numerator and the denominator --> would cancel
+averageDists <- function(clusters, g_cuts, formatted_vals, cname, newname) {
+
+  x <- gsub("\\.", "_", cname) %>% tolower() %>% paste0(newname, "_avg_", .)
+  all_clusters <- g_cuts %>% set_colnames(c("Threshold", "dr", "n"))
+
+  dist_avgs <- lapply(1:length(clusters), function(j) {
+    if (j %% 50 == 0) {
+      print(paste0(j, "/", length(clusters)))
+    }
+    cluster_x <- clusters[j]
+
+    onecluster <- all_clusters %>% filter(Threshold == cluster_x) %>% select(-Threshold)
+
+    set2 <- formatted_vals %>%
+      left_join(onecluster, ., by = c("dr" = "dr1")) %>%
+      rename(dr1 = dr, n1 = n) %>%
+      left_join(onecluster, ., by = c("dr" = "dr2")) %>%
+      rename(dr2 = dr, n2 = n) %>%
+      mutate(num_pairs = n1 * n2) %>%
+      select(dr1, dr2, Geog.Dist, n1, n2, num_pairs) %>%
+      as.data.table()
+
     total <- (set2[, ..cname] * set2$num_pairs) %>% pull() %>% sum()
     (total / sum(set2$num_pairs)) %>% return()
-    
-  }) %>% unlist() %>% tibble(clusters, .) %>% set_colnames(c(newname, x)) %>% return()
+
+  }) %>% unlist() %>% tibble(clusters, .) %>% set_colnames(c(newname, x))
+  # saveRDS(dist_avgs, "distavgs.Rds")
+  dist_avgs %>% return()
 }
 
 validateAvgDists <- function(clusters, td, strain_data, cnames, type, newname) {

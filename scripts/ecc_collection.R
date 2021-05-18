@@ -57,7 +57,7 @@ strain_data <- read_tsv(params$strains) %>%
   mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")), 
          Location = paste(Country, Province, City, sep = "_")) %>% 
   filter(Strain %in% rownames(typing_data[[2]]))
-  
+
 collected_eccs <- lapply(combos, function(x) {
   c1 <- strsplit(x, split = "") %>% unlist() %>% 
     as.numeric() %>% as.list() %>% set_names(c("tau", "gamma"))
