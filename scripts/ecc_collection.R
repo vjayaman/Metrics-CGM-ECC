@@ -10,9 +10,7 @@ libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr","reshape2
 y <- lapply(libs, require, character.only = TRUE)
 assert("All packages loaded correctly", all(unlist(y)))
 
-source("scripts/ECC/classes_ecc.R")
-source("scripts/ECC/ecc_functions.R")
-source("scripts/ECC/collecting_eccs.R")
+paste0("scripts/ECC") %>% list.files(., full.names = TRUE) %>% sapply(., source)
 
 # Title: "EpiQuant - Salmonella Enteritidis Project (2019-2020)"
 # Authors of original work and initial modifications: Ben Hetman, Elissa Giang, Dillon Barker

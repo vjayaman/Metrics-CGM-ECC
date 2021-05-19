@@ -8,9 +8,7 @@ sink(msg, type="message")
 libs <- c("R6", "tibble", "optparse", "magrittr", "dplyr", "reshape2", "progress", "testit")
 y <- lapply(libs, require, character.only = TRUE)
 
-source("scripts/CGM/formatting_cgm.R")
-source("scripts/CGM/tracking_functions.R")
-source("scripts/CGM/classes_cgm.R")
+paste0("scripts/CGM") %>% list.files(., full.names = TRUE) %>% sapply(., source)
 
 # READING IN THE INPUTS ----------------------------------------------------------------------------------------
 # Change the default values to read in your own files, or feed through terminal arguments
@@ -131,9 +129,6 @@ novel_asmts <- tp2$melted %>% mutate(across(tp2_h, as.integer)) %>%
 # Pure novel TP2 cluster
 pure_novels <- novels_only_tracking %>% filter(num_novs == tp2_cl_size) %>% 
   mutate(tp1_cl_size = 0, add_TP1 = 0) %>% 
-         # actual_size_change = tp2_cl_size - tp1_cl_size, 
-         # actual_growth_rate = ((tp2_cl_size - tp1_cl_size) / tp1_cl_size) %>% round(digits = 3), 
-         # new_growth = (tp2_cl_size / (tp2_cl_size - num_novs)) %>% round(digits = 3)) %>% 
   right_join(novel_asmts, ., by = c("tp2_h", "tp2_cl", "tp2_id")) %>% select(colnames(isolates_base))
 
 # Mixed novel TP2 clusters
@@ -143,8 +138,7 @@ mixed_novels <- novels_only_tracking %>% filter(num_novs != tp2_cl_size) %>%
 # Mixed novels clusters should inherit data from the tracked TP1 strains
 all_mixed <- isolates_base %>% 
   select(-isolate, -tp1_id, -tp1_h, -tp1_cl, -first_tp1_flag, -last_tp1_flag) %>% 
-  unique() %>% 
-  left_join(mixed_novels, .) %>% select(colnames(isolates_base))
+  unique() %>% left_join(mixed_novels, .) %>% select(colnames(isolates_base))
 
 # FULL STRAIN FILE ---------------------------------------------------------------------------------------------
 # note: two types of novel clusters, those that are fully novel, and those that are not

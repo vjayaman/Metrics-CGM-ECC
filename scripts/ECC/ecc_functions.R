@@ -1,14 +1,7 @@
 
 # EPI-HELPER-MODULAR -----------------------------------------------------------------------------
 pairwiseDists <- function(dm, type, newnames) {
-  # dm <- assignments %>% distMatrix(., type, cnames)
-  transformed <- transformData(dm, type) %>% formatData(., newnames)
-    # as.data.frame() %>% rownames_to_column("dr1") %>% as.data.table() %>% 
-    # melt.data.table(., id.vars = "dr1", variable.name = "dr2", value.name = newnames[3]) %>%
-    # as_tibble() %>% 
-    # mutate(dr2 = as.character(dr2)) %>% 
-    # as.data.table() %>% set_colnames(newnames)
-  return(transformed)
+  transformData(dm, type) %>% formatData(., newnames) %>% return()
 }
 
 distMatrix <- function(input_data, dtype, cnames) {
