@@ -102,8 +102,7 @@ file:
 * Before, a distance matrix of the required size couldn't be held in memory ("R cannot allocate vector of size ...").
 
 * This has been dealt with, but there are still a few bugs/issues that need to be addressed:
-	* type handling has been done for the CGM part, but ECC inheritance needs to be re-done (more efficiently)
-		* partly done more efficiently - should improve type3 and 4 work
+	* type handling is done but only partially tested
 	* need to bring back in the original clusters given (if they were not numbers in initial input) as another column or two (since they are represented by numbers during analysis)
 	* and any modifications that I overlooked from before (including the more detailed input parameter file)
 
