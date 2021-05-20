@@ -27,8 +27,7 @@ SOURCE=use_placeholder
 
 printf "\n\nPart 1/4:"
 if [ -f $STRAINS -a -f $TP1_CLUSTERS -a -f $TP2_CLUSTERS ]; then
-	Rscript scripts/prepare_inputs.R 
-	--inputdir $INPUTDIR --metadata $STRAINS --tp1 $TP1_CLUSTERS --tp2 $TP2_CLUSTERS --source $SOURCE
+	Rscript scripts/prepare_inputs.R --inputdir $INPUTDIR --metadata $STRAINS --tp1 $TP1_CLUSTERS --tp2 $TP2_CLUSTERS --source $SOURCE
 else
 	echo "Not all required files found for part 1."
 fi
