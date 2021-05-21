@@ -1,26 +1,61 @@
 <!DOCTYPE html>
+
+<!--See https://stackoverflow.com/questions/16870876/writing-html-form-data-to-a-txt-file-without-the-use-of-a-webserver -->
 <html>
+	<head>
+		<style>
+form * {
+	display: block;
+	margin: 5px;
+}
+		</style>
+		<script language="Javascript" >
+			function download() {
+				var filename = window.document.myform.docname.value;
+				var geo = window.document.myform.geo_interest.value;
+				var lin = window.document.myform.lin_info.checked;
+				var dateinfo = window.document.myform.date_info.checked;
+				var prov = window.document.myform.prov_info.checked;
+				var ns = window.document.myform.non_singleton.checked;
+				var startdate = window.document.myform.start_date.value;
+				var enddate = window.document.myform.end_date.value;
 
-	<head>Form 1</head>
+				var pom = document.createElement('a');
+				pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + 
+					"Geographical area of interest: " + encodeURIComponent(geo) + "\n" + 
+					"Has defined lineage information: " + encodeURIComponent(lin) + "\n" +
+					"Has defined date information: " + encodeURIComponent(dateinfo) + "\n" + 
+					"Within the temporal window [" + encodeURIComponent(startdate) + ", " + 
+					encodeURIComponent(enddate) + "]\n" + 
+					"Has province-level data: " + encodeURIComponent(prov) + "\n" +
+					"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(ns) + "\n"); 
 
+				pom.setAttribute('download', filename);
+				
+				pom.style.display = 'none';
+				document.body.appendChild(pom);
+				
+				pom.click();
+				
+				document.body.removeChild(pom);
+			}
+		</script>
+	</head>
 	<body>
-		<h3>Filtering criteria</h3>
-		<hr />
-
-		<form>
-			Geographical area of interest: <input type = "text" name = "geo_interest" value = "Italy" />
+		<form name="myform" method="post" >
+			Geographical area of interest: <input type = "text" id = "geo_interest" value = "All" style = "display:inline"/>
 			<br>
-			<input type = "checkbox" name = "lin_info" value = "on" checked = "checked"> Has defined lineage information
+			Has defined lineage information <input type = "checkbox" id = "lin_info" checked = "checked" style = "display:inline"/>
 			<br>
-			<input type = "checkbox" name = "date_info" value = "on" checked = "checked"> Has defined date information
+			Has defined date information <input type = "checkbox" id = "date_info" checked = "checked" style = "display:inline"/>
 			<br>
-			<input type = "checkbox" name = "prov_info" value = "on" checked = "checked">Has province-level data
+			<span>Within temporal window, from <input type = "date" id = "start_date"/> to <input type = "date" id = "end_date"/></span>
+			Has provincial-level data <input type = "checkbox" id = "prov_info" style = "display:inline"/>
 			<br>
-			<input type = "checkbox" name = "non_singleton" value = "on">Is in a non-singleton cluster
+			Is in a non-singleton cluster (at TP1) <input type = "checkbox" id = "non_singleton" style = "display:inline"/>
 			<br>
-			<input type = "submit" name = "submit" value = "Submit" />
+			File name to save under (.txt type): <input type = "text" id = "docname" value = "analysis_inputs.txt" style = "display:inline"/>
+			<input id="download_btn" type="submit" class="btn" style="width: 125px" onClick="download();" />    
 		</form>
 	</body>
-
-
 </html>
