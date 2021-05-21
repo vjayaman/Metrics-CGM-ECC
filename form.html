@@ -17,24 +17,27 @@ form * {
 				var lin = window.document.myform.lin_info.checked;
 				var dateinfo = window.document.myform.date_info.checked;
 				var prov = window.document.myform.prov_info.checked;
+				var threshold = window.document.myform.threshold.value;
 				var ns = window.document.myform.non_singleton.checked;
 				var tempwindow = window.document.myform.temp_win.checked;
 				
 				if (tempwindow == true) {
 					var start_date = window.document.myform.start_date.value;
 					var end_date = window.document.myform.end_date.value;
-					var temp_results = "Will filter to only include data within window " + encodeURIComponent(start_date) + " to " + encodeURIComponent(end_date) + "\n";
+					var temp_results = "[" + encodeURIComponent(start_date) + "," + encodeURIComponent(end_date) + "]";
 				}else {
-					var temp_results = "No restrictions by date" + "\n";
+					var temp_results = "none";
 				}
 
 				var pom = document.createElement('a');
 				pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + 
 					"Geographical area of interest: " + encodeURIComponent(geo) + "\n" + 
 					"Has defined lineage information: " + encodeURIComponent(lin) + "\n" +
-					"Has defined date information: " + encodeURIComponent(dateinfo) + "\n" + 
-					"Has province-level data: " + encodeURIComponent(prov) + "\n" +
-					"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(ns) + "\n" + temp_results); 
+					"Has defined date information (day, month, and year): " + encodeURIComponent(dateinfo) + "\n" + 
+					"Has province-level data: " + encodeURIComponent(prov) + "\n" + 
+					"Threshold of interest: " + encodeURIComponent(threshold) + "\n" + 
+					"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(ns) + "\n" + 
+					"Filtering by date: " + temp_results + "\n"); 
 
 				pom.setAttribute('download', filename);
 				
@@ -70,7 +73,7 @@ form * {
 			<br>
 			Has defined lineage information <input type = "checkbox" id = "lin_info" checked = "checked" style = "display:inline"/>
 			<br>
-			Has defined date information <input type = "checkbox" id = "date_info" checked = "checked" style = "display:inline"/>
+			Has defined date information (day, month, and year) <input type = "checkbox" id = "date_info" checked = "checked" style = "display:inline"/>
 			<br>
 			Within a particular temporal window <input type = "checkbox" id = "temp_win" onclick="pickDates()" style = "display:inline"/>
 			<br>
@@ -78,7 +81,9 @@ form * {
 			<br>
 			Has provincial-level data <input type = "checkbox" id = "prov_info" style = "display:inline"/>
 			<br>
-			Is in a non-singleton cluster (at TP1) <input type = "checkbox" id = "non_singleton" style = "display:inline"/>
+			Threshold of interest: <input type = "text" id = "threshold" value = "T0" style = "display:inline"/>
+			<br>
+			Is in a non-singleton cluster (at TP1, at above threshold) <input type = "checkbox" id = "non_singleton" style = "display:inline"/>
 			<br>
 			File name to save under (.txt type): <input type = "text" id = "docname" value = "analysis_inputs.txt" style = "display:inline"/>
 			<br>

@@ -5,7 +5,7 @@
 msg <- file("logs/logfile_inputs.txt", open="wt")
 sink(msg, type="message")
 
-libs <- c("optparse", "magrittr", "readr", "dplyr")
+libs <- c("optparse", "magrittr", "readr", "dplyr", "testit")
 y <- lapply(libs, require, character.only = TRUE)
 
 option_list <- list(
@@ -59,6 +59,10 @@ outputDetails(paste0("\nWill save formatted inputs to new 'processed' directory 
 # Reading and processing the data in the full metadata excel file ----------------------------------------------
 outputDetails("Reading in strain data ...", TRUE)
 
+filtering_params <- readLines("analysis_inputs.txt", warn = FALSE) %>% 
+  strsplit(., split = ": ") %>% 
+  set_names(c("geo", "lin", "date", "prov", "th", "ns", "temp_win"))
+
 strain_data <- file.path(arg$metadata) %>% 
   read.table(sep = "\t", header = TRUE, fill = TRUE, quote = "", 
              fileEncoding = checkEncoding(.)) %>% as_tibble() %>% 
@@ -85,7 +89,56 @@ time2 <- file.path(arg$tp2) %>%
 outputDetails("Making table for matching TP2 clusters to integers (for metrics process) ...", TRUE)
 processed_tp2 <- intClusters(time2)
 
-# ECC-SPECIFIC INPUT FILES -------------------------------------------------------------------------------------
+# SAVE PROCESSED FILES -----------------------------------------------------------------------------------------
+
+# geographical area of interest
+# if (filtering_params$geo[2] != "All") {
+#   strain_data %>% filter()
+# }
+
+# has defined lineage information
+if (filtering_params$lin[2] == "true") {
+  tp1_lineage_strains <- processed_tp1$new_cols$Strain
+  tp2_lineage_strains <- processed_tp2$new_cols$Strain
+
+  strain_data <- strain_data %>% filter(Strain %in% c(tp1_lineage_strains, tp2_lineage_strains))  
+}
+
+# has defined date information (day, month, and year)
+if (filtering_params$date[2] == "true") {
+  strain_data <- strain_data %>% 
+    filter(!is.na(Day)) %>% filter(!is.na(Month)) %>% filter(!is.na(Year)) %>% 
+    filter(Day != "") %>% filter(Month != "") %>% filter(Year != "")
+}
+
+# has provincial-level data
+if (filtering_params$prov[2] == "true") {
+  strain_data <- strain_data %>% 
+    filter(!is.na(Province)) %>% 
+    filter(Province != "")
+}
+
+# is in a non-singleton cluster (at TP1)
+if (filtering_params$ns[2] == "true") {
+  assert("Threshold provided", !is.null(filtering_params$th[2]))
+  singletons <- processed_tp1$lookup_table %>% select(Strain, filtering_params$th[2]) %>% 
+    set_colnames(c("Strains", "cluster")) %>% group_by(cluster) %>% 
+    summarise(cluster_size = n()) %>% 
+    filter(cluster_size == 1) %>% pull(cluster)  
+  
+  in_singletons <- processed_tp1$lookup_table %>% 
+    filter(!!as.symbol(filtering_params$th[2]) %in% singletons) %>% 
+    pull(Strain)
+  
+  processed_tp1$new_cols <- processed_tp1$new_cols %>% filter(!(Strain %in% in_singletons))
+  processed_tp2$new_cols <- processed_tp2$new_cols %>% filter(!(Strain %in% in_singletons))
+  strain_data <- strain_data %>% filter(!(Strain %in% in_singletons))
+}
+
+# within a specified temporal window
+
+
+writeData(strain_data, file.path(arg$inputdir, "processed", "strain_info.txt"))
 writeData(processed_tp1$new_cols, file.path(arg$inputdir, "processed", "tp1_clusters.txt"))
 writeData(processed_tp2$new_cols, file.path(arg$inputdir, "processed", "tp2_clusters.txt"))
 
