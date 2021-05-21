@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 
 <!--See https://stackoverflow.com/questions/16870876/writing-html-form-data-to-a-txt-file-without-the-use-of-a-webserver -->
+<!--See https://www.w3schools.com/html/default.asp -->
 <html>
 	<head>
+		<h3>Form for analysis inputs</h3>
 		<style>
 form * {
-	display: block;
 	margin: 5px;
 }
 		</style>
@@ -17,18 +18,23 @@ form * {
 				var dateinfo = window.document.myform.date_info.checked;
 				var prov = window.document.myform.prov_info.checked;
 				var ns = window.document.myform.non_singleton.checked;
-				var startdate = window.document.myform.start_date.value;
-				var enddate = window.document.myform.end_date.value;
+				var tempwindow = window.document.myform.temp_win.checked;
+				
+				if (tempwindow == true) {
+					var start_date = window.document.myform.start_date.value;
+					var end_date = window.document.myform.end_date.value;
+					var temp_results = "Will filter to only include data within window " + encodeURIComponent(start_date) + " to " + encodeURIComponent(end_date) + "\n";
+				}else {
+					var temp_results = "No restrictions by date" + "\n";
+				}
 
 				var pom = document.createElement('a');
 				pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + 
 					"Geographical area of interest: " + encodeURIComponent(geo) + "\n" + 
 					"Has defined lineage information: " + encodeURIComponent(lin) + "\n" +
 					"Has defined date information: " + encodeURIComponent(dateinfo) + "\n" + 
-					"Within the temporal window [" + encodeURIComponent(startdate) + ", " + 
-					encodeURIComponent(enddate) + "]\n" + 
 					"Has province-level data: " + encodeURIComponent(prov) + "\n" +
-					"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(ns) + "\n"); 
+					"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(ns) + "\n" + temp_results); 
 
 				pom.setAttribute('download', filename);
 				
@@ -39,6 +45,23 @@ form * {
 				
 				document.body.removeChild(pom);
 			}
+			function pickDates() {
+				var checkBox = document.getElementById("temp_win")
+				var text = document.getElementById("date_text").style;
+				var start_date = document.getElementById("start_date").style;
+				var end_date = document.getElementById("end_date").style;
+
+				if (checkBox.checked == true) {
+					text.display = "inline";
+					start_date.display = "inline";
+					end_date.display = "inline";
+				} else {
+					text.display = "none";
+					start_date.display = "none";
+					end_date.display = "none";
+				}
+			}
+			
 		</script>
 	</head>
 	<body>
@@ -49,12 +72,16 @@ form * {
 			<br>
 			Has defined date information <input type = "checkbox" id = "date_info" checked = "checked" style = "display:inline"/>
 			<br>
-			<span>Within temporal window, from <input type = "date" id = "start_date"/> to <input type = "date" id = "end_date"/></span>
+			Within a particular temporal window <input type = "checkbox" id = "temp_win" onclick="pickDates()" style = "display:inline"/>
+			<br>
+			<p id = "date_text" style = "margin-left: 40px;display:none">Window from <input type = "date" id = "start_date" style = "display:none"/> to <input type = "date" id = "end_date" style = "display:none"/></p>
+			<br>
 			Has provincial-level data <input type = "checkbox" id = "prov_info" style = "display:inline"/>
 			<br>
 			Is in a non-singleton cluster (at TP1) <input type = "checkbox" id = "non_singleton" style = "display:inline"/>
 			<br>
 			File name to save under (.txt type): <input type = "text" id = "docname" value = "analysis_inputs.txt" style = "display:inline"/>
+			<br>
 			<input id="download_btn" type="submit" class="btn" style="width: 125px" onClick="download();" />    
 		</form>
 	</body>
