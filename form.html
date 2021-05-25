@@ -71,17 +71,20 @@
 			Geographical area of interest: 
 			<input type = "text" id = "geo_interest" value = "All" style = "display:inline"/>
 			<br>
+			<br>
 			<label class = "container">
 				Has provincial-level data
 				<input type = "checkbox" id = "prov_info"/>
 				<span class = "checkmark"></span>
 			</label>
 			<br>
+			<br>
 			<label class = "container">
 				Has defined date information (day, month, and year)
 				<input type = "checkbox" id = "date_info"/>
 				<span class = "checkmark"></span>
 			</label>
+			<br>
 			<br>
 			<label class = "container">
 				Within a particular temporal window 
@@ -93,13 +96,16 @@
 			<input type = "date" id = "start_date" style = "display:none"/> to 
 			<input type = "date" id = "end_date" style = "display:none"/></p>
 			<br>
+			<br>
 			<label class = "container">
 				Has defined lineage information
 				<input type = "checkbox" id = "lin_info"/>
 				<span class = "checkmark"></span>
 			</label>
 			<br>
+			<br>
 			Threshold of interest: <input type = "text" id = "threshold" value = "T0" style = "display:inline"/>
+			<br>
 			<br>
 			<label class = "container">
 				Is in a non-singleton cluster (at TP1, at above threshold)
@@ -109,6 +115,7 @@
 			<br>
 			<br>
 			File name to save under (.txt type): <input type = "text" id = "docname" value = "analysis_inputs.txt" style = "display:inline"/>
+			<br>
 			<br>
 			<div class = "btnwrapper">
 				<button class = "btn" onclick="download()">Download Inputs</button>
