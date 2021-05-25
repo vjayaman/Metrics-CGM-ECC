@@ -68,30 +68,44 @@
 		<form name="myform" method="post" >
 			<h3>Form for analysis inputs</h3>
 			<br>
-			Geographical area of interest: <input type = "text" id = "geo_interest" value = "All" style = "display:inline"/>
+			Geographical area of interest: 
+			<input type = "text" id = "geo_interest" value = "All" style = "display:inline"/>
 			<br>
-			Has provincial-level data 
-			<input type = "checkbox" id = "prov_info" class = "chkbox" style = "display:inline"/>
+			<label class = "container">
+				Has provincial-level data
+				<input type = "checkbox" id = "prov_info"/>
+				<span class = "checkmark"></span>
+			</label>
 			<br>
+			<label class = "container">
+				Has defined date information (day, month, and year)
+				<input type = "checkbox" id = "date_info"/>
+				<span class = "checkmark"></span>
+			</label>
 			<br>
-			Has defined date information (day, month, and year) 
-			<input type = "checkbox" id = "date_info" class = "chkbox" checked = "checked" style = "display:inline"/>
-			<br>
-			Within a particular temporal window 
-			<input type = "checkbox" id = "temp_win" class = "chkbox" onclick="pickDates()" style = "display:inline"/>
+			<label class = "container">
+				Within a particular temporal window 
+				<input type = "checkbox" id = "temp_win" onclick="pickDates()"/>
+				<span class = "checkmark"></span>
+			</label>
 			<br>
 			<p id = "date_text" style = "display:none">from 
 			<input type = "date" id = "start_date" style = "display:none"/> to 
 			<input type = "date" id = "end_date" style = "display:none"/></p>
 			<br>
-			<br>
-			Has defined lineage information 
-			<input type = "checkbox" id = "lin_info" class = "chkbox" checked = "checked" style = "display:inline"/>
+			<label class = "container">
+				Has defined lineage information
+				<input type = "checkbox" id = "lin_info"/>
+				<span class = "checkmark"></span>
+			</label>
 			<br>
 			Threshold of interest: <input type = "text" id = "threshold" value = "T0" style = "display:inline"/>
 			<br>
-			Is in a non-singleton cluster (at TP1, at above threshold) 
-			<input type = "checkbox" id = "non_singleton" class = "chkbox" style = "display:inline"/>
+			<label class = "container">
+				Is in a non-singleton cluster (at TP1, at above threshold)
+				<input type = "checkbox" id = "non_singleton" class = "chkbox"/>
+				<span class = "checkmark"></span>
+			</label>
 			<br>
 			<br>
 			File name to save under (.txt type): <input type = "text" id = "docname" value = "analysis_inputs.txt" style = "display:inline"/>

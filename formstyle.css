@@ -7,16 +7,13 @@ body {
 	justify-content: center;
 	align-items: center;
 
+	font-size: 17px;
 	height: 100vh;
 
 	/*background: linear-gradient(to top left, #00796b, #e0f2f1);*/
 	/*background: linear-gradient(to top left, #0097a7, #e0f7fa);*/
 	/*background: linear-gradient(to top left, #512da8, #ede7f6);*/
 	background-repeat: cover;
-}
-
-form * {
-	margin: 5px;
 }
 
 div.btnwrapper {
@@ -43,9 +40,64 @@ form input[type="text"] {
 	width: 15px;
 	height: 15px;
 	cursor: pointer;
+	display: inline;
 }
 
-.chkbox:hover {
-	background-color: green;
+
+
+
+
+
+.container {
+	display: inline;
+	position: relative; 
+	padding-left: 30px;
+	/*margin-bottom: 0;*/
+	cursor: pointer;
+	font-size: 17px;
 }
 
+.container input {
+	position: absolute;
+	opacity: 0;
+	cursor: pointer;
+	height: 0;
+	width: 0;
+}
+
+.checkmark {
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 16px;
+	width: 16px;
+	background-color: #eee;
+}
+
+.container:hover input ~ .checkmark {
+	background-color: #ccc;
+}
+
+.container input:checked ~ .checkmark {
+	background-color: #2196F3;
+}
+
+.checkmark:after {
+	content: "";
+	position: absolute;
+	display: none;
+}
+
+.container input:checked ~ .checkmark:after {
+	display: block;
+}
+
+.container .checkmark:after {
+	left: 5px;
+	top: 2px;
+	width: 4px;
+	height: 8px;
+	border: solid white;
+	border-width: 0 3px 3px 0;
+	transform: rotate(35deg);
+}
