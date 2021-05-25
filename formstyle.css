@@ -1,0 +1,51 @@
+h3 {
+	text-align: center;
+}
+
+body {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+
+	height: 100vh;
+
+	/*background: linear-gradient(to top left, #00796b, #e0f2f1);*/
+	/*background: linear-gradient(to top left, #0097a7, #e0f7fa);*/
+	/*background: linear-gradient(to top left, #512da8, #ede7f6);*/
+	background-repeat: cover;
+}
+
+form * {
+	margin: 5px;
+}
+
+div.btnwrapper {
+	text-align: center;
+}
+
+.btn {
+	/*border: 1px solid #3498db;*/
+	background-color: transparent;
+	height: 40px;
+	width: 130px;
+}
+
+form input[type="text"] {
+	border-right: none;
+	border-top: none;
+	border-left: none;
+	background-color: transparent;
+	outline: none;
+	caret-color: white;
+}
+
+.chkbox {
+	width: 15px;
+	height: 15px;
+	cursor: pointer;
+}
+
+.chkbox:hover {
+	background-color: green;
+}
+

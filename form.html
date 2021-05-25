@@ -2,92 +2,104 @@
 
 <!--See https://stackoverflow.com/questions/16870876/writing-html-form-data-to-a-txt-file-without-the-use-of-a-webserver -->
 <!--See https://www.w3schools.com/html/default.asp -->
+<!--https://medium.com/@racullum/how-to-create-a-modern-html-form-with-css-1dd0f3d49712 -->
+
 <html>
-	<head>
-		<h3>Form for analysis inputs</h3>
-		<style>
-form * {
-	margin: 5px;
-}
-		</style>
-		<script language="Javascript" >
-			function download() {
-				var filename = window.document.myform.docname.value;
-				var geo = window.document.myform.geo_interest.value;
-				var lin = window.document.myform.lin_info.checked;
-				var dateinfo = window.document.myform.date_info.checked;
-				var prov = window.document.myform.prov_info.checked;
-				var threshold = window.document.myform.threshold.value;
-				var ns = window.document.myform.non_singleton.checked;
-				var tempwindow = window.document.myform.temp_win.checked;
-				
-				if (tempwindow == true) {
-					var start_date = window.document.myform.start_date.value;
-					var end_date = window.document.myform.end_date.value;
-					var temp_results = "[" + encodeURIComponent(start_date) + "," + encodeURIComponent(end_date) + "]";
-				}else {
-					var temp_results = "none";
-				}
+<head>
+	<link rel = "stylesheet" href = "formstyle.css">
+<script language="Javascript" >
+	function download() {
+		var filename = window.document.myform.docname.value;
+		var geo = window.document.myform.geo_interest.value;
+		var lin = window.document.myform.lin_info.checked;
+		var dateinfo = window.document.myform.date_info.checked;
+		var prov = window.document.myform.prov_info.checked;
+		var threshold = window.document.myform.threshold.value;
+		var ns = window.document.myform.non_singleton.checked;
+		var tempwindow = window.document.myform.temp_win.checked;
+		
+		if (tempwindow == true) {
+			var start_date = window.document.myform.start_date.value;
+			var end_date = window.document.myform.end_date.value;
+			var temp_results = "[" + encodeURIComponent(start_date) + "," + encodeURIComponent(end_date) + "]";
+		}else {
+			var temp_results = "none";
+		}
+		
+		var pom = document.createElement('a');
+		pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + 
+			"Geographical area of interest: " + encodeURIComponent(geo) + "\n" + 
+			"Has defined lineage information: " + encodeURIComponent(lin) + "\n" +
+			"Has defined date information (day, month, and year): " + encodeURIComponent(dateinfo) + "\n" + 
+			"Has province-level data: " + encodeURIComponent(prov) + "\n" + 
+			"Threshold of interest: " + encodeURIComponent(threshold) + "\n" + 
+			"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(ns) + "\n" + 
+			"Filtering by date: " + temp_results + "\n"); 
 
-				var pom = document.createElement('a');
-				pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + 
-					"Geographical area of interest: " + encodeURIComponent(geo) + "\n" + 
-					"Has defined lineage information: " + encodeURIComponent(lin) + "\n" +
-					"Has defined date information (day, month, and year): " + encodeURIComponent(dateinfo) + "\n" + 
-					"Has province-level data: " + encodeURIComponent(prov) + "\n" + 
-					"Threshold of interest: " + encodeURIComponent(threshold) + "\n" + 
-					"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(ns) + "\n" + 
-					"Filtering by date: " + temp_results + "\n"); 
+		pom.setAttribute('download', filename);
+				
+		pom.style.display = 'none';
+		document.body.appendChild(pom);
+				
+		pom.click();
+				
+		document.body.removeChild(pom);
+	}
+	function pickDates() {
+		var checkBox = document.getElementById("temp_win")
+		var text = document.getElementById("date_text").style;
+		var start_date = document.getElementById("start_date").style;
+		var end_date = document.getElementById("end_date").style;
 
-				pom.setAttribute('download', filename);
-				
-				pom.style.display = 'none';
-				document.body.appendChild(pom);
-				
-				pom.click();
-				
-				document.body.removeChild(pom);
-			}
-			function pickDates() {
-				var checkBox = document.getElementById("temp_win")
-				var text = document.getElementById("date_text").style;
-				var start_date = document.getElementById("start_date").style;
-				var end_date = document.getElementById("end_date").style;
-
-				if (checkBox.checked == true) {
-					text.display = "inline";
-					start_date.display = "inline";
-					end_date.display = "inline";
-				} else {
-					text.display = "none";
-					start_date.display = "none";
-					end_date.display = "none";
-				}
-			}
-			
-		</script>
-	</head>
-	<body>
+		if (checkBox.checked == true) {
+			text.display = "inline";
+			start_date.display = "inline";
+			end_date.display = "inline";
+		} else {
+			text.display = "none";
+			start_date.display = "none";
+			end_date.display = "none";
+		}
+	}
+</script>
+</head>
+<body>
+  <div class="form_container">
 		<form name="myform" method="post" >
+			<h3>Form for analysis inputs</h3>
+			<br>
 			Geographical area of interest: <input type = "text" id = "geo_interest" value = "All" style = "display:inline"/>
 			<br>
-			Has defined lineage information <input type = "checkbox" id = "lin_info" checked = "checked" style = "display:inline"/>
+			Has provincial-level data 
+			<input type = "checkbox" id = "prov_info" class = "chkbox" style = "display:inline"/>
 			<br>
-			Has defined date information (day, month, and year) <input type = "checkbox" id = "date_info" checked = "checked" style = "display:inline"/>
 			<br>
-			Within a particular temporal window <input type = "checkbox" id = "temp_win" onclick="pickDates()" style = "display:inline"/>
+			Has defined date information (day, month, and year) 
+			<input type = "checkbox" id = "date_info" class = "chkbox" checked = "checked" style = "display:inline"/>
 			<br>
-			<p id = "date_text" style = "margin-left: 40px;display:none">Window from <input type = "date" id = "start_date" style = "display:none"/> to <input type = "date" id = "end_date" style = "display:none"/></p>
+			Within a particular temporal window 
+			<input type = "checkbox" id = "temp_win" class = "chkbox" onclick="pickDates()" style = "display:inline"/>
 			<br>
-			Has provincial-level data <input type = "checkbox" id = "prov_info" style = "display:inline"/>
+			<p id = "date_text" style = "display:none">from 
+			<input type = "date" id = "start_date" style = "display:none"/> to 
+			<input type = "date" id = "end_date" style = "display:none"/></p>
+			<br>
+			<br>
+			Has defined lineage information 
+			<input type = "checkbox" id = "lin_info" class = "chkbox" checked = "checked" style = "display:inline"/>
 			<br>
 			Threshold of interest: <input type = "text" id = "threshold" value = "T0" style = "display:inline"/>
 			<br>
-			Is in a non-singleton cluster (at TP1, at above threshold) <input type = "checkbox" id = "non_singleton" style = "display:inline"/>
+			Is in a non-singleton cluster (at TP1, at above threshold) 
+			<input type = "checkbox" id = "non_singleton" class = "chkbox" style = "display:inline"/>
+			<br>
 			<br>
 			File name to save under (.txt type): <input type = "text" id = "docname" value = "analysis_inputs.txt" style = "display:inline"/>
 			<br>
-			<input id="download_btn" type="submit" class="btn" style="width: 125px" onClick="download();" />    
+			<div class = "btnwrapper">
+				<button class = "btn" onclick="download()">Download Inputs</button>
+			</div>
 		</form>
-	</body>
+		</div>
+</body>
 </html>
