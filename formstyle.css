@@ -10,54 +10,61 @@ body {
 	font-size: 17px;
 	height: 100vh;
 
-	/*background: linear-gradient(to top left, #00796b, #e0f2f1);*/
+	background: linear-gradient(to top left, #00796b, #e0f2f1);
 	/*background: linear-gradient(to top left, #0097a7, #e0f7fa);*/
-	/*background: linear-gradient(to top left, #512da8, #ede7f6);*/
-	background-repeat: cover;
 }
 
-div.btnwrapper {
+.btnwrapper {
 	text-align: center;
 }
 
 .btn {
 	/*border: 1px solid #3498db;*/
-	background-color: transparent;
-	height: 40px;
-	width: 130px;
+	/*background-color: #26a69a;*/
+	background-color: #26a69a;
+	height: 35px;
+	width: 110px;
+	color: white;
 }
 
+.form_container {
+	background-color: white;
+	padding-left: 25px;
+	padding-right: 25px;
+	padding-bottom: 24px;
+	border-radius: 25px;
+}
+
+/*Text field handling*/
 form input[type="text"] {
 	border-right: none;
 	border-top: none;
 	border-left: none;
 	background-color: transparent;
 	outline: none;
-	caret-color: white;
+	caret-color: blue;
+	display: inline;
+	font-size: 16px;
+	font-style: italic;
+	color: grey;
 }
 
+
+/*Checkbox handling*/
 .chkbox {
-	width: 15px;
-	height: 15px;
 	cursor: pointer;
 	display: inline;
 }
 
-
-
-
-
-
-.container {
+.chk_container {
 	display: inline;
 	position: relative; 
-	padding-left: 30px;
-	/*margin-bottom: 0;*/
+	padding-left: 23px;
 	cursor: pointer;
 	font-size: 17px;
 }
 
-.container input {
+.chk_container input {
 	position: absolute;
 	opacity: 0;
 	cursor: pointer;
@@ -65,7 +72,7 @@ form input[type="text"] {
 	width: 0;
 }
 
-.checkmark {
+.cbox {
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -74,25 +81,25 @@ form input[type="text"] {
 	background-color: #eee;
 }
 
-.container:hover input ~ .checkmark {
+.chk_container:hover input ~ .cbox {
 	background-color: #ccc;
 }
 
-.container input:checked ~ .checkmark {
+.chk_container input:checked ~ .cbox {
 	background-color: #2196F3;
 }
 
-.checkmark:after {
+.cbox:after {
 	content: "";
 	position: absolute;
 	display: none;
 }
 
-.container input:checked ~ .checkmark:after {
+.chk_container input:checked ~ .cbox:after {
 	display: block;
 }
 
-.container .checkmark:after {
+.chk_container .cbox:after {
 	left: 5px;
 	top: 2px;
 	width: 4px;
@@ -100,4 +107,8 @@ form input[type="text"] {
 	border: solid white;
 	border-width: 0 3px 3px 0;
 	transform: rotate(35deg);
+}
+
+th, td {
+  padding: 5px;
 }

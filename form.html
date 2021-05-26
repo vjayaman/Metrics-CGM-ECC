@@ -6,119 +6,231 @@
 
 <html>
 <head>
-	<link rel = "stylesheet" href = "formstyle.css">
+	<link rel="stylesheet" href="formstyle.css">
 <script language="Javascript" >
+
+	// https://stackoverflow.com/questions/8563240/how-to-get-all-checked-checkboxes
+	function checkBoxList() {
+		var cnamelist=document.getElementsByName("colnames");
+		var cnames="";
+
+		for (var i=0; i < cnamelist.length; i++) {
+			if (cnamelist[i].checked) {
+				if (cnames == "") {
+					cnames=cnamelist[i].value;
+				}else {
+					cnames=cnames + "," + cnamelist[i].value;	
+				}				
+			}
+		}
+		return cnames.length > 0 ? cnames : null;
+	}
+
 	function download() {
-		var filename = window.document.myform.docname.value;
-		var geo = window.document.myform.geo_interest.value;
-		var lin = window.document.myform.lin_info.checked;
-		var dateinfo = window.document.myform.date_info.checked;
-		var prov = window.document.myform.prov_info.checked;
-		var threshold = window.document.myform.threshold.value;
-		var ns = window.document.myform.non_singleton.checked;
-		var tempwindow = window.document.myform.temp_win.checked;
-		
+		var filename=window.document.myform.docname.value;
+		var reg=window.document.myform.region_interest.value;
+		var country=window.document.myform.country_interest.value;
+		var lin=window.document.myform.lin_info.checked;
+		var dateinfo=window.document.myform.date_info.checked;
+		var prov=window.document.myform.prov_info.checked;
+		var threshold=window.document.myform.threshold.value;
+		var ns=window.document.myform.non_singleton.checked;
+		var tempwindow=window.document.myform.temp_win.checked;
+		var cnames=checkBoxList();
+
 		if (tempwindow == true) {
-			var start_date = window.document.myform.start_date.value;
-			var end_date = window.document.myform.end_date.value;
-			var temp_results = "[" + encodeURIComponent(start_date) + "," + encodeURIComponent(end_date) + "]";
+			var start_date=window.document.myform.start_date.value;
+			var end_date=window.document.myform.end_date.value;
+			var temp_results="[" + encodeURIComponent(start_date) + "," + 
+			encodeURIComponent(end_date) + "]";
 		}else {
-			var temp_results = "none";
+			var temp_results="none";
+		}
+
+		if (prov == true) {
+			var province=window.document.myform.prov_interest.value;
+			var prov_results=encodeURIComponent(province);
+		}else {
+			var prov_results="none";
 		}
 		
-		var pom = document.createElement('a');
+		var pom=document.createElement('a');
 		pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + 
-			"Geographical area of interest: " + encodeURIComponent(geo) + "\n" + 
-			"Has defined lineage information: " + encodeURIComponent(lin) + "\n" +
-			"Has defined date information (day, month, and year): " + encodeURIComponent(dateinfo) + "\n" + 
+			"Region of interest: " + encodeURIComponent(reg) + "\n" + 
+			"Country of interest: " + encodeURIComponent(country) + "\n" + 
+			"Has defined lineage information: " + encodeURIComponent(lin) + "\n" + 
+			"Has defined date information (day, month, and year): " + 
+			encodeURIComponent(dateinfo) + "\n" + 
 			"Has province-level data: " + encodeURIComponent(prov) + "\n" + 
+			"Province of interest" + prov_results + "\n" + 
 			"Threshold of interest: " + encodeURIComponent(threshold) + "\n" + 
 			"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(ns) + "\n" + 
-			"Filtering by date: " + temp_results + "\n"); 
+			"Filtering by date: " + temp_results + "\n" + 
+			"Column names: " + cnames + "\n"); 
 
 		pom.setAttribute('download', filename);
 				
-		pom.style.display = 'none';
+		pom.style.display='none';
 		document.body.appendChild(pom);
 				
 		pom.click();
 				
 		document.body.removeChild(pom);
 	}
+
+
 	function pickDates() {
-		var checkBox = document.getElementById("temp_win")
-		var text = document.getElementById("date_text").style;
-		var start_date = document.getElementById("start_date").style;
-		var end_date = document.getElementById("end_date").style;
+		var checkBox=document.getElementById("temp_win")
+		var text=document.getElementById("date_text").style;
+		var start_date=document.getElementById("start_date").style;
+		var end_date=document.getElementById("end_date").style;
 
 		if (checkBox.checked == true) {
-			text.display = "inline";
-			start_date.display = "inline";
-			end_date.display = "inline";
+			text.display="inline";
+			start_date.display="inline";
+			end_date.display="inline";
 		} else {
-			text.display = "none";
-			start_date.display = "none";
-			end_date.display = "none";
+			text.display="none";
+			start_date.display="none";
+			end_date.display="none";
+		}
+	}
+
+	function provLevel() {
+		var checkBox=document.getElementById("prov_info");
+		var prov_int=document.getElementById("interest");
+
+		if (checkBox.checked == true) {
+			prov_int.style.display="inline";
+		}else {
+			prov_int.style.display="none";
 		}
 	}
 </script>
 </head>
+
 <body>
   <div class="form_container">
 		<form name="myform" method="post" >
 			<h3>Form for analysis inputs</h3>
+			Region of interest: 
+			<input type="text" id="region_interest" value="All"/>
 			<br>
-			Geographical area of interest: 
-			<input type = "text" id = "geo_interest" value = "All" style = "display:inline"/>
+			<br>
+			Country of interest: 
+			<input type="text" id="country_interest" value="All"/>
 			<br>
 			<br>
-			<label class = "container">
+			<label class="chk_container">
 				Has provincial-level data
-				<input type = "checkbox" id = "prov_info"/>
-				<span class = "checkmark"></span>
+				<input type="checkbox" id="prov_info" onclick="provLevel()"/>
+				<span class="cbox"></span>
 			</label>
 			<br>
 			<br>
-			<label class = "container">
+			<label id="interest" style="display:none">
+				Province of interest: 
+				<input type="text" id="prov_interest" value="All"/>
+				<br>
+				<br>
+			</label>
+			<label class="chk_container">
 				Has defined date information (day, month, and year)
-				<input type = "checkbox" id = "date_info"/>
-				<span class = "checkmark"></span>
+				<input type="checkbox" id="date_info"/>
+				<span class="cbox"></span>
 			</label>
 			<br>
 			<br>
-			<label class = "container">
+			<label class="chk_container">
 				Within a particular temporal window 
-				<input type = "checkbox" id = "temp_win" onclick="pickDates()"/>
-				<span class = "checkmark"></span>
+				<input type="checkbox" id="temp_win" onclick="pickDates()"/>
+				<span class="cbox"></span>
 			</label>
+			<p id="date_text" style="display:none"><br><br>from 
+			<input type="date" id="start_date" style="display:none"/> to 
+			<input type="date" id="end_date" style="display:none"/></p>
 			<br>
-			<p id = "date_text" style = "display:none">from 
-			<input type = "date" id = "start_date" style = "display:none"/> to 
-			<input type = "date" id = "end_date" style = "display:none"/></p>
 			<br>
-			<br>
-			<label class = "container">
+			<label class="chk_container">
 				Has defined lineage information
-				<input type = "checkbox" id = "lin_info"/>
-				<span class = "checkmark"></span>
+				<input type="checkbox" id="lin_info"/>
+				<span class="cbox"></span>
 			</label>
 			<br>
 			<br>
-			Threshold of interest: <input type = "text" id = "threshold" value = "T0" style = "display:inline"/>
+			Threshold of interest: <input type="text" id="threshold" value="T0"/>
 			<br>
 			<br>
-			<label class = "container">
+			<label class="chk_container">
 				Is in a non-singleton cluster (at TP1, at above threshold)
-				<input type = "checkbox" id = "non_singleton" class = "chkbox"/>
-				<span class = "checkmark"></span>
+				<input type="checkbox" id="non_singleton" class="chkbox"/>
+				<span class="cbox"></span>
 			</label>
 			<br>
 			<br>
-			File name to save under (.txt type): <input type = "text" id = "docname" value = "analysis_inputs.txt" style = "display:inline"/>
+			<fieldset>
+				<legend><em>Expected column names of metadata</em></legend>
+				Required: Strain, Latitude, Longitude, Day, Month, Year <br><br>
+				Optional:
+				<table>
+				  <tr>
+				    <td>
+				      <label class="chk_container">
+					      Source<input type="checkbox" name="colnames" value="Source" checked>
+					      <span class="cbox"></span>
+				      </label>
+				    </td>
+				    <td>
+				      <label class="chk_container">
+					      Region<input type="checkbox" name="colnames" value="Region">
+					      <span class="cbox"></span>
+				      </label>
+				    </td>
+				    <td>
+				      <label class="chk_container">
+				        Country<input type="checkbox" name="colnames" value="Country" checked>
+					      <span class="cbox"></span>
+				      </label>
+				    </td>
+				    <td>
+      				<label class="chk_container">
+      					Province<input type="checkbox" name="colnames" value="Province" checked>
+      					<span class="cbox"></span>
+      				</label>
+				    </td>
+				  </tr>
+				  
+				  <tr>
+				    <td>
+				      <label class="chk_container">
+      					City<input type="checkbox" name="colnames" value="City" checked>
+      					<span class="cbox"></span>
+				      </label>
+				    </td>
+				    <td>
+				      <label class="chk_container">
+      					TP1
+      					<input type="checkbox" name="colnames" value="TP1">
+      					<span class="cbox"></span>
+      				</label>
+				    </td>
+				    <td>
+				      <label class="chk_container">
+      					TP2
+      					<input type="checkbox" name="colnames" value="TP2">
+      					<span class="cbox"></span>
+      				</label>
+				    </td>
+				  </tr>
+				</table>
+			</fieldset>
+			<br>
+			File name to save under (.txt): 
+			<input type="text" id="docname" value="form_inputs.txt"/>
 			<br>
 			<br>
-			<div class = "btnwrapper">
-				<button class = "btn" onclick="download()">Download Inputs</button>
+			<div class="btnwrapper">
+				<button class="btn" onclick="download()"><b>Download</b></button>
 			</div>
 		</form>
 		</div>
