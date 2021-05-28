@@ -62,7 +62,7 @@
 			"Has defined date information (day, month, and year): " + 
 			encodeURIComponent(dateinfo) + "\n" + 
 			"Has province-level data: " + encodeURIComponent(prov) + "\n" + 
-			"Province of interest" + prov_results + "\n" + 
+			"Province of interest: " + prov_results + "\n" + 
 			"Threshold of interest: " + encodeURIComponent(threshold) + "\n" + 
 			"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(ns) + "\n" + 
 			"Filtering by date: " + temp_results + "\n" + 
@@ -135,8 +135,8 @@
 				<br>
 			</label>
 			<label class="chk_container">
-				Has defined date information (day, month, and year)
-				<input type="checkbox" id="date_info"/>
+				Has defined date information (day, month, year) (req.)
+				<input type="checkbox" id="date_info" disabled="disabled" checked="checked"/>
 				<span class="cbox"></span>
 			</label>
 			<br>
@@ -152,13 +152,13 @@
 			<br>
 			<br>
 			<label class="chk_container">
-				Has defined lineage information
-				<input type="checkbox" id="lin_info"/>
+				Has defined lineage information (req.)
+				<input type="checkbox" id="lin_info" disabled="disabled" checked="checked"/>
 				<span class="cbox"></span>
 			</label>
 			<br>
 			<br>
-			Threshold of interest: <input type="text" id="threshold" value="T0"/>
+			Threshold of interest: <input type="text" id="threshold" value="0"/>
 			<br>
 			<br>
 			<label class="chk_container">

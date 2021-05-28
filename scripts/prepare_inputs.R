@@ -9,10 +9,16 @@ libs <- c("optparse", "magrittr", "readr", "dplyr", "testit")
 y <- lapply(libs, require, character.only = TRUE)
 
 option_list <- list(
-  make_option(c("-i", "--inputdir"), metavar = "dir", default = "inputs", help = "Raw inputs directory"), 
-  make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/strain_info.txt", help = "Metadata file"),
-  make_option(c("-a", "--tp1"), metavar = "file", default = "inputs/tp1_clusters_init.txt", help = "TP1 cluster assignments"), 
-  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/tp2_clusters_init.txt", help = "TP2 cluster assignments"))
+  make_option(c("-i", "--inputdir"), metavar = "dir", 
+              default = "inputs", help = "Raw inputs directory"), 
+  make_option(c("-m", "--metadata"), metavar = "file", 
+              default = "inputs/strain_info.txt", help = "Metadata file"),
+  make_option(c("-a", "--tp1"), metavar = "file", 
+              default = "inputs/tp1_clusters_init.txt", help = "TP1 cluster assignments"), 
+  make_option(c("-b", "--tp2"), metavar = "file", 
+              default = "inputs/tp2_clusters_init.txt", help = "TP2 cluster assignments"), 
+  make_option(c("-x", "--details"), metavar = "file", 
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
@@ -20,70 +26,126 @@ dir.create("results", showWarnings = FALSE)
 dir.create(file.path(arg$inputdir, "processed"))
 
 # FUNCTIONS ----------------------------------------------------------------------------------------------------
-checkEncoding <- function(fp) {
-  readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
-}
+source("scripts/prepfunctions.R")
 
-# Outputs the same message in two ways, one is directed to standard output and one to a log file
-outputDetails <- function(msg, newcat = FALSE) {
-  cat(msg)
-  if (newcat) {cat("\n")}
-  message(msg)
-}
+outputDetails(paste0("\n||", paste0(rep("-", 20), collapse = ""), " Prepping inputs for metric generation ", 
+                     paste0(rep("-", 20), collapse = ""), "||\nStarted process at: ", Sys.time()), TRUE)
+outputDetails(paste0("\nWill save formatted inputs to 'processed' directory in ", arg$inputdir, " directory."), TRUE)
 
-# Writes data to a given location, saves as tab-delimited text file
-writeData <- function(df, filepath) {
-  write.table(df, filepath, row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
-}
-
-# Creates a lookup table of integer cluster (in case clusters with character names are provided)
-# Returns lookup table and new integer columns, with integer thresholds as well, from 0 to # of thresholds - 1
-intClusters <- function(df) {
-  list_lookup <- lapply(2:ncol(df), function(j) {
-    original_values <- df %>% pull(j) %>% unique()
-    tibble(original_values, 1:length(original_values)) %>% 
-      set_names(c(names(df)[j], paste0("new_", j-2)))
-  })
-  
-  lookup_tbl <- suppressMessages(plyr::join_all(append(list(df), list_lookup), type = "left")) %>% as_tibble()
-  cnames <- grep("Strain|new", colnames(lookup_tbl), value = TRUE)
-  
-  list(lookup_tbl, lookup_tbl[,cnames] %>% set_colnames(gsub("new_", "", colnames(.)))) %>% 
-    set_names(c("lookup_table", "new_cols"))%>% return()
-}
-
-outputDetails(paste0("\n||", paste0(rep("-", 20), collapse = ""), " Preparing inputs for CGM and ECC metric generation ", 
-           paste0(rep("-", 20), collapse = ""), "||\nStarted process at: ", Sys.time()), TRUE)
-outputDetails(paste0("\nWill save formatted inputs to new 'processed' directory in ", arg$inputdir, " directory."), TRUE)
-
-# Reading and processing the data in the full metadata excel file ----------------------------------------------
-outputDetails("Reading in strain data ...", TRUE)
-
-filtering_params <- readLines("analysis_inputs.txt", warn = FALSE) %>% 
-  strsplit(., split = ": ") %>% 
-  set_names(c("geo", "lin", "date", "prov", "th", "ns", "temp_win"))
+# Results of "Form for analysis inputs" ------------------------------------------------------------------------
+filtering_params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>% 
+  set_names(c("reg","cou","has_date","has_prov","prov","th","ns","temp_win","cnames"))
 
 strain_data <- file.path(arg$metadata) %>% 
   read.table(sep = "\t", header = TRUE, fill = TRUE, quote = "", 
-             fileEncoding = checkEncoding(.)) %>% as_tibble() %>% 
-  select(c("Strain", "Source", "Country", "Province", "City", "Latitude", 
-           "Longitude", "Day", "Month", "Year", "TP1", "TP2")) %>%
-  filter(TP2 == 1) %>%
-  arrange(Strain) %>% 
-  mutate(TP1 = ifelse(is.na(TP1), 0, TP1))
+             fileEncoding = checkEncoding(.)) %>% as_tibble()
+
+time1 <- file.path(arg$tp1) %>% 
+  read.table(sep = "\t", header = TRUE, fileEncoding = checkEncoding(.)) %>% as_tibble()
+
+time2 <- file.path(arg$tp2) %>% 
+  read.table(sep = "\t", header = TRUE, fileEncoding = checkEncoding(.)) %>% as_tibble()
+
+# LINEAGE INFO -------------------------------------------------------------------------------------------------
+
+# Strains with metadata and defined lineage info at TP1
+tp1strains <- intersect(strain_data$Strain, time1$Strain)
+
+time1 <- time1 %>% filter(Strain %in% tp1strains)
+
+# Strains with metadata and defined lineage info at TP1
+tp2strains <- intersect(strain_data$Strain, time2$Strain)
+
+time2 <- time2 %>% filter(Strain %in% tp2strains)
+
+# Strains that have defined lineage info
+strain_data <- strain_data %>% filter(Strain %in% c(tp1strains, tp2strains))
+
+# COLUMN NAMES -------------------------------------------------------------------------------------------------
+cnames <- filtering_params$cnames[2] %>% strsplit(split = ",") %>% unlist()
+if (cnames != "none") {
+  strain_data <- strain_data %>% 
+    select("Strain", "Latitude", "Longitude", "Day", "Month", "Year", all_of(cnames))
+}
+
+# REGION OF INTEREST -------------------------------------------------------------------------------------------
+if (filtering_params$reg[2] != "All" & "Region" %in% colnames(strain_data)) {
+  strain_data <- strain_data %>% filter(Region %in% filtering_params$reg[2])
+}
+
+# COUNTRY OF INTEREST ------------------------------------------------------------------------------------------
+if (filtering_params$cou[2] != "All" & "Country" %in% colnames(strain_data)) {
+  strain_data <- strain_data %>% filter(Country %in% filtering_params$cou[2])
+}
+
+# HAS DEFINED DATE INFO ----------------------------------------------------------------------------------------
+# if (!as.logical(filtering_params$has_date[2])) {
+#   
+# }
+
+# HAS PROVINCE-LEVEL DATA --------------------------------------------------------------------------------------
+if (as.logical(filtering_params$has_prov[2])) {
+  if (filtering_params$prov[2] != "All") {
+    strain_data <- strain_data %>% filter(Province %in% filtering_params$prov[2])
+  }
+}
+
+# NON-SINGLETON CLUSTERS ---------------------------------------------------------------------------------------
+if (as.logical(filtering_params$ns[2])) {
+  time1
+}
+
+# TEMPORAL WINDOW ----------------------------------------------------------------------------------------------
+
+
+# reg "Region of interest" "All"
+# cou "Country of interest" "All"
+# has_date "Has defined date information (day, month, and year)" "true"
+# has_prov "Has province-level data" "true"
+# prov "Province of interest" "All"
+th "Threshold of interest" "T0"
+ns "Is in a non-singleton cluster (at TP1)" "false"
+temp_win "Filtering by date" "none"
+# cnames "Column names" "Source,Country,Province,City,TP2"
+
+
+
+# REQUIRED
+# Strain, Latitude, Longitude, Day (for now), Month, Year
+
+# Optional
+# Source, Region, Country, Province, City, TP1, TP2
+
+# if ("TP2" %in% cnames) {
+#   strain_data <- strain_data %>% filter(TP2 == 1)
+# }else {
+#   
+# }
+# 
+# if ("TP1" %in% cnames) {
+#   strain_data <- strain_data %>% mutate(TP1 = ifelse(is.na(TP1), 0, TP1))
+# }else {
+#   
+# }
 
 # Reading and processing the cluster data for TP1 and TP2, making sure they match the metadata file ------------
 # TP1 DATA -----------------------------------------------------------------------------------------------------
-time1 <- file.path(arg$tp1) %>% 
-  read.table(sep = "\t", header = TRUE, fileEncoding = checkEncoding(.)) %>% as_tibble() %>% 
-  filter(Strain %in% strain_data$Strain) %>% arrange(Strain)
 
+# provided TP1 lineages
+
+  
+filter(Strain %in% strain_data$Strain) %>% arrange(Strain)
+
+# x1 <- time1 %>% select(filtering_params$th[2]) %>% pull()
+# 
+# if (!all(is.integer(x1))) {
 outputDetails("Making table for matching TP1 clusters to integers (for metrics process) ...", TRUE)
-processed_tp1 <- intClusters(time1)
+processed_tp1 <- intClusters(time1)  
 
 # TP1 DATA -----------------------------------------------------------------------------------------------------
-time2 <- file.path(arg$tp2) %>% 
-  read.table(sep = "\t", header = TRUE, fileEncoding = checkEncoding(.)) %>% as_tibble() %>% 
+
+
+
   filter(Strain %in% strain_data$Strain) %>% arrange(Strain)
 
 outputDetails("Making table for matching TP2 clusters to integers (for metrics process) ...", TRUE)
@@ -92,9 +154,11 @@ processed_tp2 <- intClusters(time2)
 # SAVE PROCESSED FILES -----------------------------------------------------------------------------------------
 
 # geographical area of interest
-# if (filtering_params$geo[2] != "All") {
-#   strain_data %>% filter()
-# }
+if (filtering_params$geo[2] != "All") {
+  strain_data %>% filter()
+}else {
+  
+}
 
 # has defined lineage information
 if (filtering_params$lin[2] == "true") {
