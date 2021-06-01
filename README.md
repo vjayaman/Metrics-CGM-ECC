@@ -97,16 +97,13 @@ file:
 
 ## Method 3 (Latest version, not ready for use):
 
-* The branch `dist_mat_memory` contains the refactored and latest version, which deals with issues relating to large input datasets (> 35000 samples, for example).
+* The branch `analysis_inputs` contains the refactored and latest version, which includes the new input form as well as general fine-tuning (and the last of the strain report modifications).
 
-* Before, a distance matrix of the required size couldn't be held in memory ("R cannot allocate vector of size ...").
-
-* This has been dealt with, but there are still a few bugs/issues that need to be addressed:
+* Still a few bugs/issues that being addressed:
 	* type handling is done but only partially tested
 	* need to bring back in the original clusters given (if they were not numbers in initial input) as another column or two (since they are represented by numbers during analysis)
-	* and any modifications that I overlooked from before (including the more detailed input parameter file)
-
-* I can stitch the new method back into the pipeline then and then finish fine-tuning the output tables changes mentioned in the last meeting.
+	* double-checking the strain report modification list
+	* validation pipeline
 
 * This will be merged back into the main branch, and after someone else has verified that everything still runs for them as expected, this will be tagged as *v2.0*.
 
