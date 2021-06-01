@@ -11,7 +11,7 @@ option_list <- list(
 arg <- parse_args(OptionParser(option_list=option_list))
 
 files <- paste0("scripts/MergeFunctions") %>% list.files(., full.names = TRUE)
-sapply(files, source)
+invisible(sapply(files, source))
 
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Merging CGM and ECC results ", 
            paste0(rep("-", 31), collapse = ""), "||\n"))
@@ -42,41 +42,43 @@ assert("No clusters with unassigned type", checkTypes(step1))
 # TYPE MODIFICATIONS FOR ECCs --------------------------------------------------------------------
 
 # Type I modifications: TP1 > 2, TP2 >2, TP1 = TP2
-# ○	None required, we can use the ECC stats for TP1 & TP2, we can use the cluster averages for TP1 & TP2
+#   - None required, we can use the ECC stats for TP1 & TP2, we can use the cluster averages for TP1 & TP2
 
 
 # Type II modifications: TP1 > 2, TP2 > 2, TP2 > TP1
-# ○	Main problem is that the novel strains in TP2 don’t have TP1 data
-# ○	TP1, no modification required
-# ○	TP2: 
-#   - no change for strains also in TP1; 
-#   - for novel strains in TP2: 
-#     - in TP1, needs to have the cluster size and ECC stats from the TP1 strains they cluster with in TP2, 
-#     - need to have the TP1 cluster number
+#   -	Main problem is that the novel strains in TP2 don’t have TP1 data
+#   -	TP1, no modification required
+#   -	TP2: 
+#     - no change for strains also in TP1; 
+#     - for novel strains in TP2: 
+#       - in TP1, needs to have the cluster size and ECC stats from the TP1 strains they cluster with in TP2, 
+#       - need to have the TP1 cluster number
 
 cases2 <- step1 %>% filter(type == "Type2") %>% type2Inheritance(.)
 step1 <- step1[ type != "Type2" ] %>% bind_rows(cases2)
 
 
 # Type III modifications: TP1 < 3, TP2 > 2
-# ○	Main problem is that TP1 cluster doesn’t have ECC stats, 
+# -	Main problem is that TP1 cluster doesn't have ECC stats, 
 #   - impacts the change vector calculation; 
 #   - also, if TP1 = 0 then cluster size for bubble plot & the cluster growth have no data 
 #     - (no bubble for TP1 & “Inf” growth rate)
-# ○	TP1 needs to have a size of 1 
+# - TP1 needs to have a size of 1 
 #   - (+ 1 adjustment for every cluster) so that the denominator is not 0 for cluster growth
 #   - (initially wanted ECC bubbles of size at least 1, NOW not doing cluster size increment for the ECCs)
-
-cases3 <- step1 %>% filter(type == "Type3") %>% type3Inheritance()
-step1 <- step1[ type != "Type3" ] %>% bind_rows(cases3)
+cases3a <- step1 %>% filter(type == "Type3")
+if (nrow(cases3a) > 0) {
+  cases3b <- type3Inheritance(cases3a)
+  step1 <- step1[ type != "Type3" ] %>% bind_rows(cases3b)
+}
 
 
 # Type IV modifications: TP1 < 3, TP2 < 3
-# ○	Main problem is that TP1 and TP2 are both small and do not have ECC stats 
+# -	Main problem is that TP1 and TP2 are both small and do not have ECC stats 
 #   since they are singletons or non-existent
-# ○	Force TP1 and TP2 ECC stats to blanks
-# ○	Filter these strains prior to analysis & give ECC blanks
-# ○	Eventually, include in analysis but maybe do not include them in EpiMatrix calculation
+# -	Force TP1 and TP2 ECC stats to blanks
+# -	Filter these strains prior to analysis & give ECC blanks
+# -	Eventually, include in analysis but maybe do not include them in EpiMatrix calculation
 
 index_eccs <- grep("ECC", colnames(step1))
 
@@ -86,6 +88,7 @@ assert("All TP1 and TP2 ECCs for these should be blank (NA, for now)",
 
 # step1 %<>% mutate(across(all_of(index_eccs), as.character))
 cases4 <- step1 %>% filter(type == "Type4")
+
 assert("All singletons or nonexistent (at both TP1 and TP2)", 
        all(c(cases4$tp1_cl_size, cases4$tp2_cl_size) < 3))
 # for (index_j in index_eccs) {set(cases4, j = index_j, value = "")}

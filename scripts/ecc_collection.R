@@ -5,12 +5,13 @@
 msg <- file("logs/logfile_epiquant.txt", open="wt")
 sink(msg, type="message")
 
-libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr","reshape2","fossil","tidyr",
-          "purrr", "data.table")
+libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
+          "reshape2","fossil","tidyr","purrr", "data.table")
 y <- lapply(libs, require, character.only = TRUE)
 assert("All packages loaded correctly", all(unlist(y)))
 
-paste0("scripts/ECC") %>% list.files(., full.names = TRUE) %>% sapply(., source)
+files <- paste0("scripts/ECC") %>% list.files(., full.names = TRUE)
+invisible(sapply(files, source))
 
 # Title: "EpiQuant - Salmonella Enteritidis Project (2019-2020)"
 # Authors of original work and initial modifications: Ben Hetman, Elissa Giang, Dillon Barker
@@ -48,6 +49,23 @@ hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th
 
 tp1 <- Timepoint$new(params$tp1, "tp1")$Process(hx)$listHeights(hx)
 tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
+
+# Type IV modifications: TP1 < 3, TP2 < 3
+tp1data <- tp1$height_list[[1]] %>% rownames_to_column() %>% 
+  as_tibble() %>% set_colnames(c("Strain", "tp1_cl"))
+
+tp2data <- tp2$height_list[[1]] %>% rownames_to_column() %>% 
+  as_tibble() %>% set_colnames(c("Strain", "tp2_cl"))
+
+tp1clusters <- tp1data %>% group_by(tp1_cl) %>% summarise(n = n()) %>% filter(n < 3) %>% left_join(., tp1data)
+tp2clusters <- tp2data %>% group_by(tp2_cl) %>% summarise(n = n()) %>% filter(n < 3) %>% left_join(., tp2data)
+type4_strains <- intersect(tp1clusters$Strain, tp2clusters$Strain)
+
+tp1singletons <- tp1clusters %>% filter(n == 1) %>% pull(Strain)
+tp2singletons <- tp2clusters %>% filter(n == 1) %>% pull(Strain)
+
+tp1$height_list[[1]] %<>% filter(!(rownames(.) %in% c(tp1singletons, type4_strains)))
+tp2$height_list[[1]] %<>% filter(!(rownames(.) %in% c(tp2singletons, type4_strains)))
 
 typing_data <- tp1$height_list %>% append(tp2$height_list)
 

@@ -63,20 +63,6 @@ epi_cohesion_new <- function(g_cuts, epi_melt) {
     dr_assignments %>% filter(cluster == h) %>% pull(n) %>% sum() %>% tibble(cluster = h, cluster_size = .)
   }) %>% bind_rows()
   
-  
-  calculate_s1 <- function(i) {
-    
-    k <- cut_cluster_members %>% filter(cluster == i) %>% pull(members) %>% unlist()
-  
-    matches <- dr_assignments %>% filter(cluster == i)
-    
-    epi_melt_joined %>% filter(Var1 %in% k & Var2 %in% k) %>% 
-      left_join(., matches, by = c("Var1" = "dr")) %>% rename(n1 = n) %>% select(-cluster) %>% 
-      left_join(., matches, by = c("Var2" = "dr")) %>% rename(n2 = n) %>% select(-cluster) %>% 
-      mutate(value2 = value * n1 * n2) %>%
-      select(value2) %>% pull() %>% sum()
-  }
-  
   # print("Starting Calculation")
   cut_cluster_members <-
     g_cuts %>% select(-n) %>% 
@@ -85,8 +71,23 @@ epi_cohesion_new <- function(g_cuts, epi_melt) {
     summarise(members = list(cur_data()$dr), .groups = "drop") %>%
     left_join(., sizes, by = "cluster")
   
-  th <- names(g_cuts)[1]
+  calculate_s1 <- function(i) {
+    # print(i)
+    # print(Sys.time())
+    k <- cut_cluster_members %>% filter(cluster == i) %>% pull(members) %>% unlist()
+    matches <- dr_assignments %>% filter(cluster == i)
+    z <- epi_melt_joined %>% filter(Var1 %in% k) %>% filter(Var2 %in% k) %>% 
+      left_join(., matches, by = c("Var1" = "dr")) %>% rename(n1 = n) %>% select(-cluster) %>% 
+      left_join(., matches, by = c("Var2" = "dr")) %>% rename(n2 = n) %>% select(-cluster) %>% 
+      mutate(value2 = value * n1 * n2) %>%
+      select(value2) %>% pull() %>% sum()
+    # print(Sys.time())
+    z
+  }
   
+  th <- names(g_cuts)[1]
+  # Sys.time()
+  # x1 <- 
   cut_cluster_members %>%
     mutate(
       s1 = map_dbl(cluster, calculate_s1),
@@ -95,6 +96,7 @@ epi_cohesion_new <- function(g_cuts, epi_melt) {
     ungroup() %>% 
     select(-cut, -members, -s1) %>%
     set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC")))
+  # Sys.time()
 }
 
 # EPI-HELPER -------------------------------------------------------------------------------------

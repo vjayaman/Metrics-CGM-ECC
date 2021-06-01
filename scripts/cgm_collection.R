@@ -8,7 +8,8 @@ sink(msg, type="message")
 libs <- c("R6", "tibble", "optparse", "magrittr", "dplyr", "reshape2", "progress", "testit")
 y <- lapply(libs, require, character.only = TRUE)
 
-paste0("scripts/CGM") %>% list.files(., full.names = TRUE) %>% sapply(., source)
+files <- paste0("scripts/CGM") %>% list.files(., full.names = TRUE)
+invisible(sapply(files, source))
 
 # READING IN THE INPUTS ----------------------------------------------------------------------------------------
 # Change the default values to read in your own files, or feed through terminal arguments

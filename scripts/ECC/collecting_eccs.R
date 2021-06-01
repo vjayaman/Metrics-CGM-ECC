@@ -10,14 +10,14 @@ epiCollection <- function(strain_data, tau, gamma, typing_data) {
   # Temporal distances - all possible date pair distances
   # pairwiseDists <- function(dm, type, cnames, newnames) {
   dm_temp <- assignments %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
-  formatted_temp <- dm_temp %>% formatData(., c("dr1", "dr2", "Temp.Dist"))
+  # formatted_temp <- dm_temp %>% formatData(., c("dr1", "dr2", "Temp.Dist"))
   transformed_temp <- dm_temp %>% pairwiseDists(., "temp", c("dr1", "dr2", "Temp.Dist"))
     
   # Geographical distances - all possible lat-long pair distances
   dm_geo <- assignments %>% select(dr, Latitude, Longitude) %>% distMatrix(., "geo", c("Latitude", "Longitude"))
-  formatted_geo <- dm_geo %>% formatData(., c("dr1", "dr2", "Geog.Dist"))
+  # formatted_geo <- dm_geo %>% formatData(., c("dr1", "dr2", "Geog.Dist"))
   transformed_geo <- dm_geo %>% pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
-
+  
   # actual_dists <- merge.data.table(formatted_temp, formatted_geo)
   
   transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
@@ -27,11 +27,12 @@ epiCollection <- function(strain_data, tau, gamma, typing_data) {
     
   rm(transformed_geo)
   rm(transformed_temp)
+  rm(transformed_dists)
   
   epi_matrix <- dcast(epi_table, formula = dr1 ~ dr2, value.var = "Total.Dist")
   epi_matrix <- as.matrix(epi_matrix[,2:ncol(epi_matrix)]) 
   rownames(epi_matrix) <- colnames(epi_matrix)
-    
+  
   # create similarity values from epi distance matrix:
   epi_melt <- as.matrix(1-epi_matrix) %>% 
     as.data.table(., keep.rownames = TRUE) %>% 
@@ -46,11 +47,12 @@ epiCollection <- function(strain_data, tau, gamma, typing_data) {
     left_join(., assignments, by = c("Latitude", "Longitude", "Date", "Location")) %>% 
     select(Strain, dr)
     
-  gc()
+  invisible(gc())
   
   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
   # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
   eccs <- lapply(1:length(typing_data), function(i) {
+    
     dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
       left_join(., dr_matches, by = "Strain") %>%
       mutate(across(dr, as.character)) %>% select(-Strain)
@@ -67,7 +69,8 @@ epiCollection <- function(strain_data, tau, gamma, typing_data) {
     a2 <- avgDists(g_cuts, dm_temp, "Temp.Dist", colnames(td_i)[1])
     b2 <- avgDists(g_cuts, dm_geo, "Geog.Dist", colnames(td_i)[1])
     
-    left_join(td_i, a2) %>% left_join(., b2) %>% return()
+    left_join(td_i, a2, by = intersect(colnames(td_i), colnames(a2))) %>% 
+      left_join(., b2, by = intersect(colnames(.), colnames(b2))) %>% return()
   })
   
   return(eccs)

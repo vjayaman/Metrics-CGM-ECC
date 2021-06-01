@@ -20,9 +20,15 @@
 					cnames=cnamelist[i].value;
 				}else {
 					cnames=cnames + "," + cnamelist[i].value;	
-				}				
+				}
 			}
 		}
+
+		var others=document.getElementsByName("othercnames");
+		for (var j=0; j < others.length; j++) {
+			cnames = cnames + "," + others[j].value;
+		}
+
 		return cnames.length > 0 ? cnames : null;
 	}
 
@@ -34,7 +40,8 @@
 		var dateinfo=window.document.myform.date_info.checked;
 		var prov=window.document.myform.prov_info.checked;
 		var threshold=window.document.myform.threshold.value;
-		var ns=window.document.myform.non_singleton.checked;
+		var nsTP1=window.document.myform.non_singletonTP1.checked;
+		var nsTP2=window.document.myform.non_singletonTP2.checked;
 		var tempwindow=window.document.myform.temp_win.checked;
 		var cnames=checkBoxList();
 
@@ -44,7 +51,7 @@
 			var temp_results="[" + encodeURIComponent(start_date) + "," + 
 			encodeURIComponent(end_date) + "]";
 		}else {
-			var temp_results="none";
+			var temp_results="[,]";
 		}
 
 		if (prov == true) {
@@ -64,7 +71,8 @@
 			"Has province-level data: " + encodeURIComponent(prov) + "\n" + 
 			"Province of interest: " + prov_results + "\n" + 
 			"Threshold of interest: " + encodeURIComponent(threshold) + "\n" + 
-			"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(ns) + "\n" + 
+			"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(nsTP1) + "\n" + 
+			"Is in a non-singleton cluster (at TP2): " + encodeURIComponent(nsTP2) + "\n" + 
 			"Filtering by date: " + temp_results + "\n" + 
 			"Column names: " + cnames + "\n"); 
 
@@ -116,10 +124,8 @@
 			Region of interest: 
 			<input type="text" id="region_interest" value="All"/>
 			<br>
-			<br>
 			Country of interest: 
 			<input type="text" id="country_interest" value="All"/>
-			<br>
 			<br>
 			<label class="chk_container">
 				Has provincial-level data
@@ -127,11 +133,9 @@
 				<span class="cbox"></span>
 			</label>
 			<br>
-			<br>
-			<label id="interest" style="display:none">
+			<label id="interest" style="display:none; padding-left: 25px;">
 				Province of interest: 
 				<input type="text" id="prov_interest" value="All"/>
-				<br>
 				<br>
 			</label>
 			<label class="chk_container">
@@ -140,37 +144,41 @@
 				<span class="cbox"></span>
 			</label>
 			<br>
-			<br>
 			<label class="chk_container">
 				Within a particular temporal window 
 				<input type="checkbox" id="temp_win" onclick="pickDates()"/>
 				<span class="cbox"></span>
 			</label>
-			<p id="date_text" style="display:none"><br><br>from 
-			<input type="date" id="start_date" style="display:none"/> to 
-			<input type="date" id="end_date" style="display:none"/></p>
 			<br>
-			<br>
+			<p id="date_text" style="display:none; padding-left: 25px;">
+				from <input type="date" id="start_date" style="display:none"/> to 
+				<input type="date" id="end_date" style="display:none"/>
+				<br>
+			</p>
 			<label class="chk_container">
 				Has defined lineage information (req.)
 				<input type="checkbox" id="lin_info" disabled="disabled" checked="checked"/>
 				<span class="cbox"></span>
 			</label>
 			<br>
-			<br>
 			Threshold of interest: <input type="text" id="threshold" value="0"/>
-			<br>
 			<br>
 			<label class="chk_container">
 				Is in a non-singleton cluster (at TP1, at above threshold)
-				<input type="checkbox" id="non_singleton" class="chkbox"/>
+				<input type="checkbox" id="non_singletonTP1" class="chkbox"/>
 				<span class="cbox"></span>
 			</label>
 			<br>
+			<label class="chk_container">
+				Is in a non-singleton cluster (at TP2, at above threshold)
+				<input type="checkbox" id="non_singletonTP2" class="chkbox"/>
+				<span class="cbox"></span>
+			</label>
 			<br>
 			<fieldset>
-				<legend><em>Expected column names of metadata</em></legend>
-				Required: Strain, Latitude, Longitude, Day, Month, Year <br><br>
+				<legend><b>Expected column names of metadata</b></legend>
+				Required: <em>Strain, Latitude, Longitude, Day, Month, Year</em>
+				<br>
 				Optional:
 				<table>
 				  <tr>
@@ -198,36 +206,21 @@
       					<span class="cbox"></span>
       				</label>
 				    </td>
-				  </tr>
-				  
-				  <tr>
 				    <td>
 				      <label class="chk_container">
       					City<input type="checkbox" name="colnames" value="City" checked>
       					<span class="cbox"></span>
 				      </label>
 				    </td>
-				    <td>
-				      <label class="chk_container">
-      					TP1
-      					<input type="checkbox" name="colnames" value="TP1">
-      					<span class="cbox"></span>
-      				</label>
-				    </td>
-				    <td>
-				      <label class="chk_container">
-      					TP2
-      					<input type="checkbox" name="colnames" value="TP2">
-      					<span class="cbox"></span>
-      				</label>
-				    </td>
 				  </tr>
 				</table>
+				Additional column names (excluding TP1, TP2). Separate with commas: 
+				<br>
+				  	<input type="text" id="othercnames" value="" style="width: 480px;" />
 			</fieldset>
-			<br>
+			<!-- <br> -->
 			File name to save under (.txt): 
-			<input type="text" id="docname" value="form_inputs.txt"/>
-			<br>
+			<input type="text" id="docname" value="form_inputs.txt" style="margin-top: 15px; margin-bottom: 15px; width: 150px;" />
 			<br>
 			<div class="btnwrapper">
 				<button class="btn" onclick="download()"><b>Download</b></button>
