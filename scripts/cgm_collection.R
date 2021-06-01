@@ -101,7 +101,7 @@ if (length(heights) > 1) {
   outputDetails(paste0("\nStep 3 OF 3: Only one threshold provided, so no further tracking necessary"), newcat = TRUE)
 }
 
-outputDetails("  Identifying and counting 'additional TP1 strains'.\n", newcat = TRUE)
+outputDetails("  Identifying and counting 'additional TP1 strains'.\n", newcat = FALSE)
 
 clusters_just_tp1 <- lapply(heights, function(h) {
   hx$results[[h]] %>% left_join(., tp1$flagged) %>% 
@@ -115,7 +115,7 @@ isolates_base <- tp1$melted %>% mutate(across(tp1_h, as.integer)) %>%
   left_join(., clusters_just_tp1, by = c("tp1_id", "tp1_h", "tp1_cl")) %>% 
   arrange(tp1_h, tp1_cl, tp2_h, tp2_cl)
 
-outputDetails("  Handling novel tracking, adding to dataset.\n", newcat = TRUE)
+outputDetails("  Handling novel tracking, adding to dataset.\n", newcat = FALSE)
 
 # NOVELS -------------------------------------------------------------------------------------------------------
 first_nov_flag <- tp2$status %>% filter(!is.na(status)) %>% group_by(isolate) %>% slice(1) %>% ungroup() %>% pull(tp2_id)
@@ -160,15 +160,15 @@ isolates_file %<>%
 isolates_file[,c("tp1_h", "tp2_h")] %<>% apply(., 2, padCol, padval = ph, padchr = "h")
 isolates_file[,c("tp1_cl", "tp2_cl")] %<>% apply(., 2, padCol, padval = pc, padchr = "c")
 
-outputDetails("  Incrementing all cluster sizes by 1, then calculating growth columns.\n", newcat = TRUE)
-outputDetails("  Also adding 'type' column to CGM results table.\n", newcat = TRUE)
+outputDetails("  Incrementing all cluster sizes by 1, then calculating growth columns.\n", newcat = FALSE)
+outputDetails("  Also adding 'type' column to CGM results table.\n", newcat = FALSE)
 
 isolates_file %<>% 
   mutate(tp1_cl_size = tp1_cl_size + 1, tp2_cl_size = tp2_cl_size + 1) %>% 
   oneHeight() %>% 
   addingType(.)
 
-outputDetails("  Saving the data in a file with strain identifiers.\n", newcat = TRUE)
+outputDetails("  Saving the data in a file with strain identifiers.\n", newcat = FALSE)
 
 isolates_file %>% 
   select(Strain, novel, first_tp2_flag, tp2_h, tp2_cl, tp2_cl_size, last_tp2_flag, 

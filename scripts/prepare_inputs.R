@@ -134,8 +134,12 @@ if (as.logical(filtering_params$nsTP2[2])) {
 }
 
 writeData(strain_data, file.path(arg$inputdir, "processed", "strain_info.txt"))
+
 writeData(processed_tp1$new_cols, file.path(arg$inputdir, "processed", "tp1_clusters.txt"))
+saveRDS(processed_tp1, file.path(arg$inputdir, "processed", "allTP1.Rds"))
+
 writeData(processed_tp2$new_cols, file.path(arg$inputdir, "processed", "tp2_clusters.txt"))
+saveRDS(processed_tp2, file.path(arg$inputdir, "processed", "allTP2.Rds"))
 
 outputDetails(paste0("\nFinished process at: ", Sys.time(), "\n||", paste0(rep("-", 14), collapse = ""), " Saved formatted inputs to 'processed' in the ",
                      arg$inputdir, " directory", paste0(rep("-", 15), collapse = ""), "||"), TRUE)
