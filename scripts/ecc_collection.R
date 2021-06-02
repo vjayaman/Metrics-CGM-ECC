@@ -34,7 +34,7 @@ option_list <- list(
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = "Comma-delimited string of heights to collect ECCs for"),
   make_option(c("-p", "--cpus"), metavar = "numeric", default = 1, help = "CPUs"),
-  make_option(c("-t", "--duo"), metavar = "character", default = "01-10",
+  make_option(c("-t", "--duo"), metavar = "character", default = "10-01",
               help = "temporal, geographic coefficients"))
 
 cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ", 
@@ -70,12 +70,19 @@ cat(paste0("\n\nPart 1:"))
 # tp1$height_list[[1]] %<>% filter(!(rownames(.) %in% c(tp1singletons, type4_strains)))
 # tp2$height_list[[1]] %<>% filter(!(rownames(.) %in% c(tp2singletons, type4_strains)))
 
-typing_data <- tp1$height_list %>% append(tp2$height_list)
-
 strain_data <- read_tsv(params$strains) %>% 
   mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")), 
-         Location = paste(Country, Province, City, sep = "_")) %>% 
-  filter(Strain %in% rownames(typing_data[[2]]))
+         Location = paste(Country, Province, City, sep = "_"))
+  # filter(Strain %in% rownames(typing_data[[2]]))
+
+strain_data <- strain_data[1:9000,]
+
+x1 <- tp1$height_list[[1]]
+tp1$height_list[[1]] <- x1[rownames(x1) %in% strain_data$Strain,,drop=FALSE]
+
+x2 <- tp2$height_list[[1]]
+tp2$height_list[[1]] <- x2[rownames(x2) %in% strain_data$Strain,,drop=FALSE]
+typing_data <- tp1$height_list %>% append(tp2$height_list)
 
 cat(paste0("\n\nPart 2:"))
 cat(paste0("\nNote that source = 0"))
@@ -129,12 +136,15 @@ collected_eccs <- lapply(1:length(combos), function(j) {
                 dm_temp, dm_geo, dr_matches, avgdistvals)
 })
 
+# collected_eccs %>% Reduce(function(...) merge(...), .) %>% as_tibble()
+
 cat(paste0("\n\nPart ", length(combos) + 3, ":"))
 outputMessages("Merging collected ECCs ...")
-full_set <- mergeECCs(collected_eccs, 1, tp1$proc) %>% 
-  merge.data.table(., mergeECCs(collected_eccs, 2, tp2$proc), by = "Strain", all.y = TRUE) %>% 
+full_set <- mergeECCs(collected_eccs, 1, tp1$proc) %>%
+  merge.data.table(., mergeECCs(collected_eccs, 2, tp2$proc), by = "Strain", all.y = TRUE) %>%
   mutate(TP1 = ifelse(is.na(TP1), 0, TP1))
-
+# saveRDS(collected_eccs, "results/new_9000_collected_ECC.tsv")
+# saveRDS(full_set, "results/new_9000_ECC.tsv")
 # outputMessages("Handling Type 4 cases, adding into table before saving ...")
 
 write.table(full_set, file = "results/ECCs.tsv", col.names = TRUE, 
