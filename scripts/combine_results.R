@@ -24,7 +24,7 @@ cgms <- readData(arg$CGMs)
 
 # actually assigned a cluster at TP2, not NA (just in case we don't have typing data for some strains)
 strain_data <- suppressMessages(read_tsv(arg$strains)) %>% 
-  filter(TP2 == 1) %>% 
+  # filter(TP2 == 1) %>% 
   mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
   select(Strain, Source, City, Province, Country, Latitude, Longitude, Date, Day, Month, Year, TP1, TP2) %>% 
   as.data.table()

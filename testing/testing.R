@@ -76,8 +76,8 @@ notmatching <- df3 %>% filter(ECC_dif > 1e-14)
 
 
 # CHECK ORIGINAL METHOD CLUSTER SIZES
-source("test_original_clusters.R")
-source("test_new_clusters.R")
+source("testing/test_original_clusters.R")
+source("testing/test_new_clusters.R")
 assert("Strain data is same for both methods", identical(sd1, sd2))
 assert("TP1 clusters are the same for both methods", identical(td1[[1]], td2[[1]]))
 assert("TP2 clusters are the same for both methods", identical(td1[[2]], td2[[2]]))

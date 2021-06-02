@@ -51,16 +51,36 @@ hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th
 tp1 <- Timepoint$new(params$tp1, "tp1")$Process(hx)$listHeights(hx)
 tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
 
-base_strains <- read_tsv(params$strains)
-loc_cols <- length(intersect(c("Country", "Province", "City"), colnames(base_strains)))
-if (loc_cols == 3) {
-  strain_data <- base_strains %>% 
-    mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")), 
-           Location = paste(Country, Province, City, sep = "_")
-    )
-}else {
-  strain_data <- base_strains %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-")))
-}
+# cat(paste0("\n\nPart 1:"))
+# outputMessages("   Removing Type 4 cases before ECC generation (will handle separately) ...")
+# # Type IV modifications: TP1 < 3, TP2 < 3
+# tp1data <- tp1$height_list[[1]] %>% rownames_to_column() %>% 
+#   as_tibble() %>% set_colnames(c("Strain", "tp1_cl"))
+# 
+# tp2data <- tp2$height_list[[1]] %>% rownames_to_column() %>% 
+#   as_tibble() %>% set_colnames(c("Strain", "tp2_cl"))
+# 
+# tp1clusters <- tp1data %>% group_by(tp1_cl) %>% summarise(n = n()) %>% filter(n < 3) %>% left_join(., tp1data)
+# tp2clusters <- tp2data %>% group_by(tp2_cl) %>% summarise(n = n()) %>% filter(n < 3) %>% left_join(., tp2data)
+# type4_strains <- intersect(tp1clusters$Strain, tp2clusters$Strain)
+# 
+# tp1singletons <- tp1clusters %>% filter(n == 1) %>% pull(Strain)
+# tp2singletons <- tp2clusters %>% filter(n == 1) %>% pull(Strain)
+# 
+# tp1$height_list[[1]] %<>% filter(!(rownames(.) %in% c(tp1singletons, type4_strains)))
+# tp2$height_list[[1]] %<>% filter(!(rownames(.) %in% c(tp2singletons, type4_strains)))
+
+strain_data <- read_tsv(params$strains) %>% 
+  mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-"))
+         # Location = paste(Country, Province, City, sep = "_")
+  )
+# filter(Strain %in% rownames(typing_data[[2]]))
+
+# strain_data <- strain_data[1:9000,]
+# x1 <- tp1$height_list[[1]]
+# tp1$height_list[[1]] <- x1[rownames(x1) %in% strain_data$Strain,,drop=FALSE]
+# x2 <- tp2$height_list[[1]]
+# tp2$height_list[[1]] <- x2[rownames(x2) %in% strain_data$Strain,,drop=FALSE]
 
 typing_data <- tp1$height_list %>% append(tp2$height_list)
 
@@ -70,20 +90,16 @@ cat(paste0("\n   Note that source = 0"))
 # Note: dr stands for data representative
 # in example: strain_data has 35,627 rows (strains), assignments has 5,504 rows (> 6-fold smaller)
 outputMessages("   Removing redundancy (comparing date, lat-long, etc. - not every pair of strains)")
-if (loc_cols == 3) {
-  assignments <- strain_data %>% select(Date, Latitude, Longitude, Location)  
-}else {
-  assignments <- strain_data %>% select(Date, Latitude, Longitude)
-}
-assignments %<>% unique() %>% rownames_to_column("dr")
+assignments <- strain_data %>% select(Date, Latitude, Longitude) %>% 
+  # Location) %>% 
+  unique() %>% rownames_to_column("dr")
 
 outputMessages("   Generating all possible date pair distances ...")
 dm_temp <- assignments %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
 transformed_temp <- dm_temp %>% pairwiseDists(., "temp", c("dr1", "dr2", "Temp.Dist"))
 
 outputMessages("   Generating all possible lat-long pair distances ...")
-dm_geo <- assignments %>% select(dr, Latitude, Longitude) %>% 
-  distMatrix(., "geo", c("Latitude", "Longitude"))
+dm_geo <- assignments %>% select(dr, Latitude, Longitude) %>% distMatrix(., "geo", c("Latitude", "Longitude"))
 transformed_geo <- dm_geo %>% pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
 
 transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
@@ -91,13 +107,9 @@ rm(transformed_geo)
 rm(transformed_temp)
 
 outputMessages("   Identifying which strains match which non-redundant 'data representatives'")
-if (loc_cols == 3) {
-  match_names <- c("Latitude", "Longitude", "Date", "Location")
-}else {
-  match_names <- c("Latitude", "Longitude", "Date")
-}
-
-dr_matches <- left_join(strain_data, assignments, by = match_names) %>% select(Strain, dr)
+dr_matches <- strain_data %>% 
+  left_join(., assignments, by = c("Latitude", "Longitude", "Date")) %>% #, "Location")) %>% 
+  select(Strain, dr)
 
 avgdistvals <- lapply(1:length(typing_data), function(i) {
   dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
@@ -123,11 +135,17 @@ collected_eccs <- lapply(1:length(combos), function(j) {
                 transformed_dists, dm_temp, dm_geo, dr_matches, avgdistvals)
 })
 
+# collected_eccs %>% Reduce(function(...) merge(...), .) %>% as_tibble()
+
 cat(paste0("\n\nPart ", length(combos) + 2, ":"))
-outputMessages("   Merging collected ECCs ...\n")
+outputMessages("Merging collected ECCs ...")
 full_set <- mergeECCs(collected_eccs, 1, tp1$proc) %>%
   merge.data.table(., mergeECCs(collected_eccs, 2, tp2$proc), by = "Strain", all.y = TRUE) %>%
   mutate(TP1 = ifelse(is.na(TP1), 0, TP1))
+
+# saveRDS(collected_eccs, "results/new_9000_collected_ECC.tsv")
+# saveRDS(full_set, "results/new_9000_ECC.tsv")
+# outputMessages("Handling Type 4 cases, adding into table before saving ...")
 
 write.table(full_set, file = "results/ECCs.tsv", col.names = TRUE, 
             row.names = FALSE, quote = FALSE, sep = "\t")

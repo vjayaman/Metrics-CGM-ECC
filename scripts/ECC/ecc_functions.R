@@ -1,14 +1,14 @@
 ### Incorporating the allele data with the epidemiological data 
 epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dists, 
                           dm_temp, dm_geo, dr_matches, avgdistvals, j) {
-  cat(paste0("\nCollecting ECC values for temporal = ", tau, ", geo = ", gamma))
+  cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
   
-  outputMessages(paste0("   Preparing table of distances: sqrt(", tau, "*(temp^2) + ", gamma, "*(geo^2))"))
+  outputMessages(paste0("      Preparing table of distances: sqrt(", tau, "*(temp^2) + ", gamma, "*(geo^2))"))
   epi_table <- transformed_dists %>% 
     mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>% 
     select(dr1, dr2, Total.Dist) %>% as.data.table()
   
-  outputMessages("   Generating matrix of similarity values from epi distance matrix ...")
+  outputMessages("      Generating matrix of similarity values from epi distance matrix ...")
   epi_matrix <- dcast(epi_table, formula = dr1 ~ dr2, value.var = "Total.Dist")
   epi_matrix <- as.matrix(epi_matrix[,2:ncol(epi_matrix)]) 
   rownames(epi_matrix) <- colnames(epi_matrix)
@@ -26,7 +26,7 @@ epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dist
   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
   # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
   eccs <- lapply(1:length(typing_data), function(i) {
-    outputMessages(paste0("   Calculating ECCs for timepoint ", i, ", which has ", 
+    outputMessages(paste0("      Calculating ECCs for timepoint ", i, ", which has ", 
                           nrow(typing_data[[i]]), " strains to consider ..."))
     dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
       left_join(., dr_matches, by = "Strain") %>%
@@ -183,140 +183,3 @@ epi_cohesion_new <- function(g_cuts, epi_melt) {
 pairwiseDists <- function(dm, type, newnames) {
   transformData(dm, type) %>% formatData(., newnames) %>% return()
 }
-
-# EPI-HELPER -------------------------------------------------------------------------------------
-#Function to return table of all the epi-similarities and final strain similarity #
-# datafile <- strain_data; source_matrix <- source_pw; source_coeff <- sigma;
-# temp_coeff <- tau; geog_coeff <- gamma; geog_temp <- matched
-# EpiTable <- function(datafile, source_matrix = NULL, source_coeff, temp_coeff, geog_coeff, geog_temp){
-#   
-#   x <- source_coeff 
-#   y <- temp_coeff
-#   z <- geog_coeff
-#   
-#   #### Create the pairwise table for lookups ####
-#   d <- expand.grid(1:nrow(datafile), 1:nrow(datafile))
-#   
-#   d1 <- d[,1]
-#   d2 <- d[,2]
-#   
-#   # split into two steps, since it seems to seems to reduce memory usage  
-#   if (x == 0) {
-#     strain_sims <- tibble(
-#       "Strain.1" = datafile[d1, "Strain"]  %>% pull (),
-#       "Strain.2" = datafile[d2, "Strain"]  %>% pull (),
-#       "Date.1"   = datafile[d1, "Date"]  %>% pull (),
-#       "Date.2"   = datafile[d2, "Date"]  %>% pull (),
-#       "Location.1" = datafile[d1, "Location"]  %>% pull (),
-#       "Location.2" = datafile[d2, "Location"] %>% pull()
-#     )
-#     
-#     str.matrix <-
-#       strain_sims %>% 
-#       left_join(geog_temp, by = c("Strain.1", "Strain.2"))
-#     # This is necessary (otherwise any NA values in the Source.Dist column make Total.Dist and Epi.Sym NA as well. 
-#     # There is a better way to handle this; will work on that.)
-#     str.matrix <-
-#       str.matrix %>% 
-#       mutate(
-#         Total.Dist = sqrt( ((Temp.Dist^2)*y) + ((Geog.Dist^2)*z) ),
-#         Epi.Sym = 1 - Total.Dist
-#       )
-#     
-#   }else {
-#     strain_sims <- tibble(
-#       "Strain.1" = datafile[d1, "Strain"]  %>% pull (),
-#       "Strain.2" = datafile[d2, "Strain"]  %>% pull (),
-#       "Source.1" = datafile[d1, "Source"]  %>% pull (),
-#       "Source.2" = datafile[d2, "Source"]  %>% pull (),
-#       "Date.1"   = datafile[d1, "Date"]  %>% pull (),
-#       "Date.2"   = datafile[d2, "Date"]  %>% pull (),
-#       "Location.1" = datafile[d1, "Location"]  %>% pull (),
-#       "Location.2" = datafile[d2, "Location"] %>% pull()
-#     )
-#     
-#     str.matrix <-
-#       strain_sims %>% 
-#       left_join(source_matrix, by = c("Source.1", "Source.2")) %>% 
-#       left_join(geog_temp, by = c("Strain.1", "Strain.2"))
-#     
-#     str.matrix <-
-#       str.matrix %>% 
-#       mutate(
-#         Total.Dist = sqrt( (((Source.Dist^2)*x) + ((Temp.Dist^2)*y) + ((Geog.Dist^2)*z)) ),
-#         Epi.Sym = 1 - Total.Dist
-#       ) 
-#   }
-#   
-#   str.matrix
-# }  
-# 
-# # datafile <- strain_data; source_matrix <- source_pw; source_coeff <- sigma; temp_coeff <- tau
-# # geog_coeff <- gamma; geog_temp <- matched
-# EpiTable2 <- function(datafile, source_matrix, source_coeff, temp_coeff, geog_coeff, geog_temp){
-#   #### Read data into memory from previous outputs ####
-#   
-#   x <- source_coeff 
-#   y <- temp_coeff
-#   z <- geog_coeff
-#   
-#   #### Create the pairwise table for lookups ####
-#   d <- expand.grid(1:nrow(datafile), 1:nrow(datafile))
-#   d1 <- d[,1]
-#   d2 <- d[,2]
-#   
-#   # split into two steps, since it seems to seems to reduce memory usage  
-#   if (x == 0) {
-#     strain_sims <- tibble(
-#       "Strain.1" = datafile[d1, "Strain"]  %>% pull (),
-#       "Strain.2" = datafile[d2, "Strain"]  %>% pull (),
-#       "Date.1"   = datafile[d1, "Date"]  %>% pull (),
-#       "Date.2"   = datafile[d2, "Date"]  %>% pull (),
-#       "Location.1" = datafile[d1, "Location"]  %>% pull (),
-#       "Location.2" = datafile[d2, "Location"] %>% pull()
-#     )
-#     
-#     # This is necessary (otherwise any NA values in the Source.Dist column make Total.Dist and Epi.Sym NA as well. 
-#     # There is a better way to handle this; will work on that.)
-#     str.matrix <- strain_sims %>% 
-#       left_join(geog_temp, by = c("Strain.1", "Strain.2")) %>% 
-#       mutate(
-#         Total.Dist = sqrt( ((Temp.Dist^2)*y) + ((Geog.Dist^2)*z) ),
-#         Epi.Sym = 1 - Total.Dist
-#       )    
-#   }else {
-#     strain_sims <- tibble(
-#       "Strain.1" = datafile[d1, "Strain"]  %>% pull (),
-#       "Strain.2" = datafile[d2, "Strain"]  %>% pull (),
-#       "Source.1" = datafile[d1, "Source"]  %>% pull (),
-#       "Source.2" = datafile[d2, "Source"]  %>% pull (),
-#       "Date.1"   = datafile[d1, "Date"]  %>% pull (),
-#       "Date.2"   = datafile[d2, "Date"]  %>% pull (),
-#       "Location.1" = datafile[d1, "Location"]  %>% pull (),
-#       "Location.2" = datafile[d2, "Location"] %>% pull()
-#     )
-#     
-#     str.matrix <-
-#       strain_sims %>% 
-#       left_join(source_matrix, by = c("Source.1", "Source.2")) %>% 
-#       left_join(geog_temp, by = c("Strain.1", "Strain.2")) %>% 
-#       mutate(
-#         Total.Dist = sqrt( (((Source.Dist^2)*x) + ((Temp.Dist^2)*y) + ((Geog.Dist^2)*z)) ),
-#         Epi.Sym = 1 - Total.Dist
-#       ) 
-#   }
-#   
-#   str.matrix
-# }
-# 
-# #Function to return matrix of just strains and final similarity scores for building graphics
-# # epi.matrix <- str.matrix
-# EpiMatrix <- function(epi.matrix){
-#   epi.matrix <- epi.matrix %>% # I think, TODO: check
-#     select(Strain.1, Strain.2, Total.Dist)
-#   epi.cast <- dcast(epi.matrix, formula= Strain.1 ~ Strain.2, value.var = "Total.Dist")
-#   epi.cast <- as.matrix(epi.cast[,2:ncol(epi.cast)]) 
-#   rownames(epi.cast) <- colnames(epi.cast)
-#   #   epi.sym <- 1 - epi.cast
-#   epi.cast
-# }
