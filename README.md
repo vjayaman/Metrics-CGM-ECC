@@ -18,7 +18,7 @@ Testing work will be compiled and added to
 
 2. Move the input files you want to use (a strain metadata file and two cluster assignment files - one for each time point) into *Metrics-CGM-ECC/inputs/*, then rename to match the examples in the *inputs/* directory.
  
-3. Open *Metrics-CGM-ECC/form.html* in a browser, then fill with inputs corresponding to your input files
+3. Open **Metrics-CGM-ECC/form.html** in a browser, then fill with inputs corresponding to your input files
 	* Download the resulting text file, and move it to the *inputs/* directory
 
 4. Navigate to the *Metrics-CGM-ECC/* directory in a terminal window
@@ -38,6 +38,8 @@ Testing work will be compiled and added to
         .../Metrics-CGM-ECC/$ bash run_process.sh
 	or
 	`.../Metrics-CGM-ECC/$ ./run_process.sh`
+	
+The CGM data, ECC metrics, and merged files (for strains and clusters) will be saved to a newly created *results/* directory.
 
 ## Method 2 (Stable, verified version):
 
