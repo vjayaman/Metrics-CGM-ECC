@@ -28,8 +28,8 @@ dir.create(file.path(arg$inputdir, "processed"))
 # FUNCTIONS ----------------------------------------------------------------------------------------------------
 source("scripts/prepfunctions.R")
 
-outputDetails(paste0("\n||", paste0(rep("-", 20), collapse = ""), " Prepping inputs for metric generation ", 
-                     paste0(rep("-", 20), collapse = ""), "||\nStarted process at: ", Sys.time()), TRUE)
+outputDetails(paste0("\n||", paste0(rep("-", 26), collapse = ""), " Prepping inputs for metric generation ", 
+                     paste0(rep("-", 26), collapse = ""), "||\nStarted process at: ", Sys.time()), TRUE)
 outputDetails(paste0("\nWill save formatted inputs to 'processed' directory in ", arg$inputdir, " directory."), TRUE)
 
 # Results of "Form for analysis inputs" ------------------------------------------------------------------------

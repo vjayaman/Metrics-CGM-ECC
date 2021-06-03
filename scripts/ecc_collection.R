@@ -34,7 +34,7 @@ option_list <- list(
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = "Comma-delimited string of heights to collect ECCs for"),
   make_option(c("-p", "--cpus"), metavar = "numeric", default = 1, help = "CPUs"),
-  make_option(c("-t", "--duo"), metavar = "character", default = "010-001",
+  make_option(c("-t", "--trio"), metavar = "character", default = "010-001",
               help = "temporal, geographic coefficients"))
 
 cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ", 
@@ -43,7 +43,7 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 
 params <- parse_args(OptionParser(option_list=option_list))
 
-combos <- params$duo %>% strsplit(., "-") %>% unlist()
+combos <- params$trio %>% strsplit(., "-") %>% unlist()
 z <- vector("list", length = length(combos)) %>% set_names(combos)
 
 hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
@@ -64,7 +64,7 @@ if (loc_cols == 3) {
 
 typing_data <- tp1$height_list %>% append(tp2$height_list)
 
-cat(paste0("\n\nPart 1:"))
+cat(paste0("\n\nStep 1:"))
 cat(paste0("\n   Note that the source coefficent is always 0 in this version"))
 
 # Note: dr stands for data representative
@@ -118,12 +118,12 @@ avgdistvals <- lapply(1:length(typing_data), function(i) {
 
 collected_eccs <- lapply(1:length(combos), function(j) {
   c1 <- unlist(strsplit(combos[j], split = "")) %>% as.numeric()
-  cat(paste0("\n\nPart ", j + 1, ":"))
+  cat(paste0("\n\nStep ", j + 1, ":"))
   epiCollection(strain_data, tau = c1[2], gamma = c1[3], typing_data, 
                 transformed_dists, dm_temp, dm_geo, dr_matches, avgdistvals)
 })
 
-cat(paste0("\n\nPart ", length(combos) + 2, ":"))
+cat(paste0("\n\nStep ", length(combos) + 2, ":"))
 outputMessages("   Merging collected ECCs ...\n")
 full_set <- mergeECCs(collected_eccs, 1, tp1$proc) %>%
   merge.data.table(., mergeECCs(collected_eccs, 2, tp2$proc), by = "Strain", all.y = TRUE) %>%
