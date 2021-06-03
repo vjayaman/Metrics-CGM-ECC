@@ -1,28 +1,22 @@
 Metrics-CGM-ECC
 ================
 
-Merged work on the two separate projects (status before initial merge
-can be found at: 
-* <https://github.com/vjayaman/EQProject> and 
-* <https://github.com/vjayaman/ClusterGrowthMetrics>)
-
-Testing work will be compiled and added to 
-* <https://github.com/vjayaman/Testing-Metrics-CGM-ECC>
-
-(For latest WIP - not ready for use - see *Method 3* below)
-
-
 ## Method 1 (Latest version, ready for beta testing):
 
-1. Download latest (development) version from **main** branch
+1. Download version [v2.0-beta](https://github.com/vjayaman/Metrics-CGM-ECC/releases/tag/v2.0-beta)
 
-2. Navigate to the *Metrics-CGM-ECC/* directory in a terminal window
+2. Move the input files you want to use (a strain metadata file and two cluster assignment files - one for each time point) into *Metrics-CGM-ECC/inputs/*, then rename to match the examples in the *inputs/* directory.
+ 
+3. Open **Metrics-CGM-ECC/form.html** in a browser, then fill with inputs corresponding to your input files
+	* Download the resulting text file, and move it to the *inputs/* directory
 
-3. Run **environment_setup.R**, to install required R packages and checks that they can be loaded.
+4. Navigate to the *Metrics-CGM-ECC/* directory in a terminal window
+
+5. Run **environment_setup.R**, to install the required R packages and check that they can be loaded.
 
         .../Metrics-CGM-ECC/$ Rscript environment_setup.R
 
-4. Open **run_process.sh** and update the input arguments to use to your data (which should be found in the *inputs/* directory)
+6. Open **run_process.sh** and update the "height" and ECC coefficient "params" input arguments to run on what you would prefer. The defaults are threshold 0 and coefficient sets 010, 001 (source, temporal, geographic).
 
 5. Give the script *run_process.sh* executable permission
 
@@ -31,6 +25,10 @@ Testing work will be compiled and added to
 6. Run the script *run_process.sh* in a terminal
 
         .../Metrics-CGM-ECC/$ bash run_process.sh
+	or
+	`.../Metrics-CGM-ECC/$ ./run_process.sh`
+	
+The CGM data, ECC metrics, and merged files (for strains and clusters) will be saved to a newly created *results/* directory.
 
 ## Method 2 (Stable, verified version):
 
@@ -95,16 +93,14 @@ file:
     As with the other files, the input arguments for this can be left blank to use the default file names.
     
         $ Rscript merge_data.R -e results/ECCs.tsv -c results/CGM_strain_results.txt -s inputs/strain_info.txt
+	
 
-## Method 3 (Latest version, not ready for use):
+## Notes:
 
-* The branch `analysis_inputs` contains the refactored and latest version, which includes the new input form as well as general fine-tuning (and the last of the strain report modifications).
+Merged work on the two separate projects (status before initial merge
+can be found at: 
+* <https://github.com/vjayaman/EQProject> and 
+* <https://github.com/vjayaman/ClusterGrowthMetrics>)
 
-* Still a few bugs/issues that being addressed:
-	* type handling is done but only partially tested
-	* need to bring back in the original clusters given (if they were not numbers in initial input) as another column or two (since they are represented by numbers during analysis)
-	* double-checking the strain report modification list
-	* validation pipeline
-
-* This will be merged back into the main branch, and after someone else has verified that everything still runs for them as expected, this will be tagged as *v2.0*.
-
+Testing work will be compiled and added to 
+* <https://github.com/vjayaman/Testing-Metrics-CGM-ECC>
