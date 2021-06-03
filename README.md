@@ -95,6 +95,8 @@ file:
         $ Rscript merge_data.R -e results/ECCs.tsv -c results/CGM_strain_results.txt -s inputs/strain_info.txt
 	
 
+================
+
 Merged work on the two separate projects (status before initial merge
 can be found at: 
 * <https://github.com/vjayaman/EQProject> and 
