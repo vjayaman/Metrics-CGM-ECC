@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<!--See https://stackoverflow.com/questions/16870876/writing-html-form-data-to-a-txt-file-without-the-use-of-a-webserver -->
+<!--See https://www.w3schools.com/html/default.asp -->
+<!--https://medium.com/@racullum/how-to-create-a-modern-html-form-with-css-1dd0f3d49712 -->
+
+<html>
+<head>
+	<link rel="stylesheet" href="formstyle.css">
+<script language="Javascript" >
+
+	// https://stackoverflow.com/questions/8563240/how-to-get-all-checked-checkboxes
+	function checkBoxList() {
+		var cnamelist=document.getElementsByName("colnames");
+		var cnames="";
+
+		for (var i=0; i < cnamelist.length; i++) {
+			if (cnamelist[i].checked) {
+				if (cnames == "") {
+					cnames=cnamelist[i].value;
+				}else {
+					cnames=cnames + "," + cnamelist[i].value;	
+				}
+			}
+		}
+
+		var others=document.getElementsByName("othercnames");
+		for (var j=0; j < others.length; j++) {
+			cnames = cnames + "," + others[j].value;
+		}
+
+		return cnames.length > 0 ? cnames : null;
+	}
+
+	function download() {
+		var filename=window.document.myform.docname.value;
+		var reg=window.document.myform.region_interest.value;
+		var country=window.document.myform.country_interest.value;
+		var lin=window.document.myform.lin_info.checked;
+		var dateinfo=window.document.myform.date_info.checked;
+		var prov=window.document.myform.prov_info.checked;
+		var threshold=window.document.myform.threshold.value;
+		var nsTP1=window.document.myform.non_singletonTP1.checked;
+		var nsTP2=window.document.myform.non_singletonTP2.checked;
+		var tempwindow=window.document.myform.temp_win.checked;
+		var cnames=checkBoxList();
+
+		if (tempwindow == true) {
+			var start_date=window.document.myform.start_date.value;
+			var end_date=window.document.myform.end_date.value;
+			var temp_results="[" + encodeURIComponent(start_date) + "," + 
+			encodeURIComponent(end_date) + "]";
+		}else {
+			var temp_results="[,]";
+		}
+
+		if (prov == true) {
+			var province=window.document.myform.prov_interest.value;
+			var prov_results=encodeURIComponent(province);
+		}else {
+			var prov_results="none";
+		}
+		
+		var pom=document.createElement('a');
+		pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + 
+			"Region of interest: " + encodeURIComponent(reg) + "\n" + 
+			"Country of interest: " + encodeURIComponent(country) + "\n" + 
+			"Has defined lineage information: " + encodeURIComponent(lin) + "\n" + 
+			"Has defined date information (day, month, and year): " + 
+			encodeURIComponent(dateinfo) + "\n" + 
+			"Has province-level data: " + encodeURIComponent(prov) + "\n" + 
+			"Province of interest: " + prov_results + "\n" + 
+			"Threshold of interest: " + encodeURIComponent(threshold) + "\n" + 
+			"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(nsTP1) + "\n" + 
+			"Is in a non-singleton cluster (at TP2): " + encodeURIComponent(nsTP2) + "\n" + 
+			"Filtering by date: " + temp_results + "\n" + 
+			"Column names: " + cnames + "\n"); 
+
+		pom.setAttribute('download', filename);
+				
+		pom.style.display='none';
+		document.body.appendChild(pom);
+				
+		pom.click();
+				
+		document.body.removeChild(pom);
+	}
+
+
+	function pickDates() {
+		var checkBox=document.getElementById("temp_win")
+		var text=document.getElementById("date_text").style;
+		var start_date=document.getElementById("start_date").style;
+		var end_date=document.getElementById("end_date").style;
+
+		if (checkBox.checked == true) {
+			text.display="inline";
+			start_date.display="inline";
+			end_date.display="inline";
+		} else {
+			text.display="none";
+			start_date.display="none";
+			end_date.display="none";
+		}
+	}
+
+	function provLevel() {
+		var checkBox=document.getElementById("prov_info");
+		var prov_int=document.getElementById("interest");
+
+		if (checkBox.checked == true) {
+			prov_int.style.display="inline";
+		}else {
+			prov_int.style.display="none";
+		}
+	}
+</script>
+</head>
+
+<body>
+  <div class="form_container">
+		<form name="myform" method="post" >
+			<h3>Form for analysis inputs</h3>
+			Region of interest: 
+			<input type="text" id="region_interest" value="All"/>
+			<br>
+			Country of interest: 
+			<input type="text" id="country_interest" value="All"/>
+			<br>
+			<label class="chk_container">
+				Has provincial-level data
+				<input type="checkbox" id="prov_info" onclick="provLevel()"/>
+				<span class="cbox"></span>
+			</label>
+			<br>
+			<label id="interest" style="display:none; padding-left: 25px;">
+				Province of interest: 
+				<input type="text" id="prov_interest" value="All"/>
+				<br>
+			</label>
+			<label class="chk_container">
+				Has defined date information (day, month, year) (req.)
+				<input type="checkbox" id="date_info" disabled="disabled" checked="checked"/>
+				<span class="cbox"></span>
+			</label>
+			<br>
+			<label class="chk_container">
+				Within a particular temporal window 
+				<input type="checkbox" id="temp_win" onclick="pickDates()"/>
+				<span class="cbox"></span>
+			</label>
+			<br>
+			<p id="date_text" style="display:none; padding-left: 25px;">
+				from <input type="date" id="start_date" style="display:none"/> to 
+				<input type="date" id="end_date" style="display:none"/>
+				<br>
+			</p>
+			<label class="chk_container">
+				Has defined lineage information (req.)
+				<input type="checkbox" id="lin_info" disabled="disabled" checked="checked"/>
+				<span class="cbox"></span>
+			</label>
+			<br>
+			Threshold of interest: <input type="text" id="threshold" value="0"/>
+			<br>
+			<label class="chk_container">
+				Is in a non-singleton cluster (at TP1, at above threshold)
+				<input type="checkbox" id="non_singletonTP1" class="chkbox"/>
+				<span class="cbox"></span>
+			</label>
+			<br>
+			<label class="chk_container">
+				Is in a non-singleton cluster (at TP2, at above threshold)
+				<input type="checkbox" id="non_singletonTP2" class="chkbox"/>
+				<span class="cbox"></span>
+			</label>
+			<br>
+			<fieldset>
+				<legend><b>Expected column names of metadata</b></legend>
+				Required: <em>Strain, Latitude, Longitude, Day, Month, Year</em>
+				<br>
+				Optional:
+				<table>
+				  <tr>
+				    <td>
+				      <label class="chk_container">
+					      Source<input type="checkbox" name="colnames" value="Source" checked>
+					      <span class="cbox"></span>
+				      </label>
+				    </td>
+				    <td>
+				      <label class="chk_container">
+					      Region<input type="checkbox" name="colnames" value="Region">
+					      <span class="cbox"></span>
+				      </label>
+				    </td>
+				    <td>
+				      <label class="chk_container">
+				        Country<input type="checkbox" name="colnames" value="Country" checked>
+					      <span class="cbox"></span>
+				      </label>
+				    </td>
+				    <td>
+      				<label class="chk_container">
+      					Province<input type="checkbox" name="colnames" value="Province" checked>
+      					<span class="cbox"></span>
+      				</label>
+				    </td>
+				    <td>
+				      <label class="chk_container">
+      					City<input type="checkbox" name="colnames" value="City" checked>
+      					<span class="cbox"></span>
+				      </label>
+				    </td>
+				  </tr>
+				</table>
+				Additional column names (excluding TP1, TP2). Separate with commas: 
+				<br>
+				  	<input type="text" id="othercnames" value="" style="width: 480px;" />
+			</fieldset>
+			<!-- <br> -->
+			File name to save under (.txt): 
+			<input type="text" id="docname" value="form_inputs.txt" style="margin-top: 15px; margin-bottom: 15px; width: 150px;" />
+			<br>
+			<div class="btnwrapper">
+				<button class="btn" onclick="download()"><b>Download</b></button>
+			</div>
+		</form>
+		</div>
+</body>
+</html>

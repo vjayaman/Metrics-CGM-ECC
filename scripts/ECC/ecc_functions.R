@@ -1,8 +1,101 @@
+### Incorporating the allele data with the epidemiological data 
+epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dists, 
+                          dm_temp, dm_geo, dr_matches, avgdistvals, j) {
+  cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
+  
+  outputMessages(paste0("      Preparing table of distances: sqrt(", tau, "*(temp^2) + ", gamma, "*(geo^2))"))
+  epi_table <- transformed_dists %>% 
+    mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>% 
+    select(dr1, dr2, Total.Dist) %>% as.data.table()
+  
+  outputMessages("      Generating matrix of similarity values from epi distance matrix ...")
+  epi_matrix <- dcast(epi_table, formula = dr1 ~ dr2, value.var = "Total.Dist")
+  epi_matrix <- as.matrix(epi_matrix[,2:ncol(epi_matrix)]) 
+  rownames(epi_matrix) <- colnames(epi_matrix)
+  
+  # create similarity values from epi distance matrix:
+  epi_melt <- as.matrix(1-epi_matrix) %>% 
+    as.data.table(., keep.rownames = TRUE) %>% 
+    melt(., id.vars = "rn", variable.factor = FALSE, value.factor = FALSE) %>% 
+    set_colnames(c("dr_1", "dr_2", "value")) %>% as.data.table()
+  
+  rm(epi_table)
+  rm(epi_matrix)
+  invisible(gc())
+  
+  # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
+  # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
+  eccs <- lapply(1:length(typing_data), function(i) {
+    outputMessages(paste0("      Calculating ECCs for timepoint ", i, ", which has ", 
+                          nrow(typing_data[[i]]), " strains to consider ..."))
+    dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
+      left_join(., dr_matches, by = "Strain") %>%
+      mutate(across(dr, as.character)) %>% select(-Strain)
+    
+    # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
+    cx <- colnames(dr_td1)[1]
+    tallied_reps <- dr_td1 %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
+    g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>%
+      unique() %>% mutate(across(dr, as.character))
+    
+    td_i <- epi_cohesion_new(g_cuts, epi_melt) %>% 
+      set_colnames(c(paste0("TP", i, "_", colnames(.))))
+    colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
+    
+    a2 <- avgdistvals[[i]]$temp
+    b2 <- avgdistvals[[i]]$geo
+    
+    left_join(td_i, a2, by = intersect(colnames(td_i), colnames(a2))) %>% 
+      left_join(., b2, by = intersect(colnames(.), colnames(b2))) %>% return()
+  })
+  
+  return(eccs)
+}
+
+# note that we sum the values for both directions e.g. (192, 346) and (346, 192)
+# and then divide by the total number of pairs (counting both directions)
+# this gives the same result as if we had used only one direction
+#   - if we did this, we would divide by 2 in the numerator and the denominator --> would cancel
+avgDists <- function(g_cuts, dm, cname, newname) {
+  x <- gsub("\\.", "_", cname) %>% tolower() %>% paste0(newname, "_avg_", .)
+  all_clusters <- g_cuts %>% set_colnames(c("Threshold", "dr", "n"))
+  clusters <- unique(all_clusters$Threshold)
+  
+  lapply(clusters, function(cl) {
+    f2 <- all_clusters %>% filter(Threshold == cl)
+    dists <- dm[f2$dr, f2$dr]
+    if (is.null(dim(dists))) {
+      return(0)
+    }else {
+      dists <- dists * f2$n[col(dists)]
+      dists <- dists * f2$n[row(dists)]
+      return(sum(dists) / (sum(f2$n)^2))
+    }
+  }) %>% unlist() %>% tibble(clusters, .) %>% set_colnames(c(newname, x))
+}
+
+# Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
+# ("pt") and a two-element named vector with Sys.time() values named "start_time" and "end_time"
+timeTaken <- function(pt, sw) {
+  z <- difftime(sw[['end_time']], sw[['start_time']], units = "secs") %>% as.double()
+  m <- 60
+  h <- m^2
+  
+  if (z >= h) {
+    hrs <- trunc(z/h)
+    mins <- trunc(z/m - hrs*m)
+    paste0("\nThe ", pt, " process took ", hrs, " hour(s), ", mins, " minute(s), and ", 
+           round(z - hrs*h - mins*m), " second(s).") %>% return()
+  }else if (z < h & z >= m) {
+    mins <- trunc(z/m)
+    paste0("\nThe ", pt, " process took ", mins, " minute(s) and ", round(z - mins*m), " second(s).") %>% return()
+  }else {
+    paste0("\nThe ", pt, " process took ", round(z), " second(s).") %>% return()
+  }
+}
 
 # EPI-HELPER-MODULAR -----------------------------------------------------------------------------
-pairwiseDists <- function(dm, type, newnames) {
-  transformData(dm, type) %>% formatData(., newnames) %>% return()
-}
+outputMessages <- function(msgs) {cat(paste0("\n",msgs))}
 
 distMatrix <- function(input_data, dtype, cnames) {
   if (dtype == "temp") {
@@ -19,25 +112,20 @@ distMatrix <- function(input_data, dtype, cnames) {
 
 transformData <- function(dm, dtype) {
   logdata <- dm %>% add(10) %>% log10()
-  
   if (dtype == "temp") {
-    
     logdata[logdata == -Inf] <- 0
     if (max(logdata) == 0) {
       logdata <- 0
     }else {
       logdata <- ((logdata - min(logdata)) / (max(logdata) - min(logdata)))
     }
-    
   }else if (dtype == "geo") {
-    
     if(max(logdata) == 1){
       logdata[1:nrow(logdata), 1:nrow(logdata)] <- 0
     } else {
       logdata <- ((logdata-min(logdata)) / (max(logdata)-min(logdata)))
     }
   }
-  
   return(logdata)
 }
 
@@ -56,37 +144,32 @@ epi_cohesion_new <- function(g_cuts, epi_melt) {
   dr_assignments <- g_cuts %>% set_colnames(c("cluster", "dr", "n"))
   
   epi_melt_joined <-
-    expand_grid(dr_names, dr_names, .name_repair = function(x) {c("Var1", "Var2")}) %>%
-    left_join(., epi_melt, by = c("Var1", "Var2")) %>% as.data.table()
+    expand_grid(dr_names, dr_names, .name_repair = function(x) {c("dr_1", "dr_2")}) %>%
+    left_join(., epi_melt, by = c("dr_1", "dr_2")) %>% as.data.table()
   
   sizes <- lapply(unique(dr_assignments$cluster), function(h) {
     dr_assignments %>% filter(cluster == h) %>% pull(n) %>% sum() %>% tibble(cluster = h, cluster_size = .)
   }) %>% bind_rows()
   
-  
-  calculate_s1 <- function(i) {
-    
-    k <- cut_cluster_members %>% filter(cluster == i) %>% pull(members) %>% unlist()
-  
-    matches <- dr_assignments %>% filter(cluster == i)
-    
-    epi_melt_joined %>% filter(Var1 %in% k & Var2 %in% k) %>% 
-      left_join(., matches, by = c("Var1" = "dr")) %>% rename(n1 = n) %>% select(-cluster) %>% 
-      left_join(., matches, by = c("Var2" = "dr")) %>% rename(n2 = n) %>% select(-cluster) %>% 
-      mutate(value2 = value * n1 * n2) %>%
-      select(value2) %>% pull() %>% sum()
-  }
-  
-  # print("Starting Calculation")
   cut_cluster_members <-
     g_cuts %>% select(-n) %>% 
     pivot_longer(-dr, names_to = "cut", values_to = "cluster") %>%
     group_by(cut, cluster) %>%
     summarise(members = list(cur_data()$dr), .groups = "drop") %>%
-    left_join(., sizes, by = "cluster")
+    left_join(., sizes, by = "cluster") %>% as.data.table()
+  
+  calculate_s1 <- function(i) {
+    k <- cut_cluster_members[cluster == i, members] %>% unlist()
+    matches <- dr_assignments %>% filter(cluster == i)
+    
+    epi_melt_joined[dr_1 %in% k][dr_2 %in% k] %>% 
+      left_join(., matches, by = c("dr_1" = "dr")) %>% rename(n1 = n) %>% select(-cluster) %>% 
+      left_join(., matches, by = c("dr_2" = "dr")) %>% rename(n2 = n) %>% select(-cluster) %>% 
+      mutate(value2 = value * n1 * n2) %>%
+      select(value2) %>% pull() %>% sum()
+  }
   
   th <- names(g_cuts)[1]
-  
   cut_cluster_members %>%
     mutate(
       s1 = map_dbl(cluster, calculate_s1),
@@ -97,145 +180,6 @@ epi_cohesion_new <- function(g_cuts, epi_melt) {
     set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC")))
 }
 
-# EPI-HELPER -------------------------------------------------------------------------------------
-#Function to return table of all the epi-similarities and final strain similarity #
-# datafile <- strain_data; source_matrix <- source_pw; source_coeff <- sigma;
-# temp_coeff <- tau; geog_coeff <- gamma; geog_temp <- matched
-EpiTable <- function(datafile, source_matrix = NULL, source_coeff, temp_coeff, geog_coeff, geog_temp){
-  
-  x <- source_coeff 
-  y <- temp_coeff
-  z <- geog_coeff
-  
-  
-  #### Create the pairwise table for lookups ####
-  d <- expand.grid(1:nrow(datafile), 1:nrow(datafile))
-  
-  d1 <- d[,1]
-  d2 <- d[,2]
-  
-  # split into two steps, since it seems to seems to reduce memory usage  
-  if (x == 0) {
-    strain_sims <- tibble(
-      "Strain.1" = datafile[d1, "Strain"]  %>% pull (),
-      "Strain.2" = datafile[d2, "Strain"]  %>% pull (),
-      "Date.1"   = datafile[d1, "Date"]  %>% pull (),
-      "Date.2"   = datafile[d2, "Date"]  %>% pull (),
-      "Location.1" = datafile[d1, "Location"]  %>% pull (),
-      "Location.2" = datafile[d2, "Location"] %>% pull()
-    )
-    
-    str.matrix <-
-      strain_sims %>% 
-      left_join(geog_temp, by = c("Strain.1", "Strain.2"))
-    # This is necessary (otherwise any NA values in the Source.Dist column make Total.Dist and Epi.Sym NA as well. 
-    # There is a better way to handle this; will work on that.)
-    str.matrix <-
-      str.matrix %>% 
-      mutate(
-        Total.Dist = sqrt( ((Temp.Dist^2)*y) + ((Geog.Dist^2)*z) ),
-        Epi.Sym = 1 - Total.Dist
-      )
-    
-  }else {
-    strain_sims <- tibble(
-      "Strain.1" = datafile[d1, "Strain"]  %>% pull (),
-      "Strain.2" = datafile[d2, "Strain"]  %>% pull (),
-      "Source.1" = datafile[d1, "Source"]  %>% pull (),
-      "Source.2" = datafile[d2, "Source"]  %>% pull (),
-      "Date.1"   = datafile[d1, "Date"]  %>% pull (),
-      "Date.2"   = datafile[d2, "Date"]  %>% pull (),
-      "Location.1" = datafile[d1, "Location"]  %>% pull (),
-      "Location.2" = datafile[d2, "Location"] %>% pull()
-    )
-    
-    str.matrix <-
-      strain_sims %>% 
-      left_join(source_matrix, by = c("Source.1", "Source.2")) %>% 
-      left_join(geog_temp, by = c("Strain.1", "Strain.2"))
-    
-    str.matrix <-
-      str.matrix %>% 
-      mutate(
-        Total.Dist = sqrt( (((Source.Dist^2)*x) + ((Temp.Dist^2)*y) + ((Geog.Dist^2)*z)) ),
-        Epi.Sym = 1 - Total.Dist
-      ) 
-  }
-  
-  str.matrix
-}  
-
-# datafile <- strain_data; source_matrix <- source_pw; source_coeff <- sigma; temp_coeff <- tau
-# geog_coeff <- gamma; geog_temp <- matched
-EpiTable2 <- function(datafile, source_matrix, source_coeff, temp_coeff, geog_coeff, geog_temp){
-  #### Read data into memory from previous outputs ####
-  
-  x <- source_coeff 
-  y <- temp_coeff
-  z <- geog_coeff
-  
-  #### Create the pairwise table for lookups ####
-  d <- expand.grid(1:nrow(datafile), 1:nrow(datafile))
-  d1 <- d[,1]
-  d2 <- d[,2]
-  
-  # split into two steps, since it seems to seems to reduce memory usage  
-  if (x == 0) {
-    strain_sims <- tibble(
-      "Strain.1" = datafile[d1, "Strain"]  %>% pull (),
-      "Strain.2" = datafile[d2, "Strain"]  %>% pull (),
-      "Date.1"   = datafile[d1, "Date"]  %>% pull (),
-      "Date.2"   = datafile[d2, "Date"]  %>% pull (),
-      "Location.1" = datafile[d1, "Location"]  %>% pull (),
-      "Location.2" = datafile[d2, "Location"] %>% pull()
-    )
-    
-    # This is necessary (otherwise any NA values in the Source.Dist column make Total.Dist and Epi.Sym NA as well. 
-    # There is a better way to handle this; will work on that.)
-    str.matrix <- strain_sims %>% 
-      left_join(geog_temp, by = c("Strain.1", "Strain.2")) %>% 
-      mutate(
-        Total.Dist = sqrt( ((Temp.Dist^2)*y) + ((Geog.Dist^2)*z) ),
-        Epi.Sym = 1 - Total.Dist
-      )    
-  }else {
-    strain_sims <- tibble(
-      "Strain.1" = datafile[d1, "Strain"]  %>% pull (),
-      "Strain.2" = datafile[d2, "Strain"]  %>% pull (),
-      "Source.1" = datafile[d1, "Source"]  %>% pull (),
-      "Source.2" = datafile[d2, "Source"]  %>% pull (),
-      "Date.1"   = datafile[d1, "Date"]  %>% pull (),
-      "Date.2"   = datafile[d2, "Date"]  %>% pull (),
-      "Location.1" = datafile[d1, "Location"]  %>% pull (),
-      "Location.2" = datafile[d2, "Location"] %>% pull()
-    )
-    
-    str.matrix <-
-      strain_sims %>% 
-      left_join(source_matrix, by = c("Source.1", "Source.2")) %>% 
-      left_join(geog_temp, by = c("Strain.1", "Strain.2")) %>% 
-      mutate(
-        Total.Dist = sqrt( (((Source.Dist^2)*x) + ((Temp.Dist^2)*y) + ((Geog.Dist^2)*z)) ),
-        Epi.Sym = 1 - Total.Dist
-      ) 
-  }
-  
-  str.matrix
+pairwiseDists <- function(dm, type, newnames) {
+  transformData(dm, type) %>% formatData(., newnames) %>% return()
 }
-
-#Function to return matrix of just strains and final similarity scores for building graphics
-# epi.matrix <- str.matrix
-EpiMatrix <- function(epi.matrix){
-  
-  epi.matrix <- epi.matrix %>% # I think, TODO: check
-    select(Strain.1, Strain.2, Total.Dist)
-  
-  epi.cast <- dcast(epi.matrix, formula= Strain.1 ~ Strain.2, value.var = "Total.Dist")
-  epi.cast <- as.matrix(epi.cast[,2:ncol(epi.cast)]) 
-  rownames(epi.cast) <- colnames(epi.cast)
-  #   epi.sym <- 1 - epi.cast
-  
-  epi.cast
-}
-
-
