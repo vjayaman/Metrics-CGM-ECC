@@ -60,7 +60,7 @@ fi
 
 printf "\n\n\nPart 4/4:"
 if [ -f "results/ECCs.tsv" -a -f "results/CGM_strain_results.tsv" -a -f $STRAINS ]; then
-  Rscript scripts/combine_results.R --ECCs results/ECCs.tsv --tp1 $TP1_CLUSTERS --tp2 $TP2_CLUSTERS --CGMs results/CGM_strain_results.tsv --strains $STRAINS --details $FORM
+  Rscript scripts/combine_results.R --ECCs results/ECCs.tsv --tp1 $INPUTDIR/processed/allTP1.Rds --tp2 $INPUTDIR/processed/allTP2.Rds --CGMs results/CGM_strain_results.tsv --strains $STRAINS --details $FORM
 else
   echo "Not all required files found for part 4."
 fi
