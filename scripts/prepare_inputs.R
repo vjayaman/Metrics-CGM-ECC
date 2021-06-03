@@ -26,7 +26,7 @@ dir.create("results", showWarnings = FALSE)
 dir.create(file.path(arg$inputdir, "processed"))
 
 # FUNCTIONS ----------------------------------------------------------------------------------------------------
-source("scripts/prepfunctions.R")
+source("scripts/formatprep.R")
 
 outputDetails(paste0("\n||", paste0(rep("-", 26), collapse = ""), " Prepping inputs for metric generation ", 
                      paste0(rep("-", 26), collapse = ""), "||\nStarted process at: ", Sys.time()), TRUE)
