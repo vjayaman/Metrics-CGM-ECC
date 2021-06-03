@@ -95,7 +95,7 @@ file:
         $ Rscript merge_data.R -e results/ECCs.tsv -c results/CGM_strain_results.txt -s inputs/strain_info.txt
 	
 
-================
+## Notes:
 
 Merged work on the two separate projects (status before initial merge
 can be found at: 
@@ -104,5 +104,3 @@ can be found at:
 
 Testing work will be compiled and added to 
 * <https://github.com/vjayaman/Testing-Metrics-CGM-ECC>
-
-(For latest WIP - not ready for use - see *Method 3* below)
