@@ -6,9 +6,9 @@ y <- suppressMessages(lapply(libs, require, character.only = TRUE))
 option_list <- list(
   make_option(c("-e", "--ECCs"), metavar = "file", default = "results/ECCs.tsv", help = "ECC result file"),
   make_option(c("-a", "--tp1"), metavar = "file", 
-              default = "inputs/tp1_clusters_init.txt", help = "TP1 cluster assignments"), 
+              default = "inputs/processed/allTP1.Rds", help = "TP1 cluster assignments"), 
   make_option(c("-b", "--tp2"), metavar = "file", 
-              default = "inputs/tp2_clusters_init.txt", help = "TP2 cluster assignments"), 
+              default = "inputs/processed/allTP2.Rds", help = "TP2 cluster assignments"), 
   make_option(c("-c", "--CGMs"), metavar = "file", default = "results/CGM_strain_results.tsv", help = "CGM result file"),
   make_option(c("-s", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain metadata file"), 
   make_option(c("-x", "--details"), metavar = "file", 
@@ -135,10 +135,21 @@ step4 <- step3 %>%
 
 dist_avgs <- grep("avg", colnames(step4), value = TRUE) %>% grep("dist", ., value = TRUE) %>% sort()
 
-step5 <- step4 %>% 
+time1 <- readRDS(arg$tp1)$lookup_table %>% 
+  select(1, as.double(filtering_params$th[2])+2) %>% 
+  set_colnames(c("Strain", "Actual TP1 cluster"))
+
+time2 <- readRDS(arg$tp2)$lookup_table %>% 
+  select(1, as.double(filtering_params$th[2])+2) %>% 
+  set_colnames(c("Strain", "Actual TP2 cluster"))
+
+step5 <- step4 %>% left_join(., time1) %>% left_join(., time2)
+
+step6 <- step5 %>% 
   select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, found_in_TP1, 
-         tp1_cl, TP1_T0_Size, all_of(tp1eccs), found_in_TP2, tp2_cl, TP2_T0_Size, all_of(tp2eccs), 
-         grep("delta_ECC", colnames(step4), value = TRUE), avg_date1, 
+         `Actual TP1 cluster`, tp1_cl, TP1_T0_Size, all_of(tp1eccs), found_in_TP2, 
+         `Actual TP2 cluster`, tp2_cl, TP2_T0_Size, all_of(tp2eccs), 
+         grep("delta_ECC", colnames(step5), value = TRUE), avg_date1, 
          getDistCols(dist_avgs, "TP1", "temp", TRUE), avg_lat_1, avg_long_1, 
          getDistCols(dist_avgs, "TP1", "geog", TRUE), avg_date2, 
          getDistCols(dist_avgs, "TP2", "temp", TRUE), avg_lat_2, avg_long_2, 
@@ -150,7 +161,7 @@ step5 <- step4 %>%
   rename_with(., replaceDistName, getDistCols(colnames(.), "TP1", "geo")) %>% 
   rename_with(., replaceDistName, getDistCols(colnames(.), "TP2", "geo"))
 
-step6 <- step5 %>% 
+step7 <- step6 %>% 
   rename("TP1 cluster" = tp1_cl, "TP1 cluster size (1)" = TP1_T0_Size, 
          "TP2 cluster" = tp2_cl, "TP2 cluster size (1)" = TP2_T0_Size, 
          "TP1" = found_in_TP1, "TP2" = found_in_TP2, 
@@ -171,9 +182,9 @@ step6 <- step5 %>%
          "Type" = type) %>% 
     arrange(`TP2 cluster`, `TP1 cluster`, Strain)
 
-writeData(fp = "results/Merged_strain_results.tsv", df = step6)
+writeData(fp = "results/Merged_strain_results.tsv", df = step7)
 
-step6 %>% 
+step7 %>% 
   group_by(`TP2 cluster`) %>% slice(1) %>% 
   select(-Strain) %>% ungroup() %>% 
   writeData(fp = "results/Merged_cluster_results.tsv", df = .)
