@@ -40,7 +40,7 @@ epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dist
     
     td_i <- epi_cohesion_new(g_cuts, epi_melt) %>% 
       set_colnames(c(paste0("TP", i, "_", colnames(.))))
-    colnames(td_i) %<>% gsub("ECC", paste0("ECC.", tau, ".", gamma), x = .)
+    colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
     
     a2 <- avgdistvals[[i]]$temp
     b2 <- avgdistvals[[i]]$geo

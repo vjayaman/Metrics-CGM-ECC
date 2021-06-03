@@ -51,11 +51,11 @@ strain_data <- x$sd; time1 <- x$t1; time2 <- x$t2; initial_sizes <- x$sizes
 # COLUMN NAMES -------------------------------------------------------------------------------------------------
 cnames <- filtering_params$cnames[2] %>% strsplit(split = ",") %>% unlist()
 if (!("none" %in% cnames)) {
-  strain_data <- strain_data %>% 
-    select("Strain", "Latitude", "Longitude", "Day", "Month", "Year", all_of(cnames))
+  fullcnames <- c("Strain", "Latitude", "Longitude", "Day", "Month", "Year", cnames)
 }else {
-  strain_data <- strain_data %>% select("Strain", "Latitude", "Longitude", "Day", "Month", "Year")
+  fullcnames <- c("Strain", "Latitude", "Longitude", "Day", "Month", "Year")
 }
+strain_data <- strain_data %>% select(all_of(fullcnames))
 
 # add column to show which strains are found in TP1
 strain_data %<>% mutate(TP1 = ifelse(Strain %in% time1$Strain, 1, 0))

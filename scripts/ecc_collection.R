@@ -34,7 +34,7 @@ option_list <- list(
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = "Comma-delimited string of heights to collect ECCs for"),
   make_option(c("-p", "--cpus"), metavar = "numeric", default = 1, help = "CPUs"),
-  make_option(c("-t", "--duo"), metavar = "character", default = "10-01",
+  make_option(c("-t", "--duo"), metavar = "character", default = "010-001",
               help = "temporal, geographic coefficients"))
 
 cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ", 
@@ -65,7 +65,7 @@ if (loc_cols == 3) {
 typing_data <- tp1$height_list %>% append(tp2$height_list)
 
 cat(paste0("\n\nPart 1:"))
-cat(paste0("\n   Note that source = 0"))
+cat(paste0("\n   Note that the source coefficent is always 0 in this version"))
 
 # Note: dr stands for data representative
 # in example: strain_data has 35,627 rows (strains), assignments has 5,504 rows (> 6-fold smaller)
@@ -119,7 +119,7 @@ avgdistvals <- lapply(1:length(typing_data), function(i) {
 collected_eccs <- lapply(1:length(combos), function(j) {
   c1 <- unlist(strsplit(combos[j], split = "")) %>% as.numeric()
   cat(paste0("\n\nPart ", j + 1, ":"))
-  epiCollection(strain_data, tau = c1[1], gamma = c1[2], typing_data, 
+  epiCollection(strain_data, tau = c1[2], gamma = c1[3], typing_data, 
                 transformed_dists, dm_temp, dm_geo, dr_matches, avgdistvals)
 })
 
