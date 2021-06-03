@@ -11,7 +11,8 @@ Testing work will be compiled and added to
 
 (For latest WIP - not ready for use - see *Method 3* below)
 
-## Method 1 (Working development version):
+
+## Method 1 (Latest version, ready for beta testing):
 
 1. Download latest (development) version from **main** branch
 
