@@ -180,7 +180,7 @@ step7 <- step6 %>%
          "Actual growth rate = (TP2 size - TP1 size) / (TP1 size)" = actual_growth_rate, 
          "Novel growth = (TP2 size) / (TP2 size - number of novels)" = new_growth, 
          "Type" = type) %>% 
-    arrange(`TP2 cluster`, `TP1 cluster`, Strain)
+  arrange(`TP2 cluster`, `TP1 cluster`, Strain)
 
 writeData(fp = "results/Merged_strain_results.tsv", df = step7)
 
