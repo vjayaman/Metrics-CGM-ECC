@@ -37,7 +37,7 @@ Testing work will be compiled and added to
 
         .../Metrics-CGM-ECC/$ bash run_process.sh
 	or
-	.../Metrics-CGM-ECC/$ ./run_process.sh
+	`.../Metrics-CGM-ECC/$ ./run_process.sh`
 
 ## Method 2 (Stable, verified version):
 
