@@ -1,17 +1,6 @@
 Metrics-CGM-ECC
 ================
 
-Merged work on the two separate projects (status before initial merge
-can be found at: 
-* <https://github.com/vjayaman/EQProject> and 
-* <https://github.com/vjayaman/ClusterGrowthMetrics>)
-
-Testing work will be compiled and added to 
-* <https://github.com/vjayaman/Testing-Metrics-CGM-ECC>
-
-(For latest WIP - not ready for use - see *Method 3* below)
-
-
 ## Method 1 (Latest version, ready for beta testing):
 
 1. Download version [v2.0-beta](https://github.com/vjayaman/Metrics-CGM-ECC/releases/tag/v2.0-beta)
@@ -104,16 +93,14 @@ file:
     As with the other files, the input arguments for this can be left blank to use the default file names.
     
         $ Rscript merge_data.R -e results/ECCs.tsv -c results/CGM_strain_results.txt -s inputs/strain_info.txt
+	
 
-## Method 3 (Latest version, not ready for use):
+Merged work on the two separate projects (status before initial merge
+can be found at: 
+* <https://github.com/vjayaman/EQProject> and 
+* <https://github.com/vjayaman/ClusterGrowthMetrics>)
 
-* The branch `analysis_inputs` contains the refactored and latest version, which includes the new input form as well as general fine-tuning (and the last of the strain report modifications).
+Testing work will be compiled and added to 
+* <https://github.com/vjayaman/Testing-Metrics-CGM-ECC>
 
-* Still a few bugs/issues that being addressed:
-	* type handling is done but only partially tested
-	* need to bring back in the original clusters given (if they were not numbers in initial input) as another column or two (since they are represented by numbers during analysis)
-	* double-checking the strain report modification list
-	* validation pipeline
-
-* This will be merged back into the main branch, and after someone else has verified that everything still runs for them as expected, this will be tagged as *v2.0*.
-
+(For latest WIP - not ready for use - see *Method 3* below)
