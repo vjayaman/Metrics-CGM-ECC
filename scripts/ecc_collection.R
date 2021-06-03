@@ -120,7 +120,7 @@ collected_eccs <- lapply(1:length(combos), function(j) {
   c1 <- unlist(strsplit(combos[j], split = "")) %>% as.numeric()
   cat(paste0("\n\nStep ", j + 1, ":"))
   epiCollection(strain_data, tau = c1[2], gamma = c1[3], typing_data, 
-                transformed_dists, dm_temp, dm_geo, dr_matches, avgdistvals)
+                transformed_dists, dm_temp, dm_geo, dr_matches, avgdistvals, j)
 })
 
 cat(paste0("\n\nStep ", length(combos) + 2, ":"))
@@ -137,4 +137,3 @@ cat(timeTaken(pt = "ECC data collection", stopwatch))
 
 cat(paste0("\n||", paste0(rep("-", 30), collapse = ""), " End of ECC metric generation ", 
            paste0(rep("-", 31), collapse = ""), "||\n"))
-
