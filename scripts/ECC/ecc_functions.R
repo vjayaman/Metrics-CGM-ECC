@@ -1,33 +1,37 @@
-### Incorporating the allele data with the epidemiological data 
-epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dists, 
-                          dm_temp, dm_geo, dr_matches, avgdistvals, j) {
+
+prepEpiTable <- function(transformed_dists, tau, gamma) {
   cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
   
   outputMessages(paste0("      Preparing table of distances: sqrt(", tau, "*(temp^2) + ", gamma, "*(geo^2))"))
-  epi_table <- transformed_dists %>% 
+  transformed_dists %>% 
     mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>% 
-    select(dr1, dr2, Total.Dist) %>% as.data.table()
-  
+    select(dr1, dr2, Total.Dist) %>% as.data.table() %>% 
+    return()
+}
+
+prepEpiMatrix <- function(epitable) {
   outputMessages("      Generating matrix of similarity values from epi distance matrix ...")
-  epi_matrix <- dcast(epi_table, formula = dr1 ~ dr2, value.var = "Total.Dist")
+  epi_matrix <- dcast(epitable, formula = dr1 ~ dr2, value.var = "Total.Dist")
   epi_matrix <- as.matrix(epi_matrix[,2:ncol(epi_matrix)]) 
   rownames(epi_matrix) <- colnames(epi_matrix)
   
   # create similarity values from epi distance matrix:
-  epi_melt <- as.matrix(1-epi_matrix) %>% 
-    as.data.table(., keep.rownames = TRUE) %>% 
+  as.matrix(1 - epi_matrix) %>% return()
+}
+
+### Incorporating the allele data with the epidemiological data 
+epiCollection <- function(sim_matrix, typing_data, tau, gamma, dr_matches, avgdistvals) {
+  
+  epi_melt <- sim_matrix %>% as.data.table(., keep.rownames = TRUE) %>% 
     melt(., id.vars = "rn", variable.factor = FALSE, value.factor = FALSE) %>% 
     set_colnames(c("dr_1", "dr_2", "value")) %>% as.data.table()
-  
-  rm(epi_table)
-  rm(epi_matrix)
-  invisible(gc())
   
   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
   # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
   eccs <- lapply(1:length(typing_data), function(i) {
     outputMessages(paste0("      Calculating ECCs for timepoint ", i, ", which has ", 
                           nrow(typing_data[[i]]), " strains to consider ..."))
+    
     dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
       left_join(., dr_matches, by = "Strain") %>%
       mutate(across(dr, as.character)) %>% select(-Strain)
@@ -52,6 +56,18 @@ epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dist
   return(eccs)
 }
 
+drCounts <- function(td_i, dr_matches) {
+  dr_td1 <- td_i %>% rownames_to_column("Strain") %>% as_tibble() %>%
+    left_join(., dr_matches, by = "Strain") %>%
+    mutate(across(dr, as.character)) %>% select(-Strain)
+  
+  # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
+  cx <- colnames(dr_td1)[1]
+  tallied_reps <- dr_td1 %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
+  tallied_reps %>% left_join(dr_td1, ., by = byNames(., dr_td1)) %>%
+    unique() %>% mutate(across(dr, as.character)) %>% return()
+}
+
 # note that we sum the values for both directions e.g. (192, 346) and (346, 192)
 # and then divide by the total number of pairs (counting both directions)
 # this gives the same result as if we had used only one direction
@@ -73,6 +89,21 @@ avgDists <- function(g_cuts, dm, cname, newname) {
     }
   }) %>% unlist() %>% tibble(clusters, .) %>% set_colnames(c(newname, x))
 }
+
+# FORMATTING ---------------------------------------------------------------------------------
+checkEncoding <- function(fp) {
+  readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
+}
+
+byNames <- function(df1, df2) {intersect(colnames(df1), colnames(df2))}
+
+mergeECCs <- function(eccs, tpx, typing_data) {
+  tbl1 <- as.data.table(typing_data)
+  sapply(eccs, "[", tpx) %>% Reduce(function(...) merge(...), .) %>% as.data.table() %>% 
+    merge.data.table(tbl1, ., by = intersect(colnames(tbl1), colnames(.))) %>% return()
+}
+
+hyps <- function(x) {paste0(rep("-", x), collapse = "")}
 
 # Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
 # ("pt") and a two-element named vector with Sys.time() values named "start_time" and "end_time"
@@ -96,6 +127,22 @@ timeTaken <- function(pt, sw) {
 
 # EPI-HELPER-MODULAR -----------------------------------------------------------------------------
 outputMessages <- function(msgs) {cat(paste0("\n",msgs))}
+
+nonRedundantDists <- function(assignments) {
+  
+  outputMessages("   Generating all possible date pair distances ...")
+  dm_temp <- assignments %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
+  transformed_temp <- dm_temp %>% pairwiseDists(., "temp", c("dr1", "dr2", "Temp.Dist"))
+  
+  outputMessages("   Generating all possible lat-long pair distances ...")
+  dm_geo <- assignments %>% select(dr, Latitude, Longitude) %>% 
+    distMatrix(., "geo", c("Longitude", "Latitude"))
+  transformed_geo <- dm_geo %>% pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
+  
+  transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
+  dists <- list("temp" = dm_temp, "geo" = dm_geo, "tr_dists" = transformed_dists)
+  return(dists)
+}
 
 distMatrix <- function(input_data, dtype, cnames) {
   if (dtype == "temp") {

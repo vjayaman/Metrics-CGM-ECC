@@ -44,6 +44,7 @@
 		var nsTP2=window.document.myform.non_singletonTP2.checked;
 		var tempwindow=window.document.myform.temp_win.checked;
 		var cnames=checkBoxList();
+		var epimatrix=window.document.myform.epi_matrix.checked;
 
 		if (tempwindow == true) {
 			var start_date=window.document.myform.start_date.value;
@@ -73,6 +74,7 @@
 			"Threshold of interest: " + encodeURIComponent(threshold) + "\n" + 
 			"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(nsTP1) + "\n" + 
 			"Is in a non-singleton cluster (at TP2): " + encodeURIComponent(nsTP2) + "\n" + 
+			"Return EpiMatrix: " + encodeURIComponent(epimatrix) + "\n" + 
 			"Filtering by date: " + temp_results + "\n" + 
 			"Column names: " + cnames + "\n"); 
 
@@ -172,6 +174,12 @@
 			<label class="chk_container">
 				Is in a non-singleton cluster (at TP2, at above threshold)
 				<input type="checkbox" id="non_singletonTP2" class="chkbox"/>
+				<span class="cbox"></span>
+			</label>
+			<br>
+			<label class="chk_container">
+				Return EpiMatrix (save separately to results folder)
+				<input type="checkbox" id="epi_matrix" class="chkbox"/>
 				<span class="cbox"></span>
 			</label>
 			<br>

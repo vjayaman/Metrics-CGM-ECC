@@ -33,9 +33,10 @@ outputDetails(paste0("\n||", paste0(rep("-", 26), collapse = ""), " Prepping inp
 outputDetails(paste0("\nWill save formatted inputs to 'processed' directory in ", arg$inputdir, " directory."), TRUE)
 
 # Results of "Form for analysis inputs" ------------------------------------------------------------------------
-filtering_params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>% 
+filtering_params <- readLines(arg$details, warn = FALSE) %>% 
+  strsplit(., split = ": ") %>%
   set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-              "th","nsTP1","nsTP2","temp_win","cnames"))
+              "th","nsTP1","nsTP2","epimat","temp_win","cnames"))
 
 strain_data <- readData(arg$metadata, TRUE)
 time1 <- readData(arg$tp1)
