@@ -110,6 +110,11 @@ clusters_just_tp1 <- lapply(heights, function(h) {
     findingSneakers(novels, tp1$status, tp2$status, .) %>% return()
 }) %>% bind_rows()
 
+# x1 <- "Anhui/SZ005/2020"
+# a1 <- tp1$melted %>% mutate(across(tp1_h, as.integer)) %>% 
+#   filter(tp1_h %in% heights)
+
+
 isolates_base <- tp1$melted %>% mutate(across(tp1_h, as.integer)) %>% 
   filter(tp1_h %in% heights) %>% 
   left_join(., clusters_just_tp1, by = c("tp1_id", "tp1_h", "tp1_cl")) %>% 
@@ -163,10 +168,12 @@ isolates_file[,c("tp1_cl", "tp2_cl")] %<>% apply(., 2, padCol, padval = pc, padc
 outputDetails("  Incrementing all cluster sizes by 1, then calculating growth columns.\n", newcat = FALSE)
 outputDetails("  Also adding 'type' column to CGM results table.\n", newcat = FALSE)
 
+# adding columns
 isolates_file %<>% 
   mutate(tp1_cl_size = tp1_cl_size + 1, tp2_cl_size = tp2_cl_size + 1) %>% 
-  oneHeight() %>% 
-  addingType(.)
+  oneHeight()
+
+isolates_file %<>% addingType(.)
 
 outputDetails("  Saving the data in a file with strain identifiers.\n", newcat = FALSE)
 

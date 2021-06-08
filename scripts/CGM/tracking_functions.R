@@ -119,7 +119,7 @@ trackClusters <- function(hdata, t2_comps, t2names, t1_coded, t2_coded, indicate
           # (2) if the process is being cut off partway - not tracking to all heights (e.g. TP2 height 1634 not found)
           results_i <- checkEachIsolate(cluster_i, t2_coded, t2_comps)
         }
-      }else { 
+      }else {
         # (1) too many isolates in the cluster for effective grep use
         results_i <- checkEachIsolate(cluster_i, t2_coded, t2_comps)
       }

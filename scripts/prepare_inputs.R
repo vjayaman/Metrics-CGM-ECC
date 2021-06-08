@@ -37,9 +37,18 @@ filtering_params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split =
   set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
               "th","nsTP1","nsTP2","temp_win","cnames"))
 
-strain_data <- readData(arg$metadata, TRUE)
+# readData("testing_inputs/inputs/strain_info.txt")
+# a1 <- readData(arg$metadata, TRUE)
+# a1 <- readData(arg$metadata, TRUE, FALSE)
+
+strain_data <- readData(arg$metadata, TRUE, FALSE)
+# time1 <- readData(arg$tp1, TRUE, FALSE)
+# time2 <- readData(arg$tp2, TRUE, FALSE)
+
+# strain_data <- readData(arg$metadata, TRUE)
 time1 <- readData(arg$tp1)
-time2 <- readData(arg$tp2)
+time2 <- readData(arg$tp2, TRUE, FALSE)
+# time2 <- readData(arg$tp2)
 
 # LINEAGE INFO -------------------------------------------------------------------------------------------------
 initial_sizes <- tibble(type="initial", a=nrow(strain_data), b=nrow(time1), d=nrow(time2))

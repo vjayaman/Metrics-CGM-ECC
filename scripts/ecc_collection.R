@@ -78,17 +78,24 @@ if (loc_cols == 3) {
 assignments %<>% unique() %>% rownames_to_column("dr")
 
 outputMessages("   Generating all possible date pair distances ...")
-dm_temp <- assignments %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
-transformed_temp <- dm_temp %>% pairwiseDists(., "temp", c("dr1", "dr2", "Temp.Dist"))
+a1 <- assignments %>% select(Date) %>% unique() %>% na.omit(Date) %>% rownames_to_column("date_dr")
+dm_temp <- a1 %>% rename(dr = date_dr) %>% distMatrix(., "temp", "Date")
+# dm_temp <- assignments %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
+# transformed_temp <- dm_temp %>% pairwiseDists(., "temp", c("dr1", "dr2", "Temp.Dist"))
+transformed_temp <- dm_temp %>% pairwiseDists(., "temp", c("d_dr1", "d_dr2", "Temp.Dist"))
 
 outputMessages("   Generating all possible lat-long pair distances ...")
-dm_geo <- assignments %>% select(dr, Latitude, Longitude) %>% 
-  distMatrix(., "geo", c("Latitude", "Longitude"))
-transformed_geo <- dm_geo %>% pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
+b1 <- assignments %>% select(Latitude, Longitude) %>% unique() %>% na.omit(Latitude) %>% 
+  na.omit(Longitude) %>% rownames_to_column("l_dr")
+dm_geo <- b1 %>% rename(dr = l_dr) %>% distMatrix(., "geo", c("Latitude", "Longitude"))
+# dm_geo <- assignments %>% select(dr, Latitude, Longitude) %>% 
+#   distMatrix(., "geo", c("Latitude", "Longitude"))
+# transformed_geo <- dm_geo %>% pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
+transformed_geo <- dm_geo %>% pairwiseDists(., "geo", c("l_dr1", "l_dr2", "Geog.Dist"))
 
-transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
-rm(transformed_geo)
-rm(transformed_temp)
+# transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
+# rm(transformed_geo)
+# rm(transformed_temp)
 
 outputMessages("   Identifying which strains match which non-redundant 'data representatives'")
 if (loc_cols == 3) {
