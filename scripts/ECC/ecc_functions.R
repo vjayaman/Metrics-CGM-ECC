@@ -26,6 +26,15 @@ epiCollection <- function(sim_matrix, typing_data, tau, gamma, dr_matches, avgdi
     melt(., id.vars = "rn", variable.factor = FALSE, value.factor = FALSE) %>% 
     set_colnames(c("dr_1", "dr_2", "value")) %>% as.data.table()
   
+  # ---------------------------------------------------------------------------------------------
+  # epimatrix <- matrix(nrow = nrow(strain_data), ncol = nrow(strain_data)) %>% 
+  #   set_colnames(strain_data$Strain) %>% set_rownames(strain_data$Strain)
+  # x1 <- left_join(epi_melt, dr_matches, by = c("dr_1" = "dr"))
+  # x2 <- x1 %>% rename(Strain1 = Strain) %>% select(dr_2, value, Strain1)
+  # x3 <- left_join(x2, dr_matches, by = c("dr_2" = "dr"))
+  
+  # ---------------------------------------------------------------------------------------------
+  
   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
   # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
   eccs <- lapply(1:length(typing_data), function(i) {

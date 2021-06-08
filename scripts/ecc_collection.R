@@ -76,7 +76,7 @@ collected_eccs <- lapply(1:length(combos), function(j) {
   gamma <- c1[3]
   epitable <- prepEpiTable(dists$tr_dists, tau, gamma)
   sim_matrix <- prepEpiMatrix(epitable)
-  x1 <- epiCollection(sim_matrix, typing_data, tau, gamma, dr_matches, avgdistvals)
+  epiCollection(sim_matrix, typing_data, tau, gamma, dr_matches, avgdistvals)
 })
 
 cat(paste0("\n\nStep ", length(combos) + 2, ":"))
