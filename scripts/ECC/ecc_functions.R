@@ -1,6 +1,8 @@
 ### Incorporating the allele data with the epidemiological data 
 epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dists, 
-                          dm_temp, dm_geo, dr_matches, avgdistvals, j) {
+                          dm_temp, dm_geo, dr_matches, 
+                          # avgdistvals, 
+                          j) {
   cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
   
   outputMessages(paste0("      Preparing table of distances: sqrt(", tau, "*(temp^2) + ", gamma, "*(geo^2))"))
@@ -42,11 +44,12 @@ epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dist
       set_colnames(c(paste0("TP", i, "_", colnames(.))))
     colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
     
-    a2 <- avgdistvals[[i]]$temp
-    b2 <- avgdistvals[[i]]$geo
+    # a2 <- avgdistvals[[i]]$temp
+    # b2 <- avgdistvals[[i]]$geo
     
-    left_join(td_i, a2, by = intersect(colnames(td_i), colnames(a2))) %>% 
-      left_join(., b2, by = intersect(colnames(.), colnames(b2))) %>% return()
+    return(td_i)
+    # left_join(td_i, a2, by = intersect(colnames(td_i), colnames(a2))) %>% 
+    #   left_join(., b2, by = intersect(colnames(.), colnames(b2))) %>% return()
   })
   
   return(eccs)

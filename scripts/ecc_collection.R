@@ -51,7 +51,11 @@ hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th
 tp1 <- Timepoint$new(params$tp1, "tp1")$Process(hx)$listHeights(hx)
 tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
 
-base_strains <- read_tsv(params$strains)
+base_strains <- read_tsv(params$strains) %>% na.omit(Latitude) %>% na.omit(Longitude) %>% na.omit(Date)
+
+typing_data <- tp1$height_list %>% append(tp2$height_list)
+
+base_strains <- base_strains[1:100000,]
 loc_cols <- length(intersect(c("Country", "Province", "City"), colnames(base_strains)))
 if (loc_cols == 3) {
   strain_data <- base_strains %>% 
@@ -61,8 +65,6 @@ if (loc_cols == 3) {
 }else {
   strain_data <- base_strains %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-")))
 }
-
-typing_data <- tp1$height_list %>% append(tp2$height_list)
 
 cat(paste0("\n\nStep 1:"))
 cat(paste0("\n   Note that the source coefficent is always 0 in this version"))
@@ -99,28 +101,30 @@ if (loc_cols == 3) {
 
 dr_matches <- left_join(strain_data, assignments, by = match_names) %>% select(Strain, dr)
 
-avgdistvals <- lapply(1:length(typing_data), function(i) {
-  dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
-    left_join(., dr_matches, by = "Strain") %>%
-    mutate(across(dr, as.character)) %>% select(-Strain)
-  
-  # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
-  cx <- colnames(dr_td1)[1]
-  tallied_reps <- dr_td1 %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
-  g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>%
-    unique() %>% mutate(across(dr, as.character))
-  
-  outputMessages(paste0("      Calculating average (not transformed) distances for timepoint ", i))
-  a2 <- avgDists(g_cuts, dm_temp, "Temp.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
-  b2 <- avgDists(g_cuts, dm_geo, "Geog.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
-  return(list(temp = a2, geo = b2))
-})
+# avgdistvals <- lapply(1:length(typing_data), function(i) {
+#   dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
+#     left_join(., dr_matches, by = "Strain") %>%
+#     mutate(across(dr, as.character)) %>% select(-Strain)
+#   
+#   # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
+#   cx <- colnames(dr_td1)[1]
+#   tallied_reps <- dr_td1 %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
+#   g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>%
+#     unique() %>% mutate(across(dr, as.character))
+#   
+#   outputMessages(paste0("      Calculating average (not transformed) distances for timepoint ", i))
+#   a2 <- avgDists(g_cuts, dm_temp, "Temp.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
+#   b2 <- avgDists(g_cuts, dm_geo, "Geog.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
+#   return(list(temp = a2, geo = b2))
+# })
 
 collected_eccs <- lapply(1:length(combos), function(j) {
   c1 <- unlist(strsplit(combos[j], split = "")) %>% as.numeric()
   cat(paste0("\n\nStep ", j + 1, ":"))
   epiCollection(strain_data, tau = c1[2], gamma = c1[3], typing_data, 
-                transformed_dists, dm_temp, dm_geo, dr_matches, avgdistvals, j)
+                transformed_dists, dm_temp, dm_geo, dr_matches, 
+                # avgdistvals, 
+                j)
 })
 
 cat(paste0("\n\nStep ", length(combos) + 2, ":"))
