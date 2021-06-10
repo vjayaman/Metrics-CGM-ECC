@@ -28,7 +28,7 @@ mergeECCs <- function(eccs, tpx, typing_data) {
 }
 
 option_list <- list(
-  make_option(c("-b", "--strains"), metavar = "file", default = "inputs/strain_info.txt", help = "Strain data"),
+  make_option(c("-b", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
   make_option(c("-c", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "TP1 cluster assignments"),
   make_option(c("-d", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
@@ -42,6 +42,11 @@ cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation 
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
 params <- parse_args(OptionParser(option_list=option_list))
+
+# params$tp1 <- "testing_inputs/inputs/small_set/tp1_clusters_init.txt"
+# params$tp2 <- "testing_inputs/inputs/small_set/tp2_clusters_init.txt"
+# params$strains <- "testing_inputs/inputs/small_set/strain_info.txt"
+# params$heights <- "1"
 
 combos <- params$trio %>% strsplit(., "-") %>% unlist()
 z <- vector("list", length = length(combos)) %>% set_names(combos)
@@ -62,8 +67,6 @@ if (loc_cols == 3) {
   strain_data <- base_strains %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-")))
 }
 
-strain_data <- strain_data %>% na.omit(Date) %>% na.omit(Latitude) %>% na.omit(Longitude)
-
 typing_data <- tp1$height_list %>% append(tp2$height_list)
 
 cat(paste0("\n\nStep 1:"))
@@ -79,22 +82,42 @@ if (loc_cols == 3) {
 }
 assignments %<>% unique() %>% rownames_to_column("dr")
 
-
-
-
-
 outputMessages("   Generating all possible date pair distances ...")
-dm_temp <- assignments %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
-transformed_temp <- dm_temp %>% pairwiseDists(., "temp", c("dr1", "dr2", "Temp.Dist"))
+uni_temp <- assignments %>% select(Date) %>% unique() %>% rownames_to_column("drt") %>% 
+  left_join(., assignments, by = "Date")
+dm_temp <- uni_temp %>% select(drt, Date) %>% unique() %>% rename(dr = drt) %>% 
+  distMatrix(., "temp", "Date")
+transformed_temp <- dm_temp %>% pairwiseDists(., "temp", c("drt1", "drt2", "Temp.Dist"))
 
 outputMessages("   Generating all possible lat-long pair distances ...")
-dm_geo <- assignments %>% select(dr, Latitude, Longitude) %>% 
-  distMatrix(., "geo", c("Latitude", "Longitude"))
-transformed_geo <- dm_geo %>% pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
+uni_geo <- assignments %>% select(Latitude, Longitude) %>% unique() %>% 
+  rownames_to_column("drg") %>% 
+  left_join(., assignments, by = c("Latitude", "Longitude"))
+dm_geo <- uni_geo %>% select(drg, Latitude, Longitude) %>% unique() %>% 
+  rename(dr = drg) %>% distMatrix(., "geo", c("Latitude", "Longitude"))
+transformed_geo <- dm_geo %>% pairwiseDists(., "geo", c("drg1", "drg2", "Geog.Dist"))
 
-transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
-rm(transformed_geo)
-rm(transformed_temp)
+dr_tempgeo <- uni_geo %>% 
+  full_join(., uni_temp, by = c("dr", "Date", "Latitude", "Longitude", "Location")) %>% 
+  select(dr, drt, drg)
+
+# transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
+# rm(transformed_geo)
+# rm(transformed_temp)
+
+
+# outputMessages("   Generating all possible date pair distances ...")
+# dm_temp <- assignments %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
+# transformed_temp <- dm_temp %>% pairwiseDists(., "temp", c("dr1", "dr2", "Temp.Dist"))
+# 
+# outputMessages("   Generating all possible lat-long pair distances ...")
+# dm_geo <- assignments %>% select(dr, Latitude, Longitude) %>% 
+#   distMatrix(., "geo", c("Latitude", "Longitude"))
+# transformed_geo <- dm_geo %>% pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
+# 
+# transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
+# rm(transformed_geo)
+# rm(transformed_temp)
 
 outputMessages("   Identifying which strains match which non-redundant 'data representatives'")
 if (loc_cols == 3) {
@@ -103,29 +126,36 @@ if (loc_cols == 3) {
   match_names <- c("Latitude", "Longitude", "Date")
 }
 
-dr_matches <- left_join(strain_data, assignments, by = match_names) %>% select(Strain, dr)
+dr_matches <- left_join(strain_data, assignments, by = match_names) %>% 
+  select(Strain, dr) %>% 
+  left_join(., dr_tempgeo, by = "dr")
 
-avgdistvals <- lapply(1:length(typing_data), function(i) {
-  dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
-    left_join(., dr_matches, by = "Strain") %>%
-    mutate(across(dr, as.character)) %>% select(-Strain)
-  
-  # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
-  cx <- colnames(dr_td1)[1]
-  tallied_reps <- dr_td1 %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
-  g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>%
-    unique() %>% mutate(across(dr, as.character))
-  
-  outputMessages(paste0("      Calculating average (not transformed) distances for timepoint ", i))
-  a2 <- avgDists(g_cuts, dm_temp, "Temp.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
-  b2 <- avgDists(g_cuts, dm_geo, "Geog.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
-  return(list(temp = a2, geo = b2))
-})
+# avgdistvals <- lapply(1:length(typing_data), function(i) {
+#   dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
+#     left_join(., dr_matches, by = "Strain") %>%
+#     mutate(across(dr, as.character)) %>% select(-Strain)
+#   
+#   # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
+#   cx <- colnames(dr_td1)[1]
+#   tallied_reps <- dr_td1 %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
+#   g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>%
+#     unique() %>% mutate(across(dr, as.character))
+#   
+#   outputMessages(paste0("      Calculating average (not transformed) distances for timepoint ", i))
+#   a2 <- avgDists(g_cuts, dm_temp, "Temp.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
+#   b2 <- avgDists(g_cuts, dm_geo, "Geog.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
+#   return(list(temp = a2, geo = b2))
+# })
+
+transformed_temp %<>% mutate(Temp.New = (Temp.Dist^2)*tau)
+transformed_geo %<>% mutate(Geog.New = (Geog.Dist^2)*gamma)
 
 collected_eccs <- lapply(1:length(combos), function(j) {
   c1 <- unlist(strsplit(combos[j], split = "")) %>% as.numeric()
   cat(paste0("\n\nStep ", j + 1, ":"))
-  epiCollection(strain_data, tau = c1[2], gamma = c1[3], typing_data, 
+  tau <- c1[2]
+  gamma <- c1[3]
+  epiCollection(strain_data, tau, gamma, typing_data, 
                 transformed_dists, dm_temp, dm_geo, dr_matches, avgdistvals, j)
 })
 
