@@ -62,6 +62,8 @@ if (loc_cols == 3) {
   strain_data <- base_strains %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-")))
 }
 
+strain_data <- strain_data %>% na.omit(Date) %>% na.omit(Latitude) %>% na.omit(Longitude)
+
 typing_data <- tp1$height_list %>% append(tp2$height_list)
 
 cat(paste0("\n\nStep 1:"))
@@ -76,6 +78,10 @@ if (loc_cols == 3) {
   assignments <- strain_data %>% select(Date, Latitude, Longitude)
 }
 assignments %<>% unique() %>% rownames_to_column("dr")
+
+
+
+
 
 outputMessages("   Generating all possible date pair distances ...")
 dm_temp <- assignments %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
