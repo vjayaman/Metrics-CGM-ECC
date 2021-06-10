@@ -10,14 +10,20 @@ outputDetails <- function(msg, newcat = FALSE) {
 }
 
 # function for reading raw strains and time point clusters
-readData <- function(path, strains = FALSE) {
+readData <- function(path, strains = FALSE, check_enc = TRUE) {
+  if (check_enc) {
+    enc <- checkEncoding(file.path(path))
+  }else {
+    enc <- ""
+  }
+  
   if (strains) {
     file.path(path) %>% 
-      read.table(sep="\t", header=TRUE, fileEncoding=checkEncoding(.), fill=TRUE, quote="") %>% 
+      read.table(sep="\t", header=TRUE, fileEncoding=enc, fill=TRUE, quote="") %>% 
       as_tibble() %>% return()
   }else {
     file.path(path) %>% 
-      read.table(sep="\t", header=TRUE, fileEncoding=checkEncoding(.)) %>% 
+      read.table(sep="\t", header=TRUE, fileEncoding=enc) %>% 
       as_tibble() %>% return()
   }
 }
