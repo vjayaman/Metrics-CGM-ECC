@@ -38,13 +38,13 @@ filtering_params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split =
               "th","nsTP1","nsTP2","temp_win","cnames"))
 
 a1 <- readData(arg$metadata, FALSE)
-a2 <- readData(arg$metadata, TRUE)
+a2 <- suppressWarnings(readData(arg$metadata, check_enc = TRUE))
 if (nrow(a1) > nrow(a2)) {strain_data <- a1}else {strain_data <- a2}
 
-time1 <- readData(arg$tp1)
+time1 <- suppressWarnings(readData(arg$tp1, check_enc = TRUE))
 if (!exists("time1")) {time1 <- readData(arg$tp1, FALSE)}
 
-time2 <- readData(arg$tp2)
+time2 <- suppressWarnings(readData(arg$tp2, check_enc = TRUE))
 if (!exists("time2")) {time2 <- readData(arg$tp2, FALSE)}
 
 # LINEAGE INFO -------------------------------------------------------------------------------------------------
@@ -61,7 +61,9 @@ if (!("none" %in% cnames)) {
 }else {
   fullcnames <- c("Strain", "Latitude", "Longitude", "Day", "Month", "Year")
 }
-strain_data <- strain_data %>% select(all_of(fullcnames))
+strain_data <- strain_data %>% select(all_of(fullcnames)) %>% 
+  na.omit(Latitude) %>% na.omit(Longitude) %>% na.omit(Day) %>% 
+  na.omit(Month) %>% na.omit(Year)
 
 # add column to show which strains are found in TP1
 strain_data %<>% mutate(TP1 = ifelse(Strain %in% time1$Strain, 1, 0))
