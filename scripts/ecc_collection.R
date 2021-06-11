@@ -125,6 +125,9 @@ dr_matches <- left_join(strain_data, assignments, by = match_names) %>%
   select(Strain, dr) %>% 
   left_join(., dr_tempgeo, by = "dr")
 
+t2clusters <- typing_data[[2]] %>% set_colnames("Threshold") %>% 
+  rownames_to_column("Strain") %>% as_tibble()
+
 # avgdistvals <- lapply(1:length(typing_data), function(i) {
 #   dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
 #     left_join(., dr_matches, by = "Strain") %>%
@@ -142,14 +145,14 @@ dr_matches <- left_join(strain_data, assignments, by = match_names) %>%
 #   return(list(temp = a2, geo = b2))
 # })
 
-transformed_temp %<>% mutate(Temp.New = (Temp.Dist^2)*tau)
-transformed_geo %<>% mutate(Geog.New = (Geog.Dist^2)*gamma)
 
 collected_eccs <- lapply(1:length(combos), function(j) {
   c1 <- unlist(strsplit(combos[j], split = "")) %>% as.numeric()
   cat(paste0("\n\nStep ", j + 1, ":"))
   tau <- c1[2]
   gamma <- c1[3]
+  transformed_temp %<>% mutate(Temp.New = (Temp.Dist^2)*tau)
+  transformed_geo %<>% mutate(Geog.New = (Geog.Dist^2)*gamma)
   epiCollection(strain_data, tau, gamma, typing_data, 
                 transformed_dists, dm_temp, dm_geo, dr_matches, avgdistvals, j)
 })
