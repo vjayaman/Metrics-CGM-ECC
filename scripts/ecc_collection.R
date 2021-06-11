@@ -43,11 +43,6 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 
 params <- parse_args(OptionParser(option_list=option_list))
 
-# params$tp1 <- "testing_inputs/inputs/small_set/tp1_clusters_init.txt"
-# params$tp2 <- "testing_inputs/inputs/small_set/tp2_clusters_init.txt"
-# params$strains <- "testing_inputs/inputs/small_set/strain_info.txt"
-# params$heights <- "1"
-
 combos <- params$trio %>% strsplit(., "-") %>% unlist()
 z <- vector("list", length = length(combos)) %>% set_names(combos)
 
