@@ -128,13 +128,51 @@ distMatrix <- function(input_data, dtype, cnames) {
   if (dtype == "temp") {
     dm <- input_data %>% select(all_of(cnames)) %>% pull() %>% 
       dist(diag = FALSE, upper = FALSE, method = "euclidean")
-    dm %>% as.matrix(nrow = nrow(input_data), ncol = nrow(input_data)) %>% return()
+    dm %>% as.matrix(nrow = nrow(input_data), ncol = nrow(input_data)) %>% 
+      set_rownames(pull(input_data, 1)) %>% 
+      set_colnames(pull(input_data, 1)) %>% return()
     
   }else if (dtype == "geo") {
     # consider using geosphere::distm() for this
     dm <- input_data %>% select(all_of(cnames)) %>% as.data.frame() %>% earth.dist(dist = TRUE)
-    dm %>% as.matrix() %>% return()
+    dm %>% as.matrix() %>% 
+      set_rownames(pull(input_data, 1)) %>% 
+      set_colnames(pull(input_data, 1)) %>% return()
   }
+}
+
+# distMatrix <- function(input_data, dtype, cnames) {
+#   if (dtype == "temp") {
+#     dm <- input_data %>% select(all_of(cnames)) %>% pull() %>% 
+#       dist(diag = FALSE, upper = FALSE, method = "euclidean")
+#     dm %>% as.matrix(nrow = nrow(input_data), ncol = nrow(input_data)) %>% return()
+#     
+#   }else if (dtype == "geo") {
+#     # consider using geosphere::distm() for this
+#     dm <- input_data %>% select(all_of(cnames)) %>% as.data.frame() %>% earth.dist(dist = TRUE)
+#     dm %>% as.matrix() %>% return()
+#   }
+# }
+
+# maxd <- max(logdata)
+# mind <- min(logdata)
+transformData2 <- function(dm, dtype, min_dist, max_dist) {
+  logdata <- dm %>% add(10) %>% log10()
+  if (dtype == "temp") {
+    logdata[logdata == -Inf] <- 0
+    if (max_dist == 0) {
+      logdata <- 0
+    }else {
+      logdata <- ((logdata - min_dist) / (max_dist - min_dist))
+    }
+  }else if (dtype == "geo") {
+    if(max_dist == 1){
+      logdata[1:nrow(logdata), 1:nrow(logdata)] <- 0
+    } else {
+      logdata <- ((logdata-min_dist) / (max_dist-min_dist))
+    }
+  }
+  return(logdata)
 }
 
 transformData <- function(dm, dtype) {
