@@ -11,7 +11,9 @@ k <- 2
 df <- typing_data[[k]] %>% rownames_to_column("Strain") %>%
   as_tibble() %>% left_join(., dr_matches, by = "Strain")
 
-results <- sectionTypingData(df, 7000)
+gc()
+
+results <- sectionTypingData(df, 8000)
 assert("No clusters overlooked", length(setdiff(pull(df,2), pull(rbindlist(results),1))) == 0)
 
 cx <- setdiff(colnames(df), c("Strain", "dr"))
@@ -20,31 +22,62 @@ c1 <- unlist(strsplit(combos[1], split = "")) %>% as.numeric()
 tau <- c1[2]
 gamma <- c1[3]
 
-p <- 5 # length(results)
-new_eccs <- lapply(1:p, function(j) {
-  
+# p <- 5 # length(results)
+# dir.create("results/tmp", showWarnings = FALSE)
+# new_eccs <- lapply(1:p, function(j) {
+  j <- 1
   x1 <- df %>% filter(!!as.symbol(cx) %in% pull(results[[j]], cx))
   cluster_asmts <- assignments %>% filter(dr %in% pull(x1, dr))
-
+  cluster_x <- x1 %>% select(-Strain)
+  
   outputMessages("   Generating all possible date pair distances ...")
-  dm_temp <- cluster_asmts %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
-  transformed_temp <- dm_temp %>% pairwiseDists(., "temp", c("dr1", "dr2", "Temp.Dist"))
+  transformed_temp <- cluster_asmts %>% select(dr, Date) %>% 
+    distMatrix(., "temp", "Date") %>% 
+    pairwiseDists(., "temp", c("dr1", "dr2", "Temp.Dist"))
 
   outputMessages("   Generating all possible lat-long pair distances ...")
-  dm_geo <- cluster_asmts %>% select(dr, Latitude, Longitude) %>% 
-    distMatrix(., "geo", c("Latitude", "Longitude"))
-  transformed_geo <- dm_geo %>% pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
+  transformed_geo <- cluster_asmts %>% select(dr, Latitude, Longitude) %>% 
+    distMatrix(., "geo", c("Latitude", "Longitude")) %>% 
+    pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
 
-  cluster_x <- x1 %>% select(-Strain)
+  gc()
+  
   transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
+  
+  outputMessages("   Clearing up some memory")
+  rm(transformed_temp)
+  rm(transformed_geo)
+  gc()
+  
+  a1 <- epiCollectionByCluster(strain_data, tau, gamma, transformed_dists, k, cluster_x)
+  saveRDS(a1, paste0("results/tmp/all-TP", k, "-", j, ".Rds"))
+  
+  rm(cluster_x)
+  rm(transformed_dists)
+  # rm(a1)
+  gc()
+  
+  
+# }) %>% bind_rows()
 
-  epiCollectionByCluster(strain_data, tau, gamma, transformed_dists, k, cluster_x)
-}) %>% bind_rows()
+# new_eccs <- lapply(1:length(results), function(j) {
+#   readRDS(paste0("results/tmp/TP", k, "-", j, ".Rds"))
+# }) %>% bind_rows()
+# new_eccs[which(new_eccs[,3] == -Inf),3] <- NA
+  
 
+tr_temp <- assignments %>% select(dr, Date) %>%
+  distMatrix(., "temp", "Date") %>%
+  pairwiseDists(., "temp", c("dr1", "dr2", "Temp.Dist"))
+tr_geo <- assignments %>% select(dr, Latitude, Longitude) %>%
+  distMatrix(., "geo", c("Latitude", "Longitude")) %>%
+  pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
+tr_dists <- merge.data.table(tr_temp, tr_geo)
+# original_eccs <- tr_dists %>% 
+#   epiCollection(strain_data, tau, gamma, typing_data, ., dm_temp, dm_geo, dr_matches)
 
-original_eccs <- merge.data.table(transformed_temp, transformed_geo) %>% 
-  epiCollection(strain_data, tau, gamma, typing_data, ., dm_temp, dm_geo, dr_matches)
-all_equal(new_eccs, original_eccs[[k]])  
+original_eccs <- readRDS("results/tmp/original_eccs.Rds")[[k]]
+all_equal(a1, original_eccs)
   
   
 

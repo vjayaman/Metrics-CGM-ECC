@@ -54,6 +54,7 @@ if (loc_cols == 3) {
 }else {
   strain_data <- base_strains %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-")))
 }
+rm(base_strains)
 
 typing_data <- tp1$height_list %>% append(tp2$height_list)
 
