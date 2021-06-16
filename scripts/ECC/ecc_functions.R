@@ -125,19 +125,20 @@ timeTaken <- function(pt, sw) {
 outputMessages <- function(msgs) {cat(paste0("\n",msgs))}
 
 distMatrix <- function(input_data, dtype, cnames) {
+  dm_names <- pull(input_data, 1) # dr, or Strain
   if (dtype == "temp") {
     dm <- input_data %>% select(all_of(cnames)) %>% pull() %>% 
       dist(diag = FALSE, upper = FALSE, method = "euclidean")
     dm %>% as.matrix(nrow = nrow(input_data), ncol = nrow(input_data)) %>% 
-      set_rownames(pull(input_data, 1)) %>% 
-      set_colnames(pull(input_data, 1)) %>% return()
+      set_rownames(dm_names) %>% 
+      set_colnames(dm_names) %>% return()
     
   }else if (dtype == "geo") {
     # consider using geosphere::distm() for this
     dm <- input_data %>% select(all_of(cnames)) %>% as.data.frame() %>% earth.dist(dist = TRUE)
     dm %>% as.matrix() %>% 
-      set_rownames(pull(input_data, 1)) %>% 
-      set_colnames(pull(input_data, 1)) %>% return()
+      set_rownames(dm_names) %>% 
+      set_colnames(dm_names) %>% return()
   }
 }
 
@@ -158,18 +159,20 @@ distMatrix <- function(input_data, dtype, cnames) {
 # mind <- min(logdata)
 transformData2 <- function(dm, dtype, min_dist, max_dist) {
   logdata <- dm %>% add(10) %>% log10()
+  x1 <- min_dist %>% add(10) %>% log10()
+  x2 <- max_dist %>% add(10) %>% log10()
   if (dtype == "temp") {
     logdata[logdata == -Inf] <- 0
-    if (max_dist == 0) {
+    if (x2 == 0) {
       logdata <- 0
     }else {
-      logdata <- ((logdata - min_dist) / (max_dist - min_dist))
+      logdata <- ((logdata - x1) / (x2 - x1))
     }
   }else if (dtype == "geo") {
-    if(max_dist == 1){
+    if(x2 == 1){
       logdata[1:nrow(logdata), 1:nrow(logdata)] <- 0
     } else {
-      logdata <- ((logdata-min_dist) / (max_dist-min_dist))
+      logdata <- ((logdata-x1) / (x2-x1))
     }
   }
   return(logdata)
@@ -351,4 +354,55 @@ epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dist
 #   })
 # 
 #   return(eccs)
+# }
+
+checkEncoding <- function(fp) {
+  readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
+}
+
+mergeECCs <- function(eccs, tpx, typing_data) {
+  tbl1 <- as.data.table(typing_data)
+  sapply(eccs, "[", tpx) %>% Reduce(function(...) merge(...), .) %>% as.data.table() %>% 
+    merge.data.table(tbl1, ., by = intersect(colnames(tbl1), colnames(.))) %>% return()
+}
+
+processedStrains <- function(base_strains) {
+  loc_cols <- length(intersect(c("Country", "Province", "City"), colnames(base_strains)))
+  if (loc_cols == 3) {
+    strain_data <- base_strains %>% 
+      mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")), 
+             Location = paste(Country, Province, City, sep = "_"))
+    assignments <- strain_data %>% select(Date, Latitude, Longitude, Location) %>% 
+      unique() %>% rownames_to_column("dr") %>% as.data.table()
+    dr_matches <- left_join(strain_data, assignments, 
+                            by = c("Latitude", "Longitude", "Date", "Location")) %>% 
+      select(Strain, dr)
+  }else {
+    strain_data <- base_strains %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-")))
+    assignments <- strain_data %>% select(Date, Latitude, Longitude) %>% 
+      unique() %>% rownames_to_column("dr") %>% as.data.table()
+    dr_matches <- left_join(strain_data, assignments, 
+                            by = c("Latitude", "Longitude", "Date")) %>% select(Strain, dr)
+  }
+  list("strain_data" = strain_data, 
+       "assignments" = assignments, 
+       "dr_matches" = dr_matches) %>% return()
+}
+
+# dataReps <- function(strain_data, loc_cols) {
+#   if (loc_cols == 3) {
+#     assignments <- strain_data %>% select(Date, Latitude, Longitude, Location)
+#   }else {
+#     assignments <- strain_data %>% select(Date, Latitude, Longitude)
+#   }
+#   assignments %>% unique() %>% rownames_to_column("dr") %>% as.data.table() %>% return()
+# }
+
+# locationColumns <- function(strain_data, loc_cols) {
+#   if (loc_cols == 3) {
+#     match_names <- c("Latitude", "Longitude", "Date", "Location")
+#   }else {
+#     match_names <- c("Latitude", "Longitude", "Date")
+#   }
+#   return(list(loc_cols, match_names))
 # }
