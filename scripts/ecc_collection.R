@@ -9,7 +9,9 @@ y <- lapply(libs, require, character.only = TRUE)
 assert("All packages loaded correctly", all(unlist(y)))
 
 # Current working directory should be Metrics-CGM-ECC/
-files <- paste0("scripts/ECC") %>% list.files(., full.names = TRUE)
+files <- paste0("scripts/ECC") %>% 
+  list.files(., full.names = TRUE) %>% 
+  grep("dist_matrices.R", ., invert = TRUE, value = TRUE)
 invisible(sapply(files, source))
 
 # Title: "EpiQuant - Salmonella Enteritidis Project (2019-2020)"
@@ -43,47 +45,54 @@ typing_data <- tp1$height_list %>% append(tp2$height_list)
 
 m <- read_tsv(params$strains) %>% processedStrains()
 
-cat(paste0("\n\nStep 1:"))
-cat(paste0("\n   Note that the source coefficent is always 0 in this version"))
-
 # Note: dr stands for data representative
 # in example: strain_data has 35,627 rows (strains), assignments has 5,504 rows (> 6-fold smaller)
+# cat(paste0("\n\nStep 1:"))
+# cat(paste0("\n   Note that the source coefficent is always 0 in this version"))
 # outputMessages("   Removing redundancy (comparing date, lat-long, etc. - not every pair of strains)")
 # outputMessages("   Identifying which strains match which non-redundant 'data representatives'")
 
-
 # TIMEPOINT 2 ANALYSIS -----------------------------------------------------------------------
-
+extremes <- readRDS("results/tmp/TP2-dists/extremes.Rds")
+collectECCs <- function(k, typing_data, m) {
+  
+  df <- typing_data[[k]] %>% 
+    rownames_to_column("Strain") %>% as.data.table() %>% 
+    left_join(., m$dr_matches, by = "Strain")
+  
+  final_steps <- lapply(1:p, function(j) {
+    
+    outputMessages(paste0("   Collecting ECCs for group of clusters ", j, " / ", p))
+    cluster_x <- df[df[[cx]] %in% pull(results[[j]], cx),-"Strain"]
+    dms <- readRDS(paste0("results/tmp/dists-", j, ".Rds"))
+    
+    transformed_temp <- dms$temp %>% 
+      transformData2(., "temp", min_temp, max_temp) %>% 
+      formatData(., c("dr1","dr2","Temp.Dist"))
+    
+    transformed_geo <- dms$geo %>%
+      transformData2(., "geo", min_geo, max_geo) %>%
+      formatData(., c("dr1","dr2","Geog.Dist"))
+    
+    rm(dms); gc()
+    
+    transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
+    
+    outputMessages("   Clearing up some memory")
+    rm(transformed_temp); rm(transformed_geo); gc()
+    
+    a1 <- epiCollectionByCluster(m$strain_data, tau, gamma, transformed_dists, k, cluster_x)
+    saveRDS(a1, paste0("results/tmp/TP", k, "-", j, "-eccs.Rds"))
+  })
+  
+}
 k <- 2
-df <- typing_data[[k]] %>% rownames_to_column("Strain") %>% as.data.table() %>% 
-  left_join(., m$dr_matches, by = "Strain")
-
-final_steps <- lapply(1:p, function(j) {
-  
-  outputMessages(paste0("   Collecting ECCs for group of clusters ", j, " / ", p))
-  cluster_x <- df[df[[cx]] %in% pull(results[[j]], cx),-"Strain"]
-  dms <- readRDS(paste0("results/tmp/dists-", j, ".Rds"))
-  
-  b1 <- transformData2(dms$temp, "temp", min_temp, max_temp)
-  transformed_temp <- b1 %>% formatData(., c("dr1","dr2","Temp.Dist"))
-
-  transformed_geo <- dms$geo %>%
-    transformData2(., "geo", min_geo, max_geo) %>%
-    formatData(., c("dr1","dr2","Geog.Dist"))
-  
-  rm(dms); gc()
-  
-  transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
-  
-  outputMessages("   Clearing up some memory")
-  rm(transformed_temp); rm(transformed_geo); gc()
-  
-  a1 <- epiCollectionByCluster(m$strain_data, tau, gamma, transformed_dists, k, cluster_x)
-  saveRDS(a1, paste0("results/tmp/TP", k, "-", j, "-eccs.Rds"))
-})
 
 new_eccs <- lapply(1:p, function(j) {
-  readRDS(paste0("results/tmp/TP", k, "-", j, "-eccs.Rds"))
+  fname <- paste0("results/tmp/TP", k, "-", j, "-eccs.Rds")
+  ecc_j <- readRDS(fname)
+  file.remove(fname)
+  return(ecc_j)
 }) %>% bind_rows()
 
 # saveRDS(new_eccs, "results/tmp/new_eccs.Rds")

@@ -389,20 +389,20 @@ processedStrains <- function(base_strains) {
        "dr_matches" = dr_matches) %>% return()
 }
 
-# dataReps <- function(strain_data, loc_cols) {
-#   if (loc_cols == 3) {
-#     assignments <- strain_data %>% select(Date, Latitude, Longitude, Location)
-#   }else {
-#     assignments <- strain_data %>% select(Date, Latitude, Longitude)
-#   }
-#   assignments %>% unique() %>% rownames_to_column("dr") %>% as.data.table() %>% return()
-# }
 
-# locationColumns <- function(strain_data, loc_cols) {
-#   if (loc_cols == 3) {
-#     match_names <- c("Latitude", "Longitude", "Date", "Location")
-#   }else {
-#     match_names <- c("Latitude", "Longitude", "Date")
-#   }
-#   return(list(loc_cols, match_names))
-# }
+# avgdistvals <- lapply(1:length(typing_data), function(i) {
+#   dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
+#     left_join(., dr_matches, by = "Strain") %>%
+#     mutate(across(dr, as.character)) %>% select(-Strain)
+#   
+#   # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
+#   cx <- colnames(dr_td1)[1]
+#   tallied_reps <- dr_td1 %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
+#   g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>%
+#     unique() %>% mutate(across(dr, as.character))
+#   
+#   outputMessages(paste0("      Calculating average (not transformed) distances for timepoint ", i))
+#   a2 <- avgDists(g_cuts, dm_temp, "Temp.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
+#   b2 <- avgDists(g_cuts, dm_geo, "Geog.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
+#   return(list(temp = a2, geo = b2))
+# })
