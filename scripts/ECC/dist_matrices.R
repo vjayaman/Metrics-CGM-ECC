@@ -57,65 +57,10 @@ dir.create("results/tmp", showWarnings = FALSE)
 
 # COLLECT dist matrices using TP2 clusters ---------------------------------------------------------
 
-collectDistances <- function(k, typing_data, m) {
-  
-  df <- typing_data[[k]] %>% rownames_to_column("Strain") %>%
-    as.data.table() %>% 
-    left_join(., m$dr_matches, by = "Strain")
-  
-  gc()
-  
-  results <- sectionTypingData(df, 1000)
-  assert("No clusters overlooked", length(setdiff(pull(df,2), pull(rbindlist(results),1))) == 0)
-  
-  cx <- setdiff(colnames(df), c("Strain", "dr"))
-  
-  c1 <- unlist(strsplit(combos[1], split = "")) %>% as.numeric()
-  tau <- c1[2]
-  gamma <- c1[3]
-  
-  min_geo <- min_temp <- Inf
-  max_geo <- max_temp <- -Inf
-  
-  p <- length(results)
-  
-  for (j in 1:p) {
-    outputMessages(paste0("Working through group ", j, " / ", p))
-    cluster_x <- df[df[[cx]] %in% pull(results[[j]], cx),-"Strain"]
-    cluster_asmts <- m$assignments[dr %in% pull(cluster_x, dr)]
-    
-    outputMessages("   Generating all possible date pair distances ...")
-    dm_temp <- cluster_asmts %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
-    
-    outputMessages("   Generating all possible lat-long pair distances ...")
-    dm_geo <- cluster_asmts %>% select(dr, Latitude, Longitude) %>% 
-      distMatrix(., "geo", c("Latitude", "Longitude"))
-    
-    min_temp <- min(min_temp, min(dm_temp))
-    max_temp <- max(max_temp, max(dm_temp))
-    
-    min_geo <- min(min_geo, min(dm_geo + 10))
-    max_geo <- max(max_geo, max(dm_geo))
-    
-    list(temp = dm_temp, geo = dm_geo) %>% 
-      saveRDS(., paste0("results/tmp/TP", k, "-dists/group", j, ".Rds"))
-    
-    rm(dm_temp)
-    rm(dm_geo)
-    gc()
-  }
-  
-  if (k == 2) {
-    tibble(temp = list("max" = max_temp, "min" = min_temp), 
-           geo = list("max" = max_geo, "min" = min_geo)) %>% 
-      saveRDS(., paste0("results/tmp/TP", k, "-dists/extremes.Rds"))
-  }
-}
-
 for (k in 1:2) {
   outputMessages(paste0("\nCollecting and saving distances for groups of clusters at TP", k))
   dir.create(paste0("results/tmp/TP", k, "-dists"), showWarnings = FALSE)
-  collectDistances(k, typing_data, m)
+  sectionClusters(k, typing_data, m) %>% collectDistances(k, m, .)
 }
 
 outputMessages("\nFinished saving distance matrices.")

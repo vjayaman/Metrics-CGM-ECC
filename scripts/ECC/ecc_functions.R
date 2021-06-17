@@ -389,7 +389,18 @@ processedStrains <- function(base_strains) {
        "dr_matches" = dr_matches) %>% return()
 }
 
-
+sectionClusters <- function(k, typing_data, m) {
+  df <- typing_data[[k]] %>% rownames_to_column("Strain") %>%
+    as.data.table() %>% 
+    left_join(., m$dr_matches, by = "Strain")
+  
+  gc()
+  
+  results <- sectionTypingData(df, 1000)
+  assert("No clusters overlooked", length(setdiff(pull(df,2), pull(rbindlist(results),1))) == 0)
+  
+  return(list("drs" = df, "results" = results))
+}
 # avgdistvals <- lapply(1:length(typing_data), function(i) {
 #   dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
 #     left_join(., dr_matches, by = "Strain") %>%
@@ -406,3 +417,82 @@ processedStrains <- function(base_strains) {
 #   b2 <- avgDists(g_cuts, dm_geo, "Geog.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
 #   return(list(temp = a2, geo = b2))
 # })
+
+collectECCs <- function(k, m, parts, extremes, c1) {
+  df <- parts$drs
+  cx <- setdiff(colnames(df), c("Strain", "dr"))
+  results <- parts$results
+  
+  tau <- c1[2]
+  gamma <- c1[3]
+  
+  final_steps <- lapply(1:length(results), function(j) {
+    
+    outputMessages(paste0("   Collecting ECCs for group of clusters ", j, " / ", length(results)))
+    cluster_x <- df[df[[cx]] %in% pull(results[[j]], cx),-"Strain"]
+    
+    dms <- paste0("results/tmp/TP", k, "-dists/group", j, ".Rds") %>% readRDS()
+    
+    transformed_temp <- dms$temp %>% 
+      transformData2(., "temp", extremes$temp$min, extremes$temp$max) %>% 
+      formatData(., c("dr1","dr2","Temp.Dist"))
+    
+    transformed_geo <- dms$geo %>%
+      transformData2(., "geo", extremes$geo$min, extremes$geo$max) %>%
+      formatData(., c("dr1","dr2","Geog.Dist"))
+    
+    rm(dms); gc()
+    
+    transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
+    
+    outputMessages("   Clearing up some memory")
+    rm(transformed_temp); rm(transformed_geo); gc()
+    
+    epiCollectionByCluster(m$strain_data, tau, gamma, transformed_dists, k, cluster_x) %>% 
+      saveRDS(., paste0("results/tmp/TP", k, "-dists/eccs", j, ".Rds"))
+  })
+}
+
+collectDistances <- function(k, m, parts) {
+  
+  df <- parts$drs
+  cx <- setdiff(colnames(df), c("Strain", "dr"))
+  results <- parts$results
+  p <- length(results)
+  
+  min_geo <- min_temp <- Inf
+  max_geo <- max_temp <- -Inf
+  
+  for (j in 1:p) {
+    outputMessages(paste0("Working through group ", j, " / ", p))
+    cluster_x <- df[df[[cx]] %in% pull(results[[j]], cx),-"Strain"]
+    cluster_asmts <- m$assignments[dr %in% pull(cluster_x, dr)]
+    
+    outputMessages("   Generating all possible date pair distances ...")
+    dm_temp <- cluster_asmts %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
+    
+    outputMessages("   Generating all possible lat-long pair distances ...")
+    dm_geo <- cluster_asmts %>% select(dr, Latitude, Longitude) %>% 
+      distMatrix(., "geo", c("Latitude", "Longitude"))
+    
+    min_temp <- min(min_temp, min(dm_temp))
+    max_temp <- max(max_temp, max(dm_temp))
+    
+    min_geo <- min(min_geo, min(dm_geo + 10))
+    max_geo <- max(max_geo, max(dm_geo))
+    
+    list(temp = dm_temp, geo = dm_geo) %>% 
+      saveRDS(., paste0("results/tmp/TP", k, "-dists/group", j, ".Rds"))
+    
+    rm(dm_temp)
+    rm(dm_geo)
+    gc()
+  }
+  
+  if (k == 2) {
+    tibble(temp = list("max" = max_temp, "min" = min_temp), 
+           geo = list("max" = max_geo, "min" = min_geo)) %>% 
+      saveRDS(., paste0("results/tmp/TP", k, "-dists/extremes.Rds"))
+  }
+}
+

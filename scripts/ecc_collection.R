@@ -54,80 +54,65 @@ m <- read_tsv(params$strains) %>% processedStrains()
 
 # TIMEPOINT 2 ANALYSIS -----------------------------------------------------------------------
 extremes <- readRDS("results/tmp/TP2-dists/extremes.Rds")
-collectECCs <- function(k, typing_data, m) {
+
+c1 <- unlist(strsplit(combos[1], split = "")) %>% as.numeric()
+
+for (k in 1:2) {
+  outputMessages(paste0("\nCollecting and saving ECCs for groups of clusters at TP", k))
+  sectionClusters(k, typing_data, m) %>% collectECCs(k, m, ., extremes, c1)
   
-  df <- typing_data[[k]] %>% 
-    rownames_to_column("Strain") %>% as.data.table() %>% 
-    left_join(., m$dr_matches, by = "Strain")
+  outputMessages(paste0("\nMerging ECC files at TP", k))
+  dir_k <- paste0("results/tmp/TP", k, "-dists/")
+  fnames <- grep("eccs", list.files(dir_k), value = TRUE)
   
-  final_steps <- lapply(1:p, function(j) {
-    
-    outputMessages(paste0("   Collecting ECCs for group of clusters ", j, " / ", p))
-    cluster_x <- df[df[[cx]] %in% pull(results[[j]], cx),-"Strain"]
-    dms <- readRDS(paste0("results/tmp/dists-", j, ".Rds"))
-    
-    transformed_temp <- dms$temp %>% 
-      transformData2(., "temp", min_temp, max_temp) %>% 
-      formatData(., c("dr1","dr2","Temp.Dist"))
-    
-    transformed_geo <- dms$geo %>%
-      transformData2(., "geo", min_geo, max_geo) %>%
-      formatData(., c("dr1","dr2","Geog.Dist"))
-    
-    rm(dms); gc()
-    
-    transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
-    
-    outputMessages("   Clearing up some memory")
-    rm(transformed_temp); rm(transformed_geo); gc()
-    
-    a1 <- epiCollectionByCluster(m$strain_data, tau, gamma, transformed_dists, k, cluster_x)
-    saveRDS(a1, paste0("results/tmp/TP", k, "-", j, "-eccs.Rds"))
-  })
+  tpk <- lapply(fnames, function(f) {
+    ecc_j <- readRDS(paste0(dir_k, f))
+    file.remove(paste0(dir_k, f))
+    return(ecc_j)
+  }) %>% bind_rows()
   
+  saveRDS(tpk, paste0("results/tmp/TP", k, "-dists/all_eccs.Rds"))
 }
-k <- 2
 
-new_eccs <- lapply(1:p, function(j) {
-  fname <- paste0("results/tmp/TP", k, "-", j, "-eccs.Rds")
-  ecc_j <- readRDS(fname)
-  file.remove(fname)
-  return(ecc_j)
-}) %>% bind_rows()
-
-# saveRDS(new_eccs, "results/tmp/new_eccs.Rds")
-# # new_eccs[which(new_eccs[,3] == -Inf),3] <- NA
 # ---------------------------------------------------------------------------------------------
 
-# Distance matrix step
-a1 <- m$assignments %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
-identical(a1[rownames(dms$temp), colnames(dms$temp)], dms$temp)
+# temporal_dists <- strain_data %>% 
+#   select(dr, Date) %>%
+#   distMatrix(., "temp", "Date") %>% 
+#   transformData(., "temp") %>%
+#   formatData(., c("dr1", "dr2", "Temp.Dist"))
 
-# Transformation step
-a2 <- a1 %>% transformData(., "temp")
-identical(a2[rownames(b1),colnames(b1)], b1)
-
-tr_temp <- a2 %>% formatData(., c("dr1", "dr2", "Temp.Dist"))
-
-tr_geo <- m$assignments %>% select(dr, Latitude, Longitude) %>%
-  distMatrix(., "geo", c("Latitude", "Longitude")) %>%
-  pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
-
-tr_dists <- merge.data.table(tr_temp, tr_geo)
-original_eccs <- tr_dists %>%
-  epiCollection(m$strain_data, tau, gamma, typing_data, ., dm_temp, dm_geo, m$dr_matches)
-
-saveRDS(tr_temp, "results/tmp/tr_temp.Rds")
-saveRDS(tr_geo, "results/tmp/tr_geo.Rds")
-saveRDS(original_eccs, "results/tmp/original_eccs.Rds")
-
-# original_eccs <- readRDS("results/tmp/original_eccs.Rds")[[k]]
-colnames(new_eccs)[grepl("ECC", colnames(new_eccs))] %<>% paste0("New_", .)
-eccs <- inner_join(new_eccs, original_eccs)
-eccs$dif <- abs(pull(eccs, 3) - pull(eccs, 4))
-assert("Original ECCs match the new ones (cluster sectioning)", nrow(eccs[!is.na(dif)][dif > 1e-10]) == 0)
-  
-eccs[!is.na(dif)][dif > 1e-10] %>% as.data.table()
+# # Distance matrix, then transformation step, then formatting data
+# tr_temp <- m$assignments %>% 
+#   select(dr, Date) %>%
+#   distMatrix(., "temp", "Date") %>% 
+#   transformData(., "temp") %>%
+#   formatData(., c("dr1", "dr2", "Temp.Dist"))
+# 
+# tr_geo <- m$assignments %>% select(dr, Latitude, Longitude) %>%
+#   distMatrix(., "geo", c("Latitude", "Longitude")) %>%
+#   pairwiseDists(., "geo", c("dr1", "dr2", "Geog.Dist"))
+# 
+# tr_dists <- merge.data.table(tr_temp, tr_geo)
+# original_eccs <- tr_dists %>%
+#   epiCollection(m$strain_data, tau, gamma, typing_data, ., dm_temp, dm_geo, m$dr_matches)
+# # saveRDS(original_eccs, "results/tmp/original_eccs.Rds")
+# 
+# tp1_eccs <- readRDS("results/tmp/TP1-dists/all_eccs.Rds")
+# colnames(tp1_eccs)[grepl("ECC", colnames(tp1_eccs))] %<>% paste0("New_", .)
+# 
+# inner_join(original_eccs[[1]], tp1_eccs) %>% 
+#   mutate(dif = abs(New_TP1_T0_ECC.0.1.0 - TP1_T0_ECC.0.1.0)) %>% 
+#   filter(!is.na(dif)) %>% 
+#   filter(dif > 0)
+# 
+# # original_eccs <- readRDS("results/tmp/original_eccs.Rds")[[k]]
+# colnames(new_eccs)[grepl("ECC", colnames(new_eccs))] %<>% paste0("New_", .)
+# eccs <- inner_join(new_eccs, original_eccs)
+# eccs$dif <- abs(pull(eccs, 3) - pull(eccs, 4))
+# assert("Original ECCs match the new ones (cluster sectioning)", nrow(eccs[!is.na(dif)][dif > 1e-10]) == 0)
+#   
+# eccs[!is.na(dif)][dif > 1e-10] %>% as.data.table()
 
 
 
