@@ -22,9 +22,6 @@ option_list <- list(
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
-dir.create("results", showWarnings = FALSE)
-dir.create(file.path(arg$inputdir, "processed"))
-
 # FUNCTIONS ----------------------------------------------------------------------------------------------------
 source("scripts/formatprep.R")
 

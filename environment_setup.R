@@ -1,6 +1,8 @@
 #! /usr/bin/env Rscript
 
 dir.create("logs", showWarnings = FALSE)
+dir.create("results", showWarnings = FALSE)
+dir.create(file.path("inputs", "processed"))
 # This should be run first, to make sure the required packages are installed
 
 required_packages <- c("R6", "testit", "optparse", "magrittr", "dplyr", "tibble", "readr", "reshape2", 
@@ -13,8 +15,7 @@ install.packages(not_installed, quiet = TRUE)
 x <- lapply(required_packages, require, character.only = TRUE)
 names(x) <- required_packages
 
-dir.create("results", showWarnings = FALSE)
-dir.create(file.path("inputs", "processed"))
+
 
 if (all(unlist(x))) {
   cat("\nEnvironment set up successful.\n")

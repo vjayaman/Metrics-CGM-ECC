@@ -142,21 +142,7 @@ distMatrix <- function(input_data, dtype, cnames) {
   }
 }
 
-# distMatrix <- function(input_data, dtype, cnames) {
-#   if (dtype == "temp") {
-#     dm <- input_data %>% select(all_of(cnames)) %>% pull() %>% 
-#       dist(diag = FALSE, upper = FALSE, method = "euclidean")
-#     dm %>% as.matrix(nrow = nrow(input_data), ncol = nrow(input_data)) %>% return()
-#     
-#   }else if (dtype == "geo") {
-#     # consider using geosphere::distm() for this
-#     dm <- input_data %>% select(all_of(cnames)) %>% as.data.frame() %>% earth.dist(dist = TRUE)
-#     dm %>% as.matrix() %>% return()
-#   }
-# }
-
-# maxd <- max(logdata)
-# mind <- min(logdata)
+# maxd <- max(logdata) # mind <- min(logdata)
 transformData2 <- function(dm, dtype, min_dist, max_dist) {
   logdata <- dm %>% add(10) %>% log10()
   x1 <- min_dist %>% add(10) %>% log10()
@@ -248,10 +234,6 @@ epi_cohesion_new <- function(g_cuts, epi_melt) {
     set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC")))
 }
 
-pairwiseDists <- function(dm, type, newnames) {
-  transformData(dm, type) %>% formatData(., newnames) %>% return()
-}
-
 ### Incorporating the allele data with the epidemiological data
 epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dists,
                           dm_temp, dm_geo, dr_matches) {
@@ -302,60 +284,6 @@ epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dist
   return(eccs)
 }
 
-# ### Incorporating the allele data with the epidemiological data
-# epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dists,
-#                           dm_temp, dm_geo, dr_matches, avgdistvals, j) {
-#   cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
-# 
-#   outputMessages(paste0("      Preparing table of distances: sqrt(", tau, "*(temp^2) + ", gamma, "*(geo^2))"))
-#   epi_table <- transformed_dists %>%
-#     mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>%
-#     select(dr1, dr2, Total.Dist) %>% as.data.table()
-# 
-#   outputMessages("      Generating matrix of similarity values from epi distance matrix ...")
-#   epi_matrix <- dcast(epi_table, formula = dr1 ~ dr2, value.var = "Total.Dist")
-#   epi_matrix <- as.matrix(epi_matrix[,2:ncol(epi_matrix)])
-#   rownames(epi_matrix) <- colnames(epi_matrix)
-# 
-#   # create similarity values from epi distance matrix:
-#   epi_melt <- as.matrix(1-epi_matrix) %>%
-#     as.data.table(., keep.rownames = TRUE) %>%
-#     melt(., id.vars = "rn", variable.factor = FALSE, value.factor = FALSE) %>%
-#     set_colnames(c("dr_1", "dr_2", "value")) %>% as.data.table()
-# 
-#   rm(epi_table)
-#   rm(epi_matrix)
-#   invisible(gc())
-# 
-#   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
-#   # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
-#   eccs <- lapply(1:length(typing_data), function(i) {
-#     outputMessages(paste0("      Calculating ECCs for timepoint ", i, ", which has ",
-#                           nrow(typing_data[[i]]), " strains to consider ..."))
-#     dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
-#       left_join(., dr_matches, by = "Strain") %>%
-#       mutate(across(dr, as.character)) %>% select(-Strain)
-# 
-#     # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
-#     cx <- colnames(dr_td1)[1]
-#     tallied_reps <- dr_td1 %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
-#     g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>%
-#       unique() %>% mutate(across(dr, as.character))
-# 
-#     td_i <- epi_cohesion_new(g_cuts, epi_melt) %>%
-#       set_colnames(c(paste0("TP", i, "_", colnames(.))))
-#     colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
-# 
-#     a2 <- avgdistvals[[i]]$temp
-#     b2 <- avgdistvals[[i]]$geo
-# 
-#     left_join(td_i, a2, by = intersect(colnames(td_i), colnames(a2))) %>%
-#       left_join(., b2, by = intersect(colnames(.), colnames(b2))) %>% return()
-#   })
-# 
-#   return(eccs)
-# }
-
 checkEncoding <- function(fp) {
   readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
 }
@@ -401,22 +329,6 @@ sectionClusters <- function(k, typing_data, m) {
   
   return(list("drs" = df, "results" = results))
 }
-# avgdistvals <- lapply(1:length(typing_data), function(i) {
-#   dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
-#     left_join(., dr_matches, by = "Strain") %>%
-#     mutate(across(dr, as.character)) %>% select(-Strain)
-#   
-#   # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
-#   cx <- colnames(dr_td1)[1]
-#   tallied_reps <- dr_td1 %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
-#   g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>%
-#     unique() %>% mutate(across(dr, as.character))
-#   
-#   outputMessages(paste0("      Calculating average (not transformed) distances for timepoint ", i))
-#   a2 <- avgDists(g_cuts, dm_temp, "Temp.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
-#   b2 <- avgDists(g_cuts, dm_geo, "Geog.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
-#   return(list(temp = a2, geo = b2))
-# })
 
 collectECCs <- function(k, m, parts, extremes, c1) {
   df <- parts$drs
@@ -496,3 +408,91 @@ collectDistances <- function(k, m, parts) {
   }
 }
 
+# avgdistvals <- lapply(1:length(typing_data), function(i) {
+#   dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
+#     left_join(., dr_matches, by = "Strain") %>%
+#     mutate(across(dr, as.character)) %>% select(-Strain)
+#   
+#   # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
+#   cx <- colnames(dr_td1)[1]
+#   tallied_reps <- dr_td1 %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
+#   g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>%
+#     unique() %>% mutate(across(dr, as.character))
+#   
+#   outputMessages(paste0("      Calculating average (not transformed) distances for timepoint ", i))
+#   a2 <- avgDists(g_cuts, dm_temp, "Temp.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
+#   b2 <- avgDists(g_cuts, dm_geo, "Geog.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
+#   return(list(temp = a2, geo = b2))
+# })
+
+
+# ### Incorporating the allele data with the epidemiological data
+# epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dists,
+#                           dm_temp, dm_geo, dr_matches, avgdistvals, j) {
+#   cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
+# 
+#   outputMessages(paste0("      Preparing table of distances: sqrt(", tau, "*(temp^2) + ", gamma, "*(geo^2))"))
+#   epi_table <- transformed_dists %>%
+#     mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>%
+#     select(dr1, dr2, Total.Dist) %>% as.data.table()
+# 
+#   outputMessages("      Generating matrix of similarity values from epi distance matrix ...")
+#   epi_matrix <- dcast(epi_table, formula = dr1 ~ dr2, value.var = "Total.Dist")
+#   epi_matrix <- as.matrix(epi_matrix[,2:ncol(epi_matrix)])
+#   rownames(epi_matrix) <- colnames(epi_matrix)
+# 
+#   # create similarity values from epi distance matrix:
+#   epi_melt <- as.matrix(1-epi_matrix) %>%
+#     as.data.table(., keep.rownames = TRUE) %>%
+#     melt(., id.vars = "rn", variable.factor = FALSE, value.factor = FALSE) %>%
+#     set_colnames(c("dr_1", "dr_2", "value")) %>% as.data.table()
+# 
+#   rm(epi_table)
+#   rm(epi_matrix)
+#   invisible(gc())
+# 
+#   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
+#   # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
+#   eccs <- lapply(1:length(typing_data), function(i) {
+#     outputMessages(paste0("      Calculating ECCs for timepoint ", i, ", which has ",
+#                           nrow(typing_data[[i]]), " strains to consider ..."))
+#     dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
+#       left_join(., dr_matches, by = "Strain") %>%
+#       mutate(across(dr, as.character)) %>% select(-Strain)
+# 
+#     # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
+#     cx <- colnames(dr_td1)[1]
+#     tallied_reps <- dr_td1 %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
+#     g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>%
+#       unique() %>% mutate(across(dr, as.character))
+# 
+#     td_i <- epi_cohesion_new(g_cuts, epi_melt) %>%
+#       set_colnames(c(paste0("TP", i, "_", colnames(.))))
+#     colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
+# 
+#     a2 <- avgdistvals[[i]]$temp
+#     b2 <- avgdistvals[[i]]$geo
+# 
+#     left_join(td_i, a2, by = intersect(colnames(td_i), colnames(a2))) %>%
+#       left_join(., b2, by = intersect(colnames(.), colnames(b2))) %>% return()
+#   })
+# 
+#   return(eccs)
+# }
+
+# pairwiseDists <- function(dm, type, newnames) {
+#   transformData(dm, type) %>% formatData(., newnames) %>% return()
+# }
+
+# distMatrix <- function(input_data, dtype, cnames) {
+#   if (dtype == "temp") {
+#     dm <- input_data %>% select(all_of(cnames)) %>% pull() %>% 
+#       dist(diag = FALSE, upper = FALSE, method = "euclidean")
+#     dm %>% as.matrix(nrow = nrow(input_data), ncol = nrow(input_data)) %>% return()
+#     
+#   }else if (dtype == "geo") {
+#     # consider using geosphere::distm() for this
+#     dm <- input_data %>% select(all_of(cnames)) %>% as.data.frame() %>% earth.dist(dist = TRUE)
+#     dm %>% as.matrix() %>% return()
+#   }
+# }
