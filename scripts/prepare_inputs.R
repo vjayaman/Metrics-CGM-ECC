@@ -52,14 +52,15 @@ x <- updateStrains("lin_info", strain_data, time1, time2, initial_sizes)
 strain_data <- x$sd; time1 <- x$t1; time2 <- x$t2; initial_sizes <- x$sizes
 
 # COLUMN NAMES -------------------------------------------------------------------------------------------------
+reqnames <- c("Strain", "Latitude", "Longitude", "Day", "Month", "Year")
 cnames <- filtering_params$cnames[2] %>% strsplit(split = ",") %>% unlist()
 if (!("none" %in% cnames)) {
-  fullcnames <- c("Strain", "Latitude", "Longitude", "Day", "Month", "Year", cnames)
+  fullcnames <- c(reqnames, cnames)
 }else {
-  fullcnames <- c("Strain", "Latitude", "Longitude", "Day", "Month", "Year")
+  fullcnames <- reqnames
 }
 strain_data <- strain_data %>% select(all_of(fullcnames)) %>% 
-  na.omit(Latitude) %>% na.omit(Longitude) %>% na.omit(Day) %>% 
+  na.omit(Strain) %>% na.omit(Latitude) %>% na.omit(Longitude) %>% na.omit(Day) %>% 
   na.omit(Month) %>% na.omit(Year)
 
 # add column to show which strains are found in TP1

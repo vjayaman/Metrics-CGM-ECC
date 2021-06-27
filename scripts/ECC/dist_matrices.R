@@ -2,8 +2,8 @@
 
 # Current working directory should be Metrics-CGM-ECC/
 
-# msg <- file("logs/logfile_epiquant.txt", open="wt")
-# sink(msg, type="message")
+msg <- file("logs/logfile_distmatrices.txt", open="wt")
+sink(msg, type="message")
 
 libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
           "reshape2","fossil","tidyr","purrr", "data.table")
