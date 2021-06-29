@@ -39,46 +39,6 @@ epiCollectionByCluster <- function(strain_data, tau, gamma, transformed_dists, t
   return(td_i)
 }
 
-# df has colnames Strain, T0, dr (in example):
-sectionTypingData <- function(df, maxsize) {
-  cx <- setdiff(colnames(df), c("Strain", "dr"))
-  drsizes <- df %>% select(-Strain) %>% unique() %>% group_by(!!as.symbol(cx)) %>% summarise(n = n())
-
-  m <- max(drsizes$n, maxsize)
-  rows_x <- c()
-  total <- 0
-  results <- vector("list", nrow(drsizes))
-  
-  for (i in 1:nrow(drsizes)) {
-    row_i <- drsizes[i,]
-    updated <- row_i$n + total
-    
-    if (updated < m) {
-      rows_x <- bind_rows(rows_x, row_i)
-      total <- total + row_i$n
-
-    }else if (updated == m) {
-      rows_x <- bind_rows(rows_x, row_i)
-      total <- total + row_i$n
-
-      results[[i]] <- rows_x
-      rows_x <- c()
-      total <- 0
-
-    }else { # updated > m
-      results[[i]] <- rows_x
-      rows_x <- row_i
-      total <- row_i$n
-    }
-  }
-  
-  if (total != 0) {results[[i]] <- rows_x}
-  
-  results[sapply(results, is.null)] <- NULL
-  
-  return(results)
-}
-
 # note that we sum the values for both directions e.g. (192, 346) and (346, 192)
 # and then divide by the total number of pairs (counting both directions)
 # this gives the same result as if we had used only one direction
@@ -123,24 +83,6 @@ timeTaken <- function(pt, sw) {
 
 # EPI-HELPER-MODULAR -----------------------------------------------------------------------------
 outputMessages <- function(msgs) {cat(paste0("\n",msgs))}
-
-distMatrix <- function(input_data, dtype, cnames) {
-  dm_names <- pull(input_data, 1) # dr, or Strain
-  if (dtype == "temp") {
-    dm <- input_data %>% select(all_of(cnames)) %>% pull() %>% 
-      dist(diag = FALSE, upper = FALSE, method = "euclidean")
-    dm %>% as.matrix(nrow = nrow(input_data), ncol = nrow(input_data)) %>% 
-      set_rownames(dm_names) %>% 
-      set_colnames(dm_names) %>% return()
-    
-  }else if (dtype == "geo") {
-    # consider using geosphere::distm() for this
-    dm <- input_data %>% select(all_of(cnames)) %>% as.data.frame() %>% earth.dist(dist = TRUE)
-    dm %>% as.matrix() %>% 
-      set_rownames(dm_names) %>% 
-      set_colnames(dm_names) %>% return()
-  }
-}
 
 # maxd <- max(logdata) # mind <- min(logdata)
 transformData2 <- function(dm, dtype, min_dist, max_dist) {
@@ -317,19 +259,6 @@ processedStrains <- function(base_strains) {
        "dr_matches" = dr_matches) %>% return()
 }
 
-sectionClusters <- function(k, typing_data, m) {
-  df <- typing_data[[k]] %>% rownames_to_column("Strain") %>%
-    as.data.table() %>% 
-    left_join(., m$dr_matches, by = "Strain")
-  
-  gc()
-  
-  results <- sectionTypingData(df, 1000)
-  assert("No clusters overlooked", length(setdiff(pull(df,2), pull(rbindlist(results),1))) == 0)
-  
-  return(list("drs" = df, "results" = results))
-}
-
 collectECCs <- function(k, m, parts, extremes, c1) {
   df <- parts$drs
   cx <- setdiff(colnames(df), c("Strain", "dr"))
@@ -364,135 +293,3 @@ collectECCs <- function(k, m, parts, extremes, c1) {
       saveRDS(., paste0("results/tmp/TP", k, "-dists/eccs", j, ".Rds"))
   })
 }
-
-collectDistances <- function(k, m, parts) {
-  
-  df <- parts$drs
-  cx <- setdiff(colnames(df), c("Strain", "dr"))
-  results <- parts$results
-  p <- length(results)
-  
-  min_geo <- min_temp <- Inf
-  max_geo <- max_temp <- -Inf
-  
-  for (j in 1:p) {
-    outputMessages(paste0("Working through group ", j, " / ", p))
-    cluster_x <- df[df[[cx]] %in% pull(results[[j]], cx),-"Strain"]
-    cluster_asmts <- m$assignments[dr %in% pull(cluster_x, dr)]
-    
-    outputMessages("   Generating all possible date pair distances ...")
-    dm_temp <- cluster_asmts %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
-    
-    outputMessages("   Generating all possible lat-long pair distances ...")
-    dm_geo <- cluster_asmts %>% select(dr, Latitude, Longitude) %>% 
-      distMatrix(., "geo", c("Latitude", "Longitude"))
-    
-    min_temp <- min(min_temp, min(dm_temp))
-    max_temp <- max(max_temp, max(dm_temp))
-    
-    min_geo <- min(min_geo, min(dm_geo + 10))
-    max_geo <- max(max_geo, max(dm_geo))
-    
-    list(temp = dm_temp, geo = dm_geo) %>% 
-      saveRDS(., paste0("results/tmp/TP", k, "-dists/group", j, ".Rds"))
-    
-    rm(dm_temp)
-    rm(dm_geo)
-    gc()
-  }
-  
-  if (k == 2) {
-    tibble(temp = list("max" = max_temp, "min" = min_temp), 
-           geo = list("max" = max_geo, "min" = min_geo)) %>% 
-      saveRDS(., paste0("results/tmp/TP", k, "-dists/extremes.Rds"))
-  }
-}
-
-# avgdistvals <- lapply(1:length(typing_data), function(i) {
-#   dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
-#     left_join(., dr_matches, by = "Strain") %>%
-#     mutate(across(dr, as.character)) %>% select(-Strain)
-#   
-#   # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
-#   cx <- colnames(dr_td1)[1]
-#   tallied_reps <- dr_td1 %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
-#   g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>%
-#     unique() %>% mutate(across(dr, as.character))
-#   
-#   outputMessages(paste0("      Calculating average (not transformed) distances for timepoint ", i))
-#   a2 <- avgDists(g_cuts, dm_temp, "Temp.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
-#   b2 <- avgDists(g_cuts, dm_geo, "Geog.Dist", paste0("TP", i, "_", colnames(g_cuts)[1]))
-#   return(list(temp = a2, geo = b2))
-# })
-
-
-# ### Incorporating the allele data with the epidemiological data
-# epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dists,
-#                           dm_temp, dm_geo, dr_matches, avgdistvals, j) {
-#   cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
-# 
-#   outputMessages(paste0("      Preparing table of distances: sqrt(", tau, "*(temp^2) + ", gamma, "*(geo^2))"))
-#   epi_table <- transformed_dists %>%
-#     mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>%
-#     select(dr1, dr2, Total.Dist) %>% as.data.table()
-# 
-#   outputMessages("      Generating matrix of similarity values from epi distance matrix ...")
-#   epi_matrix <- dcast(epi_table, formula = dr1 ~ dr2, value.var = "Total.Dist")
-#   epi_matrix <- as.matrix(epi_matrix[,2:ncol(epi_matrix)])
-#   rownames(epi_matrix) <- colnames(epi_matrix)
-# 
-#   # create similarity values from epi distance matrix:
-#   epi_melt <- as.matrix(1-epi_matrix) %>%
-#     as.data.table(., keep.rownames = TRUE) %>%
-#     melt(., id.vars = "rn", variable.factor = FALSE, value.factor = FALSE) %>%
-#     set_colnames(c("dr_1", "dr_2", "value")) %>% as.data.table()
-# 
-#   rm(epi_table)
-#   rm(epi_matrix)
-#   invisible(gc())
-# 
-#   # ### Section 3: Incorporating the allele data with the epidemiological data - typing_data
-#   # # Calculate ECC in parallel; this may not work on Windows, but should work out of the box on Linux and OSX
-#   eccs <- lapply(1:length(typing_data), function(i) {
-#     outputMessages(paste0("      Calculating ECCs for timepoint ", i, ", which has ",
-#                           nrow(typing_data[[i]]), " strains to consider ..."))
-#     dr_td1 <- typing_data[[i]] %>% rownames_to_column("Strain") %>% as_tibble() %>%
-#       left_join(., dr_matches, by = "Strain") %>%
-#       mutate(across(dr, as.character)) %>% select(-Strain)
-# 
-#     # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
-#     cx <- colnames(dr_td1)[1]
-#     tallied_reps <- dr_td1 %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
-#     g_cuts <- left_join(dr_td1, tallied_reps, by = intersect(colnames(tallied_reps), colnames(dr_td1))) %>%
-#       unique() %>% mutate(across(dr, as.character))
-# 
-#     td_i <- epi_cohesion_new(g_cuts, epi_melt) %>%
-#       set_colnames(c(paste0("TP", i, "_", colnames(.))))
-#     colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
-# 
-#     a2 <- avgdistvals[[i]]$temp
-#     b2 <- avgdistvals[[i]]$geo
-# 
-#     left_join(td_i, a2, by = intersect(colnames(td_i), colnames(a2))) %>%
-#       left_join(., b2, by = intersect(colnames(.), colnames(b2))) %>% return()
-#   })
-# 
-#   return(eccs)
-# }
-
-# pairwiseDists <- function(dm, type, newnames) {
-#   transformData(dm, type) %>% formatData(., newnames) %>% return()
-# }
-
-# distMatrix <- function(input_data, dtype, cnames) {
-#   if (dtype == "temp") {
-#     dm <- input_data %>% select(all_of(cnames)) %>% pull() %>% 
-#       dist(diag = FALSE, upper = FALSE, method = "euclidean")
-#     dm %>% as.matrix(nrow = nrow(input_data), ncol = nrow(input_data)) %>% return()
-#     
-#   }else if (dtype == "geo") {
-#     # consider using geosphere::distm() for this
-#     dm <- input_data %>% select(all_of(cnames)) %>% as.data.frame() %>% earth.dist(dist = TRUE)
-#     dm %>% as.matrix() %>% return()
-#   }
-# }

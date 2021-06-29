@@ -1,7 +1,12 @@
 #! /usr/bin/env Rscript
 
 dir.create("logs", showWarnings = FALSE)
+msg <- file("logs/logfile_env.txt", open="wt")
+sink(msg, type="message")
+
 dir.create("results", showWarnings = FALSE)
+dir.create("results/dists", showWarnings = FALSE)
+
 dir.create(file.path("inputs", "processed"))
 # This should be run first, to make sure the required packages are installed
 
@@ -14,7 +19,6 @@ install.packages(not_installed, quiet = TRUE)
 # Testing packages were installed correctly:
 x <- lapply(required_packages, require, character.only = TRUE)
 names(x) <- required_packages
-
 
 
 if (all(unlist(x))) {
