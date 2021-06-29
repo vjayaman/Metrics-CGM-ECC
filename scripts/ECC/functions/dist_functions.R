@@ -68,7 +68,7 @@ distMatrix <- function(input_data, dtype, cnames) {
   }
 }
 
-collectDistances <- function(k, m, parts) {
+collectDistances <- function(k, m, parts, fpath1, fpath2) {
   
   df <- parts$drs
   cx <- setdiff(colnames(df), c("Strain", "dr"))
@@ -97,7 +97,7 @@ collectDistances <- function(k, m, parts) {
     max_geo <- max(max_geo, max(dm_geo))
     
     list(temp = dm_temp, geo = dm_geo) %>% 
-      saveRDS(., paste0("results/tmp/TP", k, "-dists/group", j, ".Rds"))
+      saveRDS(., paste0(fpath1, "group", j, ".Rds"))
     
     rm(dm_temp)
     rm(dm_geo)
@@ -107,6 +107,6 @@ collectDistances <- function(k, m, parts) {
   if (k == 2) {
     tibble(temp = list("max" = max_temp, "min" = min_temp), 
            geo = list("max" = max_geo, "min" = min_geo)) %>% 
-      saveRDS(., paste0("results/tmp/TP", k, "-dists/extremes.Rds"))
+      saveRDS(., paste0(fpath2, "dist_extremes.Rds"))
   }
 }

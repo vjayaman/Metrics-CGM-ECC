@@ -41,7 +41,7 @@ strain_data <- suppressMessages(read_tsv(arg$strains)) %>%
   as.data.table() %>% 
   filter(TP2 == 1)
 
-step1 <- merge.data.table(cgms, eccs, by = "Strain") %>% select(-TP1, -TP2) %>% 
+step1 <- merge.data.table(cgms, eccs, by = "Strain") %>% 
   merge.data.table(., strain_data, by = "Strain") %>% 
   rename(found_in_TP1 = TP1, found_in_TP2 = TP2)
 
@@ -155,13 +155,15 @@ step6 <- step5 %>%
          getDistCols(dist_avgs, "TP2", "temp", TRUE), avg_lat_2, avg_long_2, 
          getDistCols(dist_avgs, "TP2", "geog", TRUE), first_tp1_flag, last_tp1_flag, 
          first_tp2_flag, last_tp2_flag, tp1_cl_size, tp2_cl_size, 
-         actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth, type) %>% 
+         actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth, type)
+
+step7 <- step6 %>% 
   rename_with(., replaceDistName, getDistCols(colnames(.), "TP1", "temp")) %>% 
   rename_with(., replaceDistName, getDistCols(colnames(.), "TP2", "temp")) %>% 
   rename_with(., replaceDistName, getDistCols(colnames(.), "TP1", "geo")) %>% 
   rename_with(., replaceDistName, getDistCols(colnames(.), "TP2", "geo"))
 
-step7 <- step6 %>% 
+step8 <- step7 %>% 
   rename("TP1 cluster" = tp1_cl, "TP1 cluster size (1)" = TP1_T0_Size, 
          "TP2 cluster" = tp2_cl, "TP2 cluster size (1)" = TP2_T0_Size, 
          "TP1" = found_in_TP1, "TP2" = found_in_TP2, 
@@ -182,9 +184,9 @@ step7 <- step6 %>%
          "Type" = type) %>% 
   arrange(`TP2 cluster`, `TP1 cluster`, Strain)
 
-writeData(fp = "results/Merged_strain_results.tsv", df = step7)
+writeData(fp = "results/Merged_strain_results.tsv", df = step8)
 
-step7 %>% 
+step8 %>% 
   group_by(`TP2 cluster`) %>% slice(1) %>% 
   select(-Strain) %>% ungroup() %>% 
   writeData(fp = "results/Merged_cluster_results.tsv", df = .)
