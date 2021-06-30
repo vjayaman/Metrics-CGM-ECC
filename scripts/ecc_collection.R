@@ -6,7 +6,6 @@ sink(msg, type="message")
 source("scripts/ecc_opener.R")
 assert("Distances were collected and saved", file.exists("results/TP1/dists/group1.Rds"))
 
-# TIMEPOINT 2 ANALYSIS -----------------------------------------------------------------------
 extremes <- readRDS("results/dist_extremes.Rds")
 
 dfx <- expand.grid(x = combos, k = c(1,2)) %>% as.data.frame()
