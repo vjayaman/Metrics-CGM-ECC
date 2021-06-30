@@ -47,11 +47,11 @@ for (i in 1:nrow(dfx)) {
 
 a1 <- lapply(combos, function(x) {
   readRDS(paste0("results/TP1/eccs/", x, "/TP1-", x, "-eccs.Rds"))
-}) %>% Reduce(inner_join, .)
+}) %>% Reduce(inner_join, .) %>% unique()
 
 b1 <- lapply(combos, function(x) {
   readRDS(paste0("results/TP2/eccs/", x, "/TP2-", x, "-eccs.Rds"))
-}) %>% Reduce(inner_join, .)
+}) %>% Reduce(inner_join, .) %>% unique()
 
 tp1_eccs <- tp1$proc[,c("Strain",colnames(a1)[1])] %>% left_join(., a1)
 tp2_eccs <- tp2$proc[,c("Strain",colnames(b1)[1])] %>% left_join(., b1)
@@ -66,10 +66,14 @@ num_others <- all_eccs[inf_inds,] %>% filter(!is.na(!!as.symbol(tp1size))) %>%
 assert("The -Infs are because of TP1 singletons", num_others == 0)
 all_eccs[all_eccs == -Inf] <- NA
 
+source("scripts/ECC/average_dists.R")
+
 cat(paste0("\n\nStep ", length(combos) + 2, ":"))
 outputMessages("   Merging collected ECCs ...\n")
-write.table(all_eccs, file = "results/ECCs.tsv", col.names = TRUE, 
-            row.names = FALSE, quote = FALSE, sep = "\t")
+
+inner_join(all_avg_dists, all_eccs) %>% 
+  write.table(., file = "results/ECCs.tsv", col.names = TRUE, 
+              row.names = FALSE, quote = FALSE, sep = "\t")
 
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 cat(timeTaken(pt = "ECC data collection", stopwatch))
