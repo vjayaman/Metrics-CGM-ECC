@@ -20,9 +20,10 @@ for (k in 1:2) {
   dir.create(paste0("results/TP", k), showWarnings = FALSE)
   dir.create(paste0("results/TP", k, "/dists"), showWarnings = FALSE)
   
-  outputMessages(paste0("\nCollecting and saving distances for groups of clusters at TP", k))
-  sectionClusters(k, typing_data, m) %>% 
-    collectDistances(k, m, ., paste0("results/TP", k, "/dists/"), "results/")
+  outputMessages(paste0("\nCollecting and saving distances for groups at TP", k))
+  dists <- paste0("results/TP", k, "/dists/")
+  extremes <- "results/"
+  sectionClusters(k, typing_data, m) %>% collectDistances(k, m, ., dists, extremes)
 }
 
 outputMessages("\nFinished saving distance matrices.")

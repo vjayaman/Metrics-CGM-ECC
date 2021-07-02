@@ -56,20 +56,17 @@ distMatrix <- function(input_data, dtype, cnames) {
     dm <- input_data %>% select(all_of(cnames)) %>% pull() %>% 
       dist(diag = FALSE, upper = FALSE, method = "euclidean")
     dm %>% as.matrix(nrow = nrow(input_data), ncol = nrow(input_data)) %>% 
-      set_rownames(dm_names) %>% 
-      set_colnames(dm_names) %>% return()
+      set_rownames(dm_names) %>% set_colnames(dm_names) %>% return()
     
   }else if (dtype == "geo") {
     # consider using geosphere::distm() for this
-    dm <- input_data %>% select(all_of(cnames)) %>% as.data.frame() %>% earth.dist(dist = TRUE)
-    dm %>% as.matrix() %>% 
-      set_rownames(dm_names) %>% 
-      set_colnames(dm_names) %>% return()
+    input_data %>% select(all_of(cnames)) %>% 
+      as.data.frame() %>% earth.dist(dist = TRUE) %>% 
+      as.matrix() %>% set_rownames(dm_names) %>% set_colnames(dm_names) %>% return()
   }
 }
 
 collectDistances <- function(k, m, parts, fpath1, fpath2) {
-  
   df <- parts$drs
   cx <- setdiff(colnames(df), c("Strain", "dr"))
   results <- parts$results

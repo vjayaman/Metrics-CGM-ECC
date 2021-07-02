@@ -1,0 +1,92 @@
+---
+title: "ecc_function_tests"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
+          "reshape2","fossil","tidyr","purrr", "data.table")
+y <- lapply(libs, require, character.only = TRUE)
+assert("All packages loaded correctly", all(unlist(y)))
+
+source("../scripts/ECC/functions/ecc_functions.R")
+# # Current working directory should be Metrics-CGM-ECC/testing/
+# files <- paste0("scripts/ECC/functions/") %>% list.files(., full.names = TRUE)
+# invisible(sapply(files, source))
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## ECC functions
+
+(3) Indicates length of a process in hours, minutes, and seconds, when given a name of the process ("pt") and a two-element named vector with Sys.time() values named "start_time" and "end_time"
+
+```{r}
+stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
+Sys.sleep(10)
+stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
+assert("timeTaken() returns expected expression", 
+       identical(timeTaken("test", stopwatch), "\nThe test process took 10 second(s)."))
+```
+
+(4)
+```{r}
+assert("outputMessages() returns expected expression", 
+       identical(cat(paste0("\n","")), outputMessages("")))
+```
+
+(10)
+```{r}
+# checkEncoding(fp)
+# readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
+```
+
+(1) Incorporating the allele data with the epidemiological data 
+```{r}
+# epiCollectionByCluster(strain_data, tau, gamma, transformed_dists, tpx, cluster_x)
+```
+
+(2) Note that we sum the values for both directions e.g. (192, 346) and (346, 192) and then divide by the total number of pairs (counting both directions). This gives the same result as if we had used only one direction - if we did this, we would divide by 2 in the numerator and the denominator --> would cancel
+
+```{r}
+# avgDists(g_cuts, dm, cname, newname)
+```
+
+(5) maxd <- max(logdata) # mind <- min(logdata)
+```{r}
+# transformData2(dm, dtype, min_dist, max_dist)
+```
+
+(6)
+```{r}
+# transformData(dm, dtype)
+```
+
+(7)
+```{r}
+# formatData(dm, newnames)
+```
+
+(8)
+```{r}
+# epi_cohesion_new(g_cuts, epi_melt)
+```
+
+(9) Incorporating the allele data with the epidemiological data
+```{r}
+# epiCollection(strain_data, tau, gamma, typing_data, transformed_dists, dm_temp, dm_geo, dr_matches)
+```
+
+(11)
+```{r}
+# mergeECCs(eccs, tpx, typing_data)
+```
+
+(12)
+```{r}
+# processedStrains(base_strains)
+```
+
+(13)
+```{r}
+# collectECCs(k, m, parts, extremes, c1, fpath1, fpath2)
+```

@@ -30,7 +30,7 @@ outputDetails(paste0("\n||", paste0(rep("-", 26), collapse = ""), " Prepping inp
 outputDetails(paste0("\nWill save formatted inputs to 'processed' directory in ", arg$inputdir, " directory."), TRUE)
 
 # Results of "Form for analysis inputs" ------------------------------------------------------------------------
-filtering_params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>% 
+params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>% 
   set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
               "th","nsTP1","nsTP2","temp_win","cnames"))
 
@@ -47,13 +47,13 @@ if (!exists("time2")) {time2 <- readData(arg$tp2, FALSE)}
 # LINEAGE INFO -------------------------------------------------------------------------------------------------
 initial_sizes <- tibble(type="initial", a=nrow(strain_data), b=nrow(time1), d=nrow(time2))
 
-assert("Has lineage info", as.logical(filtering_params$has_lin[2]))
+assert("Has lineage info", as.logical(params$has_lin[2]))
 x <- updateStrains("lin_info", strain_data, time1, time2, initial_sizes)
 strain_data <- x$sd; time1 <- x$t1; time2 <- x$t2; initial_sizes <- x$sizes
 
 # COLUMN NAMES -------------------------------------------------------------------------------------------------
 reqnames <- c("Strain", "Latitude", "Longitude", "Day", "Month", "Year")
-cnames <- filtering_params$cnames[2] %>% strsplit(split = ",") %>% unlist()
+cnames <- params$cnames[2] %>% strsplit(split = ",") %>% unlist()
 if (!("none" %in% cnames)) {
   fullcnames <- c(reqnames, cnames)
 }else {
@@ -70,24 +70,24 @@ strain_data %<>% mutate(TP1 = ifelse(Strain %in% time1$Strain, 1, 0))
 strain_data %<>% mutate(TP2 = ifelse(Strain %in% time2$Strain, 1, 0))
 
 # REGION OF INTEREST -------------------------------------------------------------------------------------------
-if (filtering_params$reg[2] != "All" & "Region" %in% colnames(strain_data)) {
-  strain_data <- strain_data %>% filter(Region %in% filtering_params$reg[2])
+if (params$reg[2] != "All" & "Region" %in% colnames(strain_data)) {
+  strain_data <- strain_data %>% filter(Region %in% params$reg[2])
 }
 
 # COUNTRY OF INTEREST ------------------------------------------------------------------------------------------
-if (filtering_params$cou[2] != "All" & "Country" %in% colnames(strain_data)) {
-  strain_data <- strain_data %>% filter(Country %in% filtering_params$cou[2])
+if (params$cou[2] != "All" & "Country" %in% colnames(strain_data)) {
+  strain_data <- strain_data %>% filter(Country %in% params$cou[2])
 }
 
 # HAS DEFINED DATE INFO ----------------------------------------------------------------------------------------
-if (as.logical(filtering_params$has_date[2])) {
+if (as.logical(params$has_date[2])) {
   strain_data <- strain_data %>% 
     filter(!is.na(Day)) %>% filter(!is.na(Month)) %>% filter(!is.na(Year)) %>% 
     filter(Day != "") %>% filter(Month != "") %>% filter(Year != "")
 }
 
-if (nchar(filtering_params$temp_win[2]) > nchar("[,]")) {
-  tempwindow <- filtering_params$temp_win[2] %>% gsub("\\[|\\]", "", .) %>% 
+if (nchar(params$temp_win[2]) > nchar("[,]")) {
+  tempwindow <- params$temp_win[2] %>% gsub("\\[|\\]", "", .) %>% 
     strsplit(., ",") %>% unlist()
   
   strain_data %<>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
@@ -100,11 +100,11 @@ if (nchar(filtering_params$temp_win[2]) > nchar("[,]")) {
 
 # HAS PROVINCE-LEVEL DATA --------------------------------------------------------------------------------------
 
-if (as.logical(filtering_params$has_prov[2])) {
+if (as.logical(params$has_prov[2])) {
   strain_data <- strain_data %>% filter(!is.na(Province)) %>% filter(Province != "")
   
-  if (filtering_params$prov[2] != "All") {
-    strain_data <- strain_data %>% filter(Province %in% filtering_params$prov[2])
+  if (params$prov[2] != "All") {
+    strain_data <- strain_data %>% filter(Province %in% params$prov[2])
   }
   
   # Strains with metadata and defined lineage info at TP2
@@ -119,9 +119,9 @@ processed_tp1 <- intClusters(time1)
 outputDetails("Making table for matching TP2 clusters to integers (for metrics process) ...", TRUE)
 processed_tp2 <- intClusters(time2)
 
-th <- filtering_params$th[2]
+th <- params$th[2]
 
-if (as.logical(filtering_params$nsTP1[2])) {
+if (as.logical(params$nsTP1[2])) {
   remove_strains <- strainsInSingletons(processed_tp1$new_cols, th)
   processed_tp1$new_cols %<>% filter(!(Strain %in% remove_strains))
   processed_tp2$new_cols %<>% filter(!(Strain %in% remove_strains))
@@ -130,7 +130,7 @@ if (as.logical(filtering_params$nsTP1[2])) {
   initial_sizes %<>% add_row(tibble(type="tp1_ns", a=nrow(strain_data), b=nrow(time1), d=nrow(time2)))
 }
 
-if (as.logical(filtering_params$nsTP2[2])) {
+if (as.logical(params$nsTP2[2])) {
   remove_strains <- strainsInSingletons(processed_tp2$new_cols, th)
   processed_tp1$new_cols %<>% filter(!(Strain %in% remove_strains))
   processed_tp2$new_cols %<>% filter(!(Strain %in% remove_strains))
