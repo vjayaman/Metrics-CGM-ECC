@@ -9,7 +9,6 @@ source("scripts/ECC/functions/dist_functions.R")
 # INITIALLY, TESTING FUNCTIONS FOR CORRECT INPUTS ONLY
 # WILL ADD TESTS FOR MALICIOUS/INCORRECT INPUTS AFTERWARDS
 
-
 # FUNCTIONS for checking sizes and making fakes, stubs, mocks, etc.
 checkSizes <- function(res, sz) {
   lapply(1:length(res), function(i) sum(res[[i]]$n) <= sz) %>% unlist() %>% all() %>% return()  
