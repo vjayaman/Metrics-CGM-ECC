@@ -22,7 +22,7 @@ for (i in 1:nrow(dfx)) {
     dir.create(., showWarnings = FALSE)
   
   outputMessages(paste0("\nCollecting and saving ECCs for groups of clusters at TP", 
-                        dfx$k[i], ", for ecc triple ", as.character(dfx$x[i])))
+                        dfx$k[i], ", for ECC coefficient triple ", as.character(dfx$x[i])))
   sectionClusters(dfx$k[i], typing_data, m) %>% 
     collectECCs(dfx$k[i], m, ., extremes, c1, 
                 paste0("results/TP", dfx$k[i], "/dists/"), 
@@ -69,7 +69,8 @@ num_others <- all_eccs[inf_inds,] %>% filter(!is.na(!!as.symbol(tp1size))) %>%
 assert("The -Infs are because of TP1 singletons", num_others == 0)
 all_eccs[all_eccs == -Inf] <- NA
 
-source("scripts/ECC/average_dists.R")
+assert("Average distances were collected and saved", file.exists("results/average_dists.Rds"))
+all_avg_dists <- readRDS("results/average_dists.Rds")
 
 cat(paste0("\n\nStep ", length(combos) + 2, ":"))
 outputMessages("   Merging collected ECCs ...\n")

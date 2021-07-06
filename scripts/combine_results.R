@@ -16,8 +16,9 @@ option_list <- list(
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
-files <- paste0("scripts/MergeFunctions") %>% list.files(., full.names = TRUE)
-invisible(sapply(files, source))
+source("scripts/MergeFunctions/type_handling.R")
+# files <- paste0("scripts/MergeFunctions") %>% list.files(., full.names = TRUE)
+# invisible(sapply(files, source))
 
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Merging CGM and ECC results ", 
            paste0(rep("-", 31), collapse = ""), "||\n"))
