@@ -67,3 +67,9 @@ epiCollection <- function(strain_data, tau, gamma, typing_data, transformed_dist
   
   return(eccs)
 }
+
+# mergeECCs <- function(eccs, tpx, typing_data) {
+#   tbl1 <- as.data.table(typing_data)
+#   sapply(eccs, "[", tpx) %>% Reduce(function(...) merge(...), .) %>% as.data.table() %>%
+#     merge.data.table(tbl1, ., by = intersect(colnames(tbl1), colnames(.))) %>% return()
+# }

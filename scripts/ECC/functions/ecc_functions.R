@@ -154,18 +154,14 @@ epi_cohesion_new <- function(g_cuts, epi_melt) {
     set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC")))
 }
 
-mergeECCs <- function(eccs, tpx, typing_data) {
-  tbl1 <- as.data.table(typing_data)
-  sapply(eccs, "[", tpx) %>% Reduce(function(...) merge(...), .) %>% as.data.table() %>% 
-    merge.data.table(tbl1, ., by = intersect(colnames(tbl1), colnames(.))) %>% return()
-}
-
 processedStrains <- function(base_strains) {
-  loc_cols <- length(intersect(c("Country", "Province", "City"), colnames(base_strains)))
-  if (loc_cols == 3) {
+  loc_cols <- intersect(c("Country", "Province", "City"), colnames(base_strains)) %>% sort()
+  
+  if (length(loc_cols) > 0) {
     strain_data <- base_strains %>% 
       mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")), 
-             Location = paste(Country, Province, City, sep = "_"))
+             Location = do.call(paste, c(base_strains[loc_cols], sep = "_")))
+    
     assignments <- strain_data %>% select(Date, Latitude, Longitude, Location) %>% 
       unique() %>% rownames_to_column("dr") %>% as.data.table()
     dr_matches <- left_join(strain_data, assignments, 
@@ -178,10 +174,12 @@ processedStrains <- function(base_strains) {
     dr_matches <- left_join(strain_data, assignments, 
                             by = c("Latitude", "Longitude", "Date")) %>% select(Strain, dr)
   }
+  
   list("strain_data" = strain_data, 
        "assignments" = assignments, 
        "dr_matches" = dr_matches) %>% return()
 }
+
 
 collectECCs <- function(k, m, parts, extremes, c1, fpath1, fpath2) {
   df <- parts$drs

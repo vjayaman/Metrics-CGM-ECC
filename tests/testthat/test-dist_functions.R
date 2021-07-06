@@ -146,7 +146,8 @@ test_that("collectDistances()", {
     min_temp <- min(min_temp, min(dm_temp))
     max_temp <- max(max_temp, max(dm_temp))
     
-    min_geo <- min(min_geo, min(dm_geo + 10)) # necessary for the transformation step
+    # min_geo <- min(min_geo, min(dm_geo + 10)) # necessary for the transformation step?
+    min_geo <- min(min_geo, min(dm_geo)) # necessary for the transformation step?
     max_geo <- max(max_geo, max(dm_geo))
   }
   
