@@ -73,7 +73,7 @@ epiCollectionByCluster <- function(strain_data, tau, gamma, transformed_dists, t
   g_cuts <- left_join(cluster_x, tallied_reps, by = cnames) %>%
       unique() %>% mutate(across(dr, as.character))
   
-  td_i <- epi_cohesion_new(g_cuts, epi_melt) %>% 
+  td_i <- epiCohesion(g_cuts, epi_melt) %>% 
     set_colnames(c(paste0("TP", tpx, "_", colnames(.))))
   colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
 
@@ -112,8 +112,7 @@ formatData <- function(dm, newnames) {
     as.data.table() %>% set_colnames(newnames) %>% return()
 }
 
-epi_cohesion_new <- function(g_cuts, epi_melt) {
-  
+epiCohesion <- function(g_cuts, epi_melt) {
   dr_names <- g_cuts %>% select(dr) %>% pull() %>% unique()
   dr_assignments <- g_cuts %>% set_colnames(c("cluster", "dr", "n"))
   
@@ -122,7 +121,8 @@ epi_cohesion_new <- function(g_cuts, epi_melt) {
     inner_join(., epi_melt, by = c("dr_1", "dr_2")) %>% as.data.table()
   
   sizes <- lapply(unique(dr_assignments$cluster), function(h) {
-    dr_assignments %>% filter(cluster == h) %>% pull(n) %>% sum() %>% tibble(cluster = h, cluster_size = .)
+    dr_assignments %>% filter(cluster == h) %>% 
+      pull(n) %>% sum() %>% tibble(cluster = h, cluster_size = .)
   }) %>% bind_rows()
   
   cut_cluster_members <-

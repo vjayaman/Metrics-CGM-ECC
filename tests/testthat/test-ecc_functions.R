@@ -57,6 +57,17 @@ fakeStrains <- function(nrows, cnames = NULL) {
   return(basic_strains)
 }
 
+
+# FAKES - used in the following tests
+# In this fake object, there are 20 drs, 100 strains, and 15 clusters
+fake_obj <- fakeSecCluster(sample.int(50,1), sample.int(200,1)*2, sample.int(20,1))
+assignments <- fake_obj$a
+results <- fake_obj$b$results
+inds <- fake_obj$b$drs[["th"]] %in% pull(results[[1]], "th")
+cluster_x <- fake_obj$b$drs[inds,-"Strain"]
+cluster_asmts <- assignments[dr %in% pull(cluster_x, dr)]
+
+
 # (3) timeTaken() function
 # - Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
 # ("pt") and a two-element named vector with Sys.time() values named "start_time" and "end_time"
@@ -94,15 +105,6 @@ test_that("outputMessages()", {
   expect_output(outputMessages("Test"), "\nTest")
   expect_silent(outputMessages())
 })
-
-# FAKES - used in the following tests
-# In this fake object, there are 20 drs, 100 strains, and 15 clusters
-fake_obj <- fakeSecCluster(sample.int(50,1), sample.int(200,1)*2, sample.int(20,1))
-assignments <- fake_obj$a
-results <- fake_obj$b$results
-inds <- fake_obj$b$drs[["th"]] %in% pull(results[[1]], "th")
-cluster_x <- fake_obj$b$drs[inds,-"Strain"]
-cluster_asmts <- assignments[dr %in% pull(cluster_x, dr)]
 
 
 test_that("transformData2() - temp", {
@@ -202,96 +204,74 @@ test_that("processedStrains() - additional columns test", {
   expect_identical(dr_matches, returned$dr_matches)
 })
 
-# # epi_cohesion_new(g_cuts, epi_melt)
-# test_that("epi_cohesion_new()", {
-#   fake_obj <- fakeSecCluster(12, 60, 10)
-#   dr_matches <- fake_obj$c
-#   dr_td1 <- dr_matches %>% select(-Strain)
-#   g_cuts <- countDataReps(dr_td1)
-# 
-#   dm_temp <- cluster_asmts %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
-#   dm_geo <- cluster_asmts %>% select(dr, Longitude, Latitude) %>%
-#     distMatrix(., "geo", c("Longitude", "Latitude"))
-#   
-#   transformed_temp <- transformData2(dm_temp, "temp", min(dm_temp), max(dm_temp)) %>%
-#     formatData(., c("dr1","dr2","Temp.Dist"))
-#   transformed_geo <- transformData2(dm_geo, "geo", min(dm_geo), max(dm_geo)) %>%
-#     formatData(., c("dr1","dr2","Geog.Dist"))
-#   transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
-# 
-#   tau <- 1
-#   gamma <- 0
-#   epi_table <- transformed_dists %>%
-#     mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>%
-#     select(dr1, dr2, Total.Dist) %>% as.data.table()
-# 
-#   epi_matrix <- dcast(epi_table, formula = dr1 ~ dr2, value.var = "Total.Dist")
-#   epi_matrix <- as.matrix(epi_matrix[,2:ncol(epi_matrix)])
-#   rownames(epi_matrix) <- colnames(epi_matrix)
-# 
-#   epi_melt <- as.matrix(1-epi_matrix) %>%
-#     as.data.table(., keep.rownames = TRUE) %>%
-#     melt(., id.vars = "rn", variable.factor = FALSE, value.factor = FALSE) %>%
-#     set_colnames(c("dr_1", "dr_2", "value")) %>% as.data.table()
-# 
-#   cx <- colnames(cluster_x)[1]
-#   tallied_reps <- cluster_x %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
-#   cnames <- intersect(colnames(tallied_reps), colnames(cluster_x))
-#   g_cuts <- left_join(cluster_x, tallied_reps, by = cnames) %>%
-#     unique() %>% mutate(across(dr, as.character))
-# 
-#   tpx <- 1
-#   td_i <- epi_cohesion_new(g_cuts, epi_melt) %>%
-#     set_colnames(c(paste0("TP", tpx, "_", colnames(.))))
-#   colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
-# })
-# 
-# ndrs <- 10
-# alldrs <- sample(seq(1,5500), ndrs)
-# epi_melt <- data.table(
-#   dr_1 = alldrs, 
-#   dr_2 = sort(alldrs), 
-#   value = sample(seq(0,0.95,0.0001), ndrs)
-# )
-# 
-# nstrains <- ceiling(sample(25:75, 1))
-# g_cuts <- data.table(
-#   th = sample(1:10, nstrains, replace = TRUE), 
-#   dr = sample(alldrs, nstrains, replace = TRUE)
-# )
-# -----------------------------------------------------------------------------------
-# epi_cohesion_new ------------------------------------------------------------------
-# -----------------------------------------------------------------------------------
-# 
-# epi_cohesion_new(g_cuts, epi_melt)
-# # Example:
-# # epi_melt: 
-# #     dr_1 (chr)    dr_2 (chr)      value (dbl)
-# #      1              1              0.8957695
-# #      10             1              0.4255450
-# #      100            1              0.4081672
-# #      101            1              0.4081672
-# #      105            1              0.4081672
-# #      ...           ...                ...
-# # min:  1             1              0.0005198079
-# # max: 5499          5499            0.9019662
-# 
-# # g_cuts
-# #       T0 (int)      dr (chr)          n (int)
-# #         1              1                 1
-# #         1              2                 1
-# #         1              3                 5
-# #         1              4                 1
-# #         2              5                 1
-# #         3              5                 2
-# #         1              5                 3
-# #         1              6                 1
-# #         4              7                 1
-# #         1              7                 1
-# #        ...            ...               ...
-# # min:    1              1                 1
-# # max:    10            5499              154
+strainByStrainEpiMelt <- function(dr_matches) {
+  df1 <- dr_matches %>% select(strain, v)
+  
+  dr_matches$strain %>% 
+    expand.grid(strain1 = ., strain2 = .) %>% as_tibble() %>% 
+    left_join(., df1, by = c("strain1" = "strain")) %>% rename(v1 = v) %>% 
+    left_join(., df1, by = c("strain2" = "strain")) %>% rename(v2 = v) %>% 
+    mutate(Total.Dist = abs(v2 - v1)) %>% 
+    select(strain1, strain2, Total.Dist) %>% return()
+}
 
+strainByStrainECC <- function(dr_matches, epi_melt) {
+  cut_cluster_members <- dr_matches %>% select(th, strain) %>% 
+    pivot_longer(-strain, names_to = "cut", values_to = "cluster") %>%  
+    group_by(cut, cluster) %>% 
+    summarise(members = list(cur_data()$strain), .groups = "drop")
+  
+  calculate_s1 <- function(k) {
+    epi_melt %>% filter(strain1 %in% k, strain2 %in% k) %>%
+      select(Total.Dist) %>% pull() %>% sum()}
+  
+  cut_cluster_members %>% 
+    mutate(
+      s1 = map_dbl(members, calculate_s1),
+      cluster_size = map_int(members, length),
+      ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))
+    ) %>% ungroup() %>% 
+    select(cluster, cluster_size, ECC) %>% as.data.table() %>% 
+    set_colnames(c("th", "th_Size", "th_ECC")) %>% return()
+}
+
+test_that("epiCohesion()", {
+  ndrs <- 10
+  alldrs <- sample(seq(1,200), ndrs)
+  nstrains <- ceiling(sample(25:75, 1))
+  nclusters <- 15
+  
+  drs <- sample(alldrs, nstrains, replace = TRUE)
+  
+  dr_vals <- data.table(dr = unique(drs), v = sample(seq(0, 1, by = 0.0001), length(unique(drs))))
+  
+  dr_matches <- data.table(
+    th = sample(1:nclusters, nstrains, replace = TRUE),
+    strain = 1:nstrains %>% as.character(), 
+    dr = drs
+    ) %>% left_join(., dr_vals, by = "dr") %>% 
+    as_tibble() %>% arrange(th) %>% 
+    mutate(both = paste(strain, dr, sep = "-"))
+  
+  df2 <- dr_matches %>% select(strain, dr)
+  epi_melt_interim <- strainByStrainEpiMelt(dr_matches)
+  
+  epi_melt <- left_join(epi_melt_interim, df2, by = c("strain1" = "strain")) %>% 
+    select(-strain1) %>% rename(dr_1 = dr) %>% 
+    left_join(., df2, by = c("strain2" = "strain")) %>% rename(dr_2 = dr, value = Total.Dist) %>% 
+    select(dr_1, dr_2, value) %>% unique()
+  
+  g_cuts <- dr_matches %>% group_by(th) %>% count(dr) %>% ungroup() %>% as_tibble()
+  
+  returned <- epiCohesion(g_cuts, epi_melt)
+  actual <- strainByStrainECC(dr_matches, epi_melt_interim)
+  
+  expect_identical(returned, actual)
+})
+
+# test_that("epiCollectionByCluster()", {
+#   
+# })
 
 # epiCollectionByCluster(strain_data, tau, gamma, transformed_dists, tpx, cluster_x)
 # collectECCs(k, m, parts, extremes, c1, fpath1, fpath2)
@@ -370,7 +350,7 @@ test_that("processedStrains() - additional columns test", {
   # g_cuts <- left_join(cluster_x, tallied_reps, by = cnames) %>%
   #   unique() %>% mutate(across(dr, as.character))
   # 
-  # td_i <- epi_cohesion_new(g_cuts, epi_melt) %>%
+  # td_i <- epiCohesion(g_cuts, epi_melt) %>%
   #   set_colnames(c(paste0("TP", tpx, "_", colnames(.))))
   # colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
   # 
