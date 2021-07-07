@@ -58,21 +58,90 @@ fakeStrains <- function(nrows, cnames = NULL) {
 }
 
 
-# FAKES - used in the following tests
-# In this fake object, there are 20 drs, 100 strains, and 15 clusters
-fake_obj <- fakeSecCluster(sample.int(50,1), sample.int(200,1)*2, sample.int(20,1))
-assignments <- fake_obj$a
-results <- fake_obj$b$results
-inds <- fake_obj$b$drs[["th"]] %in% pull(results[[1]], "th")
-cluster_x <- fake_obj$b$drs[inds,-"Strain"]
-cluster_asmts <- assignments[dr %in% pull(cluster_x, dr)]
+strainByStrainEpiMelt <- function(dr_matches) {
+  df1 <- dr_matches %>% select(strain, v)
+  
+  dr_matches$strain %>% 
+    expand.grid(strain1 = ., strain2 = .) %>% as_tibble() %>% 
+    left_join(., df1, by = c("strain1" = "strain")) %>% rename(v1 = v) %>% 
+    left_join(., df1, by = c("strain2" = "strain")) %>% rename(v2 = v) %>% 
+    mutate(Total.Dist = abs(v2 - v1)) %>% 
+    select(strain1, strain2, Total.Dist) %>% return()
+}
+
+strainByStrainECC <- function(g_cuts, epi_melt) {
+  cut_cluster_members <- g_cuts %>% select(th, strain) %>% 
+    pivot_longer(-strain, names_to = "cut", values_to = "cluster") %>%  
+    group_by(cut, cluster) %>% 
+    summarise(members = list(cur_data()$strain), .groups = "drop")
+  
+  calculate_s1 <- function(k) {
+    epi_melt %>% filter(strain1 %in% k, strain2 %in% k) %>%
+      select(value) %>% pull() %>% sum()}
+  
+  cut_cluster_members %>% 
+    mutate(
+      s1 = map_dbl(members, calculate_s1),
+      cluster_size = map_int(members, length),
+      ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))
+    ) %>% ungroup() %>% 
+    select(cluster, cluster_size, ECC) %>% as.data.table() %>% 
+    set_colnames(c("th", "th_Size", "th_ECC")) %>% return()
+}
+
+
+runDrECBC <- function(cluster_asmts, strain_data, tau, gamma) {
+  dm_temp <- cluster_asmts %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
+  transformed_temp <- transformData2(dm_temp, "temp", min(dm_temp), max(dm_temp)) %>% 
+    formatData(., c("dr1","dr2","Temp.Dist"))
+  
+  dm_geo <- cluster_asmts %>% select(dr, Longitude, Latitude) %>% 
+    distMatrix(., "geo", c("Longitude", "Latitude"))
+  transformed_geo <- transformData2(dm_geo, "geo", min(dm_geo), max(dm_geo)) %>%
+    formatData(., c("dr1","dr2","Geog.Dist"))
+  
+  transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
+  # note, we calculate sizes using this, so do not make it unique
+  cluster_x <- strain_data %>% select(th, dr)
+  
+  epiCollectionByCluster(strain_data, tau, gamma, transformed_dists, tpx = 1, cluster_x) %>% 
+    set_colnames(c("th", "th_Size", "th_ECC")) %>% return()
+}
+
+runStrainECBC <- function(strain_raws, tau, gamma) {
+  temp_dm <- strain_raws %>% select(Strain, Date) %>% distMatrix(., "temp", "Date")
+  geo_dm <- strain_raws %>% select(Strain, Longitude, Latitude) %>% 
+    distMatrix(., "geo", c("Longitude", "Latitude"))
+  
+  transformed_temp <- transformData2(temp_dm, "temp", min(temp_dm), max(temp_dm)) %>% 
+    formatData(., c("strain1","strain2","Temp.Dist"))
+  transformed_geo <- transformData2(geo_dm, "geo", min(geo_dm), max(geo_dm)) %>%
+    formatData(., c("strain1","strain2","Geog.Dist"))
+  
+  transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
+  
+  epi_melt <- transformed_dists %>% 
+    mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>% 
+    select(strain1, strain2, Total.Dist) %>% as.data.table() %>% 
+    mutate(value = 1 - Total.Dist) %>% select(-Total.Dist)
+  
+  g_cuts <- strain_raws %>% rename(strain = Strain)
+  strainByStrainECC(g_cuts, epi_melt) %>% return()
+}
+
+
+test_results <- vector(length = 9) %>% 
+  setNames(c("timeTaken() - null inputs", "timeTaken() - time inputs", 
+             "outputMessages()", "transformData2() - temp", "transformData2() - geo", 
+             "processedStrains() - requirements test", "processedStrains() - additional columns test", 
+             "epiCohesion()", "epiCollectionByCluster()"))
 
 
 # (3) timeTaken() function
 # - Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
 # ("pt") and a two-element named vector with Sys.time() values named "start_time" and "end_time"
 
-test_that("timeTaken() - null inputs", {
+test_results[[1]] <- test_that("timeTaken() - null inputs", {
   stopwatch <- list("start_time" = NULL, "end_time" = NULL)
   expect_identical(timeTaken("test", stopwatch), "Neither start nor end time were collected")
   
@@ -84,7 +153,7 @@ test_that("timeTaken() - null inputs", {
   expect_identical(timeTaken("test", stopwatch), "End time was not collected.")
 })
 
-test_that("timeTaken() - time inputs", {
+test_results[[2]] <- test_that("timeTaken() - time inputs", {
   x <- as.character.POSIXt(Sys.time())
   stopwatch <- list("start_time" = x, "end_time" = NULL)
   stopwatch$end_time <- as.character.POSIXt(as.POSIXct(x) + 30)
@@ -100,14 +169,20 @@ test_that("timeTaken() - time inputs", {
 
 
 # (4) outputMessages() function
-test_that("outputMessages()", {
+test_results[[3]] <- test_that("outputMessages()", {
   expect_identical(outputMessages(""), cat(paste0("\n","")))
   expect_output(outputMessages("Test"), "\nTest")
   expect_silent(outputMessages())
 })
 
 
-test_that("transformData2() - temp", {
+test_results[[4]] <- test_that("transformData2() - temp", {
+  fake_obj <- fakeSecCluster(sample.int(50,1), sample.int(200,1)*2, sample.int(20,1))
+  results <- fake_obj$b$results
+  inds <- fake_obj$b$drs[["th"]] %in% pull(results[[1]], "th")
+  cluster_x <- fake_obj$b$drs[inds,-"Strain"]
+  cluster_asmts <- fake_obj$a[dr %in% pull(cluster_x, dr)]
+  
   dm_temp <- cluster_asmts %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
   
   returned <- transformData2(dm_temp, "temp", min(dm_temp), max(dm_temp))
@@ -128,7 +203,13 @@ test_that("transformData2() - temp", {
   }
 })
 
-test_that("transformData2() - geo", {
+test_results[[5]] <- test_that("transformData2() - geo", {
+  fake_obj <- fakeSecCluster(sample.int(50,1), sample.int(200,1)*2, sample.int(20,1))
+  results <- fake_obj$b$results
+  inds <- fake_obj$b$drs[["th"]] %in% pull(results[[1]], "th")
+  cluster_x <- fake_obj$b$drs[inds,-"Strain"]
+  cluster_asmts <- fake_obj$a[dr %in% pull(cluster_x, dr)]
+  
   dm_geo <- cluster_asmts %>% select(dr, Longitude, Latitude) %>% 
     distMatrix(., "geo", c("Longitude", "Latitude"))
   
@@ -164,7 +245,7 @@ test_that("transformData2() - geo", {
 #   iteration of test development (malicious/incorrect inputs)
 # test_that("formatData()", {formatData(dm, c("dr1","dr2","Temp.Dist"))})
 
-test_that("processedStrains() - requirements test", {
+test_results[[6]] <- test_that("processedStrains() - requirements test", {
   base_strains <- sample.int(200, 1) %>% fakeStrains()
   returned <- processedStrains(base_strains)
   
@@ -183,7 +264,7 @@ test_that("processedStrains() - requirements test", {
   expect_identical(dr_matches, returned$dr_matches)
 })
 
-test_that("processedStrains() - additional columns test", {
+test_results[[7]] <- test_that("processedStrains() - additional columns test", {
   additional_cols <- sample(c("Country","Province","City"), sample.int(3, 1)) %>% sort()
   base_strains <- sample.int(200, 1) %>% fakeStrains(., additional_cols)
   returned <- processedStrains(base_strains)
@@ -204,38 +285,8 @@ test_that("processedStrains() - additional columns test", {
   expect_identical(dr_matches, returned$dr_matches)
 })
 
-strainByStrainEpiMelt <- function(dr_matches) {
-  df1 <- dr_matches %>% select(strain, v)
-  
-  dr_matches$strain %>% 
-    expand.grid(strain1 = ., strain2 = .) %>% as_tibble() %>% 
-    left_join(., df1, by = c("strain1" = "strain")) %>% rename(v1 = v) %>% 
-    left_join(., df1, by = c("strain2" = "strain")) %>% rename(v2 = v) %>% 
-    mutate(Total.Dist = abs(v2 - v1)) %>% 
-    select(strain1, strain2, Total.Dist) %>% return()
-}
 
-strainByStrainECC <- function(dr_matches, epi_melt) {
-  cut_cluster_members <- dr_matches %>% select(th, strain) %>% 
-    pivot_longer(-strain, names_to = "cut", values_to = "cluster") %>%  
-    group_by(cut, cluster) %>% 
-    summarise(members = list(cur_data()$strain), .groups = "drop")
-  
-  calculate_s1 <- function(k) {
-    epi_melt %>% filter(strain1 %in% k, strain2 %in% k) %>%
-      select(Total.Dist) %>% pull() %>% sum()}
-  
-  cut_cluster_members %>% 
-    mutate(
-      s1 = map_dbl(members, calculate_s1),
-      cluster_size = map_int(members, length),
-      ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))
-    ) %>% ungroup() %>% 
-    select(cluster, cluster_size, ECC) %>% as.data.table() %>% 
-    set_colnames(c("th", "th_Size", "th_ECC")) %>% return()
-}
-
-test_that("epiCohesion()", {
+test_results[[8]] <- test_that("epiCohesion()", {
   ndrs <- 10
   alldrs <- sample(seq(1,200), ndrs)
   nstrains <- ceiling(sample(25:75, 1))
@@ -264,100 +315,37 @@ test_that("epiCohesion()", {
   g_cuts <- dr_matches %>% group_by(th) %>% count(dr) %>% ungroup() %>% as_tibble()
   
   returned <- epiCohesion(g_cuts, epi_melt)
-  actual <- strainByStrainECC(dr_matches, epi_melt_interim)
+  g_cuts <- dr_matches %>% select(-dr, -both)
+  actual <- epi_melt_interim %>% rename(value = Total.Dist) %>% strainByStrainECC(g_cuts, .)
   
-  expect_identical(returned, actual)
+  expect_equal(returned, actual)
 })
 
-# test_that("epiCollectionByCluster()", {
-#   
-# })
 
-# epiCollectionByCluster(strain_data, tau, gamma, transformed_dists, tpx, cluster_x)
-# collectECCs(k, m, parts, extremes, c1, fpath1, fpath2)
-
-
-# -----------------------------------------------------------------------------------
-# epiCollectionByCluster ------------------------------------------------------------
-# -----------------------------------------------------------------------------------
-
-# # ### Incorporating the allele data with the epidemiological data 
-# # epiCollectionByCluster(strain_data, tau, gamma, transformed_dists, tpx, cluster_x)
-# k <- 1
-# m <- read_tsv(params$strains) %>% processedStrains() #list(strain_data, assignments, dr_matches)
-# parts <- sectionClusters(k, typing_data, m)
-# extremes <- readRDS("results/dist_extremes.Rds")
-# c1 <- "001" %>% strsplit(., split = "") %>% unlist() %>% as.numeric()
-# fpath1 <- paste0("results/TP", k, "/dists/")
-# fpath2 <- paste0("results/TP", k, "/eccs/", "001", "/")
-# 
-# df <- parts$drs
-# cx <- setdiff(colnames(df), c("Strain", "dr"))
-# results <- parts$results
-# 
-# # epiCollectionByCluster(m$strain_data, tau, gamma, transformed_dists, k, cluster_x)
-# strain_data <- m$strain_data
-# tau <- c1[2]
-# gamma <- c1[3]
-# 
-# j <- 1
-# cluster_x <- df[df[[cx]] %in% pull(results[[j]], cx),-"Strain"]
-# 
-# dms <- paste0(fpath1, "group", j, ".Rds") %>% readRDS()
-# transformed_temp <- dms$temp %>% 
-#   transformData2(., "temp", extremes$temp$min, extremes$temp$max) %>% 
-#   formatData(., c("dr1","dr2","Temp.Dist"))
-# transformed_geo <- dms$geo %>%
-#   transformData2(., "geo", extremes$geo$min, extremes$geo$max) %>%
-#   formatData(., c("dr1","dr2","Geog.Dist"))
-# transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
-# 
-# tpx <- k
-# 
-# epiCollectionByCluster(strain_data, tau, gamma, transformed_dists, k, cluster_x)
-# 
-# ### Incorporating the allele data with the epidemiological data 
-# epiCollectionByCluster <- function(strain_data, tau, gamma, transformed_dists, tpx, cluster_x) {
-  # cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
-  # 
-  # outputMessages(paste0("      Preparing table of distances: sqrt(", tau, "*(temp^2) + ", gamma, "*(geo^2))"))
-  # epi_table <- transformed_dists %>%
-  #   mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>%
-  #   select(dr1, dr2, Total.Dist) %>% as.data.table()
-  # invisible(gc())
-  # 
-  # outputMessages("      Generating epi distance matrix ...")
-  # epi_matrix <- dcast(epi_table, formula = dr1 ~ dr2, value.var = "Total.Dist")
-  # epi_matrix <- as.matrix(epi_matrix[,2:ncol(epi_matrix)])
-  # rownames(epi_matrix) <- colnames(epi_matrix)
-  # rm(epi_table)
-  # invisible(gc())
-  # 
-  # outputMessages("      Formatting into table of similarity values from epi distance matrix ...")
-  # epi_melt <- as.matrix(1-epi_matrix) %>%
-  #   as.data.table(., keep.rownames = TRUE) %>%
-  #   melt(., id.vars = "rn", variable.factor = FALSE, value.factor = FALSE) %>%
-  #   set_colnames(c("dr_1", "dr_2", "value")) %>% as.data.table()
-  # 
-  # rm(epi_matrix)
-  # invisible(gc())
-  # 
-  # outputMessages("      Incorporating the metadata with the clusters (typing data) ...")
-  # # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
-  # cx <- colnames(cluster_x)[1]
-  # tallied_reps <- cluster_x %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
-  # cnames <- intersect(colnames(tallied_reps), colnames(cluster_x))
-  # g_cuts <- left_join(cluster_x, tallied_reps, by = cnames) %>%
-  #   unique() %>% mutate(across(dr, as.character))
-  # 
-  # td_i <- epiCohesion(g_cuts, epi_melt) %>%
-  #   set_colnames(c(paste0("TP", tpx, "_", colnames(.))))
-  # colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
-  # 
-  # return(td_i)
-# }
-
-# -----------------------------------------------------------------------------------
-# -----------------------------------------------------------------------------------
+test_results[[9]] <- test_that("epiCollectionByCluster()", {
+  fake_obj <- fakeSecCluster(sample.int(50,1), sample.int(200,1)*2, sample.int(20,1))
+  strain_raws <- left_join(fake_obj$c, fake_obj$a, by = "dr")
+  
+  cluster_asmts <- strain_raws %>% select(-Strain, -th) %>% unique()
+  
+  returned <- runDrECBC(cluster_asmts, strain_data = strain_raws, tau = 1, gamma = 0)
+  actual <- runStrainECBC(strain_raws, tau = 1, gamma = 0)
+  cat("\n")
+  expect_equal(returned, actual)
+})
 
 
+# collectECCs - can check by inspection, don't necessarily need a test for this?
+#   - unless the inputs are invalid, in which case will do this one in the next 
+#   iteration of test development (malicious/incorrect inputs)
+#   - it's basically just running epiCollectionByCluster()
+# test_that("collectECCs()", {})
+
+
+test_results %<>% unlist(test_results)
+if (all(test_results)) {
+  cat("\nAll valid-input ECC tests passed.\n")
+}else {
+  cat(paste0("\nTests ", paste0(names(test_results)[which(test_results == FALSE)], 
+                                collapse = ", "), " failed.\n"))
+}
