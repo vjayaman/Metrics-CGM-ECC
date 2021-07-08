@@ -6,7 +6,9 @@ assert("All packages loaded correctly", all(unlist(y)))
 files <- paste0("scripts/CGM") %>% list.files(., full.names = TRUE)
 invisible(sapply(files, source))
 
-
+test_results <- vector(length = 12) %>% 
+  setNames(c("Part 1", "Part 2", "Part 3", "Part 4", "Part 5", "Part 6", 
+             "Part 7", "Part 8", "Part 9", "Part 10", "Part 11", "Part 12"))
 # Part 1
 # f1 <- readBaseData(arg$tp1, 1, reader::get.delim(arg$tp1))
 # f2 <- readBaseData(arg$tp2, 2, reader::get.delim(arg$tp2))
