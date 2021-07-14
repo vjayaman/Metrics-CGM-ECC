@@ -6,12 +6,14 @@
 Timedata <- R6Class(
   "Timedata", lock_objects = FALSE, 
   public = list(
-    name = NULL, raw = NULL, flagged = NULL, cnames = NULL, 
-    coded = NULL, melted = NULL, comps = NULL, status = NULL, 
+    name = NULL, raw = NULL, flagged = NULL, cnames = NULL, coded = NULL, 
+    melted = NULL, comps = NULL, status = NULL, msg = TRUE, ind_prog = TRUE, 
     
-    initialize = function(name, raw, isos, pad_height, pad_cluster) {
+    initialize = function(name, raw, isos, pad_height, pad_cluster, msg, ind_prog) {
       self$name <- name
-      self$start()
+      self$msg <- msg
+      self$ind_prog <- ind_prog
+      if (msg) {self$start()}
       self$raw <- raw
       self$coded <- codeIsolates(raw, name, isos, pad_height, pad_cluster)
       self$melted <- meltedIDs(raw, name, pad_height, pad_cluster)
@@ -26,7 +28,7 @@ Timedata <- R6Class(
     set_comps = function() {
       self$comps <- self$coded %>% 
         set_colnames(gsub(self$name, "tp", colnames(.))) %>% 
-        compsSet(., toupper(self$name), indicate_progress = TRUE)
+        compsSet(., toupper(self$name), indicate_progress = self$ind_prog)
       invisible(self)
     }, 
     set_cnames = function() {
@@ -54,8 +56,9 @@ Heightdata <- R6Class(
       self$results <- vector(mode = "list", length = length(hvals)) %>% set_names(hvals)
       invisible(self)
     }, 
-    clust_tracking = function(t2_comps, t2_cnames, t1_coded, t2_coded, indp) {
-      self$changed <- trackClusters(self$comps, t2_comps, t2_cnames, t1_coded, t2_coded, indp)
+    clust_tracking = function(t2_comps, t2_cnames, t1_coded, t2_coded, ind_prog) {
+      self$changed <- trackClusters(self$comps, t2_comps, t2_cnames, 
+                                    t1_coded, t2_coded, ind_prog)
       invisible(self)
     }, 
     post_data = function(t1_comps) {
@@ -420,4 +423,3 @@ findingSneakers <- function(novels, q1, q2, matched) {
   
   results %>% return()
 }
-
