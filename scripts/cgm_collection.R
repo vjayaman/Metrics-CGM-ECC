@@ -5,7 +5,8 @@
 msg <- file("logs/logfile_datacollection.txt", open="wt")
 sink(msg, type="message")
 
-libs <- c("R6", "tibble", "optparse", "magrittr", "dplyr", "reshape2", "progress", "testit")
+libs <- c("R6", "tibble", "optparse", "magrittr", "dplyr", "reshape2", "progress", 
+          "testit", "data.table")
 y <- lapply(libs, require, character.only = TRUE)
 
 files <- paste0("scripts/CGM") %>% list.files(., full.names = TRUE)
@@ -41,7 +42,7 @@ all_isolates <- unique(c(f1$isolate, f2$isolate)) %>% as_tibble() %>%
   set_colnames("char_isolate") %>% rowid_to_column("num_isolate")
 
 ph <- max(nchar(colnames(f1)[-1]), nchar(colnames(f2)[-1]))
-pc <- f1 %>% select(-isolate) %>% max(., f1 %>% select(-isolate)) %>% nchar()
+pc <- f2 %>% select(-isolate) %>% max(., f2 %>% select(-isolate)) %>% nchar()
 
 outputDetails("  Processing timepoint clusters for easier data handling and flagging clusters", newcat = TRUE)
 tp1 <- Timedata$new("tp1", raw = f1, all_isolates, pad_height = ph, pad_cluster = pc)$set_comps()$flag_clusters()
@@ -157,6 +158,7 @@ if (nrow(all_mixed) > 0) {
 isolates_file %<>% 
   mutate(novel = ifelse(isolate %in% setdiff(tp2$raw$isolate, tp1$raw$isolate), 1, 0)) %>% 
   rename(Strain = isolate)
+
 isolates_file[,c("tp1_h", "tp2_h")] %<>% apply(., 2, padCol, padval = ph, padchr = "h")
 isolates_file[,c("tp1_cl", "tp2_cl")] %<>% apply(., 2, padCol, padval = pc, padchr = "c")
 

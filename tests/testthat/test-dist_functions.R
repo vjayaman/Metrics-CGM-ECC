@@ -1,40 +1,13 @@
 libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
-          "reshape2","fossil","tidyr","purrr", "data.table")
-library(testthat)
+          "reshape2","fossil","tidyr","purrr", "data.table", "testthat")
 y <- suppressPackageStartupMessages(lapply(libs, require, character.only = TRUE))
 assert("All packages loaded correctly", all(unlist(y)))
 
 source("scripts/ECC/functions/dist_functions.R")
+source("tests/testthat/helper_functions.R")
 
 # INITIALLY, TESTING FUNCTIONS FOR CORRECT INPUTS ONLY
 # WILL ADD TESTS FOR MALICIOUS/INCORRECT INPUTS AFTERWARDS
-
-# FUNCTIONS for checking sizes and making fakes, stubs, mocks, etc.
-checkSizes <- function(res, sz) {
-  lapply(1:length(res), function(i) sum(res[[i]]$n) <= sz) %>% unlist() %>% all() %>% return()  
-}
-
-fakeRaw <- function(ndrs, n, nc) {
-  data.table(th = sample(1:nc, n, replace = TRUE) %>% sort(), 
-             dr = rep(1:ndrs, ceiling(n/ndrs))[1:n]) %>% 
-    rownames_to_column("Strain") %>% return()
-}
-
-fakeSecCluster <- function(ndrs, n, nc) {
-  testcase <- fakeRaw(ndrs, n, nc)
-  nunique <- length(unique(testcase$dr))
-  
-  assignments <- data.table(
-    dr = testcase$dr %>% unique(), 
-    Date = sample(seq(as.Date('2019/01/01'), as.Date('2021/01/01'), by="day"), nunique), 
-    Latitude = sample(seq(25.00000, 65.00000, by = 0.00001), nunique), 
-    Longitude = sample(seq(-100.00000, 125.00000, by = 0.00001), nunique))
-  
-  # fake sectionClusters() result object:
-  parts <- formatForSectioning(testcase, 5) %>% sectionTypingData() %>% 
-    list("drs" = testcase, "results" = .)
-  return(list("a" = assignments, "b" = parts, "c" = testcase))
-}
 
 # FAKES - used in the following tests
 # In this fake object, there are 12 drs, 60 strains, and 10 clusters
