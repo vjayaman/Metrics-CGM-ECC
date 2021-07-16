@@ -19,10 +19,13 @@ option_list <- list(
               help = "Comma-delimited string of heights to collect ECCs for"),
   make_option(c("-p", "--cpus"), metavar = "numeric", default = 1, help = "CPUs"),
   make_option(c("-t", "--trio"), metavar = "character", default = "0-1-0,0-0-1",
-              help = "source, temporal, geographic coefficients"))
+              help = "source, temporal, geographic coefficients"), 
+  make_option(c("-m", "--distmat"), metavar = "logical", default = FALSE, 
+              help = paste0("Save distances as a full matrix, e.g. for heatmaps. ", 
+                            "Default is FALSE, uses reduced redundancy methods for distance metrics")))
 
-cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ", 
-           paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
+# cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ",
+#            paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
 params <- parse_args(OptionParser(option_list=option_list))
@@ -37,3 +40,4 @@ tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
 typing_data <- tp1$height_list %>% append(tp2$height_list)
 
 m <- read_tsv(params$strains) %>% processedStrains()
+save_dist_matrix <- params$distmat

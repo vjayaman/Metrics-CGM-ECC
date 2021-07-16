@@ -5,8 +5,7 @@ msg <- file("logs/logfile_env.txt", open="wt")
 sink(msg, type="message")
 
 dir.create("results", showWarnings = FALSE)
-dir.create("results/dists", showWarnings = FALSE)
-
+dir.create("intermediate_data", showWarnings = FALSE)
 dir.create(file.path("inputs", "processed"))
 # This should be run first, to make sure the required packages are installed
 
