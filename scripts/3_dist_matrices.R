@@ -5,8 +5,8 @@
 msg <- file("logs/logfile_distmatrices.txt", open="wt")
 sink(msg, type="message")
 
-source("scripts/ecc_opener.R")
-source("scripts/ECC/functions/dist_functions.R")
+source("scripts/ECC/ecc_opener.R")
+source("scripts/ECC/dist_functions.R")
 
 # Note: dr stands for data representative
 # in example: strain_data has 35,627 rows (strains), assignments has 5,504 rows (> 6-fold smaller)

@@ -6,8 +6,8 @@ assert("All packages loaded correctly", all(unlist(y)))
 source("scripts/CGM/cgm_functions.R")
 source("tests/testthat/helper_functions.R")
 
-test_results <- vector(length = 4) %>% 
-  setNames(c("checkEachIsolate()", "trackSingletons()", "oneHeight()", "findingSneakers()"))
+test_results <- vector(length = 3) %>% 
+  setNames(c("checkEachIsolate()", "trackSingletons()", "oneHeight()"))#, "findingSneakers()"))
 
 # Fakes --------------------------------------------------------------------------------------
 tp2_assignments <- simulatedAssignments(ntph = 5, 
@@ -46,7 +46,6 @@ tp1$coded_status(novels)
 
 hx <- Heightdata$new(starter = heights[1], t1_comps = tp1$comps, hvals = heights)
 # --------------------------------------------------------------------------------------------
-
 
 test_results[[1]] <- test_that("checkEachIsolate()", {
   multistrain <- hx$comps %>% filter(tp1_cl_size > 1)
@@ -185,45 +184,39 @@ test_results[[3]] <- test_that("oneHeight()", {
     expect_equal(., round(df$tp2_cl_size / (df$tp2_cl_size - df$num_novs), digits = 3))
 })
 
-# findingSneakers <- function(novels, q1, q2, matched) {
-#   compmatches <- matched[!duplicated(matched$tp1_id),]
+
+# test_results[[4]] <- test_that("findingSneakers()", {
+#   hx$clust_tracking(tp2$comps, tp2$cnames, tp1$coded, tp2$coded, FALSE)$
+#     update_iteration()
 #   
-#   did_not_chg <- compmatches %>% filter(tp1_cl_size == tp2_cl_size) %>% add_column(add_TP1 = 0)
-#   chg <- compmatches %>% filter(tp1_cl_size != tp2_cl_size)
-#   
-#   if (nrow(chg) > 0) {
-#     # identifying the number of additional TP1 strains (sneakers) that show up in the TP2 cluster 
-#     # that each TP1 cluster was first tracked to
-#     sneakers <- lapply(1:nrow(chg), function(j) {
-#       kc <- chg %>% slice(j) # key cluster j
-#       tbl1 <- q1 %>% filter(tp1_id == kc$tp1_id) %>% mutate(status = "tp1_cl_size")
-#       tbl2 <- q2 %>% filter(tp2_id == kc$tp2_id)
-#       # number of novels in the TP2 cluster it kc was tracked to
-#       x2 <- tbl2 %>% filter(status == "novs") %>% nrow()
-#       # number of sneakers in the TP2 cluster it kc was tracked to
-#       x3 <- tbl2 %>% filter(!(isolate %in% tbl1$isolate) & is.na(status)) %>% 
-#         mutate(status = "additional_TP1") %>% nrow()
-#       
-#       c2_tally <- tibble(tp1_cl_size = nrow(tbl1), num_novs = x2, add_TP1 = x3, 
-#                          tp2_cl_size = sum(nrow(tbl1), x2, x3))
-#       
-#       assert(paste0("oneHeight(): Novels check failed for ", kc$tp1_id), kc$num_novs == c2_tally$num_novs)
-#       assert(paste0("Composition not calculated properly for ", kc$tp2_id, 
-#                     " when tracking ", kc$tp1_id), c2_tally$tp2_cl_size == kc$tp2_cl_size)
-#       
-#       left_join(kc, c2_tally, by = c("tp1_cl_size", "tp2_cl_size", "num_novs")) %>% return()
-#     }) %>% bind_rows()
-#     
-#     results <- bind_rows(did_not_chg, sneakers)
-#   }else {
-#     results <- did_not_chg
+#   # REST OF THE HEIGHTS ------------------------------------------------------------------------------------------
+#   if (length(heights) > 1) {
+#     for (j in 1:length(heights[-1])) {
+#       hx$h_after <- heights[-1][j]
+#       # Part 1: unchanged(): identifying clusters that have not changed from the previous height
+#       # Part 2: takes comps for new height, previous height, and the tracked data for the previous height
+#       #   --> identifies clusters that have not changed since the previous height, and reuses their tracking data
+#       hx$post_data(tp1$comps)$unchanged()
+#       # Part 2: tracking clusters that changed, saving to results list, and prepping variable for next height
+#       hx$comps <- hx$aft %>% filter(!(id_aft %in% hx$same$tp1_id)) %>% set_colnames(colnames(tp1$comps))
+#       hx$clust_tracking(tp2$comps, tp2$cnames, tp1$coded, tp2$coded, FALSE)$
+#         update_iteration()$reset_values()
+#     }
 #   }
 #   
-#   results %>% return()
-# }
-test_results[[4]] <- test_that("findingSneakers()", {
-  expect_true(FALSE)
-})
+#   clusters_just_tp1 <- lapply(heights, function(h) {
+#     hx$results[[h]] %>% 
+#       left_join(., tp1$flagged, by = intersect(colnames(.), colnames(tp1$flagged))) %>% 
+#       left_join(., tp2$flagged, by = intersect(colnames(.), colnames(tp2$flagged))) %>% 
+#       arrange(tp1_h, tp1_cl, tp2_h, tp2_cl) %>% 
+#       findingSneakers(novels, tp1$status, tp2$status, .) %>% return()
+#   }) %>% bind_rows()
+#   
+#   expected_returned <- clusters_just_tp1 %>% 
+#     select(tp1_h, tp1_cl, tp1_cl_size, tp2_h, tp2_cl, tp2_cl_size, num_novs, add_TP1)
+#   
+#   hx$results %>% bind_rows() %>% select(tp1_h, tp1_cl, tp1_cl_size) %>% unique()
+# })
 
 
 test_results %<>% unlist(test_results)

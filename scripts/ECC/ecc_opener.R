@@ -4,7 +4,7 @@ y <- lapply(libs, require, character.only = TRUE)
 assert("All packages loaded correctly", all(unlist(y)))
 
 # Current working directory should be Metrics-CGM-ECC/
-files <- paste0("scripts/ECC/functions/") %>% list.files(., full.names = TRUE)
+files <- c("scripts/ECC/classes_ecc.R", "scripts/ECC/ecc_functions.R")
 invisible(sapply(files, source))
 
 # Title: "EpiQuant - Salmonella Enteritidis Project (2019-2020)"
@@ -18,7 +18,7 @@ option_list <- list(
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = "Comma-delimited string of heights to collect ECCs for"),
   make_option(c("-p", "--cpus"), metavar = "numeric", default = 1, help = "CPUs"),
-  make_option(c("-t", "--trio"), metavar = "character", default = "010-001",
+  make_option(c("-t", "--trio"), metavar = "character", default = "0-1-0,0-0-1",
               help = "source, temporal, geographic coefficients"))
 
 cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ", 
@@ -27,7 +27,7 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 
 params <- parse_args(OptionParser(option_list=option_list))
 
-combos <- params$trio %>% strsplit(., "-") %>% unlist()
+combos <- params$trio %>% strsplit(., ",") %>% unlist()
 z <- vector("list", length = length(combos)) %>% set_names(combos)
 
 hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))

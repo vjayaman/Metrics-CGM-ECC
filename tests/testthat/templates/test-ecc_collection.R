@@ -58,7 +58,13 @@ test_that("Part 3", {})
 # tp1_eccs <- tp1$proc[,c("Strain",colnames(a1)[1])] %>% left_join(., a1)
 # tp2_eccs <- tp2$proc[,c("Strain",colnames(b1)[1])] %>% left_join(., b1)
 # all_eccs <- right_join(tp1_eccs, tp2_eccs, by = "Strain")
-test_that("Part 4", {})
+
+# tp1_eccs <- tp1$proc[,c("Strain", colnames(a1[[1]])[1])] %>% 
+#   left_join(., a1[[1]], by = intersect(colnames(.), colnames(a1[[1]]))) %>% 
+#   left_join(., a1[[2]], by = intersect(colnames(.), colnames(a1[[2]])))
+test_that("Part 4", {
+  
+})
 
 # Part 5
 # tp1size <- colnames(all_eccs) %>% 

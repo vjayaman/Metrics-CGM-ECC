@@ -45,9 +45,13 @@ ph <- max(nchar(colnames(f1)[-1]), nchar(colnames(f2)[-1]))
 pc <- f2 %>% select(-isolate) %>% max(., f2 %>% select(-isolate)) %>% nchar()
 
 outputDetails("  Processing timepoint clusters for easier data handling and flagging clusters", newcat = TRUE)
-tp1 <- Timedata$new("tp1", raw = f1, all_isolates, pad_height = ph, pad_cluster = pc)$set_comps()$flag_clusters()
+tp1 <- Timedata$new("tp1", raw = f1, all_isolates, pad_height = ph, 
+                    pad_cluster = pc, msg = TRUE, ind_prog = TRUE)$
+  set_comps()$flag_clusters()
 
-tp2 <- Timedata$new("tp2", raw = f2, all_isolates, pad_height = ph, pad_cluster = pc)$set_comps()$set_cnames()
+tp2 <- Timedata$new("tp2", raw = f2, all_isolates, pad_height = ph, 
+                    pad_cluster = pc, msg = TRUE, ind_prog = TRUE)$
+  set_comps()$set_cnames()
 
 outputDetails("  Collecting and counting novel isolates in TP2 clusters ...", newcat = TRUE)
 novels <- setdiff(tp2$coded$isolate, tp1$coded$isolate)

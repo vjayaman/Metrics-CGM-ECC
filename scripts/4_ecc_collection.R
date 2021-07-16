@@ -3,7 +3,8 @@
 msg <- file("logs/logfile_epiquant.txt", open="wt")
 sink(msg, type="message")
 
-source("scripts/ecc_opener.R")
+source("scripts/ECC/ecc_opener.R")
+source("scripts/ECC/dist_functions.R")
 assert("Distances were collected and saved", file.exists("results/TP1/dists/group1.Rds"))
 
 extremes <- readRDS("results/dist_extremes.Rds")
@@ -15,7 +16,8 @@ for (k in unique(dfx$k)) {
 }
 
 for (i in 1:nrow(dfx)) {
-  c1 <- as.character(dfx$x[i]) %>% strsplit(., split = "") %>% 
+  cat(paste0("\n\nStep ", i, " / ", nrow(dfx) + 2, ":"))
+  c1 <- as.character(dfx$x[i]) %>% strsplit(., split = "-") %>% 
     unlist() %>% as.numeric()
   
   paste0("results/TP", dfx$k[i], "/eccs/", as.character(dfx$x[i])) %>% 
@@ -29,17 +31,19 @@ for (i in 1:nrow(dfx)) {
                 paste0("results/TP", dfx$k[i], "/eccs/", 
                        as.character(dfx$x[i]), "/"))
   
-  outputMessages(paste0("\nMerging ECC files at TP", dfx$k[i]))
+  c1 %>% paste0(., collapse = ", ") %>% 
+    paste0("\nMerging ECC files at TP", dfx$k[i], ", for ECC parameters ", .) %>% 
+    outputMessages()
 }
 
-
+cat(paste0("\n\nStep ", nrow(dfx) + 1, " / ", nrow(dfx) + 2, ":"))
 for (i in 1:nrow(dfx)) {
   dir_k <- paste0("results/TP", dfx$k[i], "/eccs/", dfx$x[i], "/")
-  fnames <- list.files(dir_k)
+  fnames <- list.files(dir_k) %>% grep("group", ., value = TRUE)
   
   tpk <- lapply(fnames, function(f) {
     ecc_j <- readRDS(paste0(dir_k, f))
-    file.remove(paste0(dir_k, f))
+    # file.remove(paste0(dir_k, f))
     return(ecc_j)
   }) %>% bind_rows()
   
@@ -47,6 +51,7 @@ for (i in 1:nrow(dfx)) {
 }
 
 # Generating ECC results file ----------------------------------------------------
+outputMessages("   Putting together saved ECCs, replacing blanks with NAs")
 a1 <- lapply(combos, function(x) {
   readRDS(paste0("results/TP1/eccs/", x, "/TP1-", x, "-eccs.Rds"))
 }) %>% Reduce(inner_join, .) %>% unique()
@@ -72,9 +77,8 @@ all_eccs[all_eccs == -Inf] <- NA
 assert("Average distances were collected and saved", file.exists("results/average_dists.Rds"))
 all_avg_dists <- readRDS("results/average_dists.Rds")
 
-cat(paste0("\n\nStep ", length(combos) + 2, ":"))
+cat(paste0("\n\nStep ", nrow(dfx) + 2, " / ", nrow(dfx) + 2, ":"))
 outputMessages("   Merging collected ECCs ...\n")
-
 inner_join(all_avg_dists, all_eccs) %>% 
   write.table(., file = "results/ECCs.tsv", col.names = TRUE, 
               row.names = FALSE, quote = FALSE, sep = "\t")

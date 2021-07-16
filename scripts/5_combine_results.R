@@ -16,9 +16,7 @@ option_list <- list(
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
-source("scripts/MergeFunctions/type_handling.R")
-# files <- paste0("scripts/MergeFunctions") %>% list.files(., full.names = TRUE)
-# invisible(sapply(files, source))
+source("scripts/Misc/type_handling.R")
 
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Merging CGM and ECC results ", 
            paste0(rep("-", 31), collapse = ""), "||\n"))
@@ -144,7 +142,9 @@ time2 <- readRDS(arg$tp2)$lookup_table %>%
   select(1, as.double(filtering_params$th[2])+2) %>% 
   set_colnames(c("Strain", "Actual TP2 cluster"))
 
-step5 <- step4 %>% left_join(., time1) %>% left_join(., time2)
+step5 <- step4 %>% 
+  left_join(., time1, by = intersect(colnames(.), colnames(time1))) %>% 
+  left_join(., time2, by = intersect(colnames(.), colnames(time2)))
 
 step6 <- step5 %>% 
   select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, found_in_TP1, 
