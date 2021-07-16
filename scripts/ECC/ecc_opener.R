@@ -24,8 +24,6 @@ option_list <- list(
               help = paste0("Save distances as a full matrix, e.g. for heatmaps. ", 
                             "Default is FALSE, uses reduced redundancy methods for distance metrics")))
 
-# cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ",
-#            paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
 params <- parse_args(OptionParser(option_list=option_list))

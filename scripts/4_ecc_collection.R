@@ -5,14 +5,18 @@ sink(msg, type="message")
 
 source("scripts/ECC/ecc_opener.R")
 source("scripts/ECC/dist_functions.R")
-assert("Distances were collected and saved", file.exists("results/TP1/dists/group1.Rds"))
 
-extremes <- readRDS("results/dist_extremes.Rds")
+assert("Distances were collected and saved", file.exists("intermediate_data/dist_extremes.Rds"))
+
+cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ",
+           paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
+
+extremes <- readRDS("intermediate_data/dist_extremes.Rds")
 
 dfx <- expand.grid(x = combos, k = c(1,2)) %>% as.data.frame()
 
 for (k in unique(dfx$k)) {
-  dir.create(paste0("results/TP", k, "/eccs"), showWarnings = FALSE)
+  dir.create(paste0("intermediate_data/TP", k, "/ecc_groups/"), showWarnings = FALSE)
 }
 
 for (i in 1:nrow(dfx)) {
@@ -20,16 +24,16 @@ for (i in 1:nrow(dfx)) {
   c1 <- as.character(dfx$x[i]) %>% strsplit(., split = "-") %>% 
     unlist() %>% as.numeric()
   
-  paste0("results/TP", dfx$k[i], "/eccs/", as.character(dfx$x[i])) %>% 
+  paste0("intermediate_data/TP", dfx$k[i], "/ecc_groups/", as.character(dfx$x[i])) %>% 
     dir.create(., showWarnings = FALSE)
   
   outputMessages(paste0("\nCollecting and saving ECCs for groups of clusters at TP", 
                         dfx$k[i], ", for ECC coefficient triple ", as.character(dfx$x[i])))
   sectionClusters(dfx$k[i], typing_data, m) %>% 
     collectECCs(dfx$k[i], m, ., extremes, c1, 
-                paste0("results/TP", dfx$k[i], "/dists/"), 
-                paste0("results/TP", dfx$k[i], "/eccs/", 
-                       as.character(dfx$x[i]), "/"))
+                read_from = paste0("intermediate_data/TP", dfx$k[i], "/dists/"), 
+                save_to = paste0("intermediate_data/TP", dfx$k[i], "/ecc_groups/", 
+                                 as.character(dfx$x[i]), "/"))
   
   c1 %>% paste0(., collapse = ", ") %>% 
     paste0("\nMerging ECC files at TP", dfx$k[i], ", for ECC parameters ", .) %>% 
@@ -38,26 +42,22 @@ for (i in 1:nrow(dfx)) {
 
 cat(paste0("\n\nStep ", nrow(dfx) + 1, " / ", nrow(dfx) + 2, ":"))
 for (i in 1:nrow(dfx)) {
-  dir_k <- paste0("results/TP", dfx$k[i], "/eccs/", dfx$x[i], "/")
-  fnames <- list.files(dir_k) %>% grep("group", ., value = TRUE)
+  fnames <- list.files(paste0("intermediate_data/TP", dfx$k[i], 
+                              "/ecc_groups/", dfx$x[i], "/"), full.names = TRUE)
   
-  tpk <- lapply(fnames, function(f) {
-    ecc_j <- readRDS(paste0(dir_k, f))
-    # file.remove(paste0(dir_k, f))
-    return(ecc_j)
-  }) %>% bind_rows()
+  tpk <- lapply(fnames, function(f) {readRDS(f)}) %>% bind_rows()
   
-  saveRDS(tpk, paste0(dir_k, "TP", dfx$k[i], "-", dfx$x[i], "-eccs.Rds"))
+  saveRDS(tpk, paste0("intermediate_data/TP", dfx$k[i], "/", dfx$x[i], "-eccs.Rds"))
 }
 
 # Generating ECC results file ----------------------------------------------------
 outputMessages("   Putting together saved ECCs, replacing blanks with NAs")
 a1 <- lapply(combos, function(x) {
-  readRDS(paste0("results/TP1/eccs/", x, "/TP1-", x, "-eccs.Rds"))
+  readRDS(paste0("intermediate_data/TP1/", x, "-eccs.Rds"))
 }) %>% Reduce(inner_join, .) %>% unique()
 
 b1 <- lapply(combos, function(x) {
-  readRDS(paste0("results/TP2/eccs/", x, "/TP2-", x, "-eccs.Rds"))
+  readRDS(paste0("intermediate_data/TP2/", x, "-eccs.Rds"))
 }) %>% Reduce(inner_join, .) %>% unique()
 
 tp1_eccs <- tp1$proc[,c("Strain",colnames(a1)[1])] %>% left_join(., a1)
