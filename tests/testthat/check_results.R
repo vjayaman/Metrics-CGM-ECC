@@ -1,0 +1,86 @@
+
+libs <- c("R6","optparse","magrittr","tibble", "dplyr", "readr", "testit", "data.table", 
+          "fossil", "tidyr", "purrr")
+y <- suppressMessages(lapply(libs, require, character.only = TRUE))
+
+option_list <- list(
+  make_option(c("-e", "--ECCs"), metavar = "file", default = "results/ECCs.tsv", help = "ECC result file"),
+  make_option(c("-a", "--tp1"), metavar = "file",
+              default = "inputs/processed/tp1_clusters.txt", help = "TP1 cluster assignments"),
+  make_option(c("-b", "--tp2"), metavar = "file",
+              default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
+  make_option(c("-p", "--timepoint"), metavar = "numeric", default = 1, 
+              help = "Test ECCs of this timepoint manually"), 
+  make_option(c("-s", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain metadata file"))
+
+arg <- parse_args(OptionParser(option_list=option_list))
+
+source("scripts/Misc/type_handling.R")
+source("scripts/ECC/ecc_functions.R")
+source("scripts/ECC/classes_ecc.R")
+source("tests/testthat/check_result_functions.R")
+source("scripts/Misc/formatprep.R")
+# ------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------
+
+tp1 <- Timepoint$new(arg$tp1, "tp1")$filedata[,"0",drop=FALSE]
+tp2 <- Timepoint$new(arg$tp2, "tp2")$filedata[,"0",drop=FALSE]
+typing_data <- list("tp1" = tp1, "tp2" = tp2)
+
+returned_eccs <- readData(arg$ECCs) %>% as.data.table()
+
+strain_data <- readData(arg$strains, check_enc = TRUE)
+
+triples <-
+  colnames(returned_eccs) %>% grep("ECC", ., value = TRUE) %>% 
+  strsplit(., split = "ECC.") %>% sapply(., '[[', 2) %>% unique()
+
+combos <- expand_grid(timepoint = c("TP1", "TP2"), triples) %>% 
+  separate(., triples, sep = "[.]", into = c("phi", "tau", "gamma")) %>% select(-phi)
+
+results <- lapply(1:nrow(combos), function(i) {
+  tpcname <- combos$timepoint[i]
+  tpx <- tpcname %>% gsub("TP", "", .) %>% as.integer()
+  g_cuts <- typing_data[[tpx]] %>% set_colnames(paste0("T", colnames(.))) %>% 
+    rownames_to_column("genome")
+  
+  tau <- combos$tau[i] %>% as.integer()
+  gamma <- combos$gamma[i] %>% as.integer()
+  
+  original_eccs <- strain_data %>% testDists() %>% 
+    testEpiMelt(., tau, gamma) %>% testECCs(g_cuts, .)  
+  hx <- unique(original_eccs$cut)[1]
+  dfx <- original_eccs %>% select(-cut) %>% 
+    set_colnames(c(paste(tpcname, hx, sep = "_"), 
+                   paste(tpcname, hx, "Size", sep = "_"), 
+                   paste(tpcname, hx, paste0("ECC.0.", tau, ".", gamma), sep = "_")))
+  dfx[is.nan(pull(dfx, 3)),3] <- NA
+  
+  typing_data[[tpx]] %>% set_colnames(colnames(dfx)[1]) %>% 
+    rownames_to_column("Strain") %>% 
+    left_join(., dfx, by = intersect(colnames(dfx), colnames(.))) %>% return()
+})
+
+original_eccs <- suppressMessages(Reduce(full_join, results)) %>% 
+  as.data.table() %>% arrange(Strain)
+new_eccs <- returned_eccs %>% select(colnames(original_eccs)) %>% arrange(Strain)
+
+dfz <- original_eccs %>% set_colnames(gsub("TP", "o_TP", colnames(.))) %>% 
+  full_join(., new_eccs, by = "Strain")
+
+checked_all_cols <- lapply(2:length(colnames(new_eccs)), function(j) {
+  cname <- colnames(new_eccs)[j]
+  newname <- paste0("o_", cname)
+  difs <- abs(pull(dfz, cname) - pull(dfz, newname)) %>% na.omit()
+  if (grepl("ECC", cname)) {
+    return(all(difs < 1e-14))
+  }else {
+    return(all(difs == 0))
+  }
+}) %>% unlist()
+
+if (all(checked_all_cols)) {
+  outputMessages("All ECC columns match results generated manually.")
+}else {
+  outputMessages("Not all columns of the generated ECC files match the manually generated result.")  
+}

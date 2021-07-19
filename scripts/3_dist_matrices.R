@@ -88,8 +88,7 @@ if (save_dist_matrix) {
     rm(a1)
     # print("d")
     grouped_dists[i] %>% strsplit(.,"/") %>% unlist() %>% extract2(4) %>% 
-      paste0(geo_path, .) %>% 
-      saveRDS(a2, .)
+      paste0(geo_path, .) %>% saveRDS(a2, .)
     rm(a2)
   }
   outputMessages(paste0("\nSee results/geographical_distances/ or ", 
@@ -134,3 +133,33 @@ saveRDS(all_avg_dists, "results/average_dists.Rds")
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), 
            " End of distances collection ", 
            paste0(rep("-", 31), collapse = ""), "||\nStarted process at: ", Sys.time()))
+
+# # Check the dist results for a few sampled at random -----------------------------------------
+# a1 <- readRDS("results/geographical_distances/group1.Rds")
+# strains <- a1$Strain1[1:100] %>% sort()
+# a2 <- a1[Strain1 %in% strains & Strain2 %in% strains] %>% arrange(Strain1, Strain2)
+# group1 <- m$strain_data %>% filter(Strain %in% strains) %>% 
+#   select(Strain, Longitude, Latitude) %>% arrange(Strain)
+# 
+# dm <- group1 %>% column_to_rownames("Strain") %>% as.data.frame() %>% 
+#   earth.dist(dist = TRUE) %>% as.matrix() %>% 
+#   set_rownames(group1$Strain) %>% set_colnames(group1$Strain)
+# 
+# dm2 <- dm %>% 
+#   as.data.frame() %>% rownames_to_column("Strain1") %>% as.data.table() %>% 
+#   melt.data.table(., id.vars = "Strain1", variable.name = "Strain2", value.name = "Geog.Dist2") %>% 
+#   arrange(Strain1, Strain2)
+# 
+# testers <- c("Fuzhou/JX2012/2020", "Foshan/20SF207/2020")
+# tmp1 <- m$strain_data %>% filter(Strain %in% testers) %>% 
+#   select(Strain, Longitude, Latitude) %>% as.data.frame() %>% 
+#   column_to_rownames("Strain") %>% earth.dist(dist = TRUE) %>% as.matrix()
+# 
+# b1 <- m$dr_matches %>% filter(Strain %in% testers) %>% pull(dr)
+# m$assignments[dr %in% b1]
+# 
+# # Note: with this method, we don't have per-strain inter-cluster distances, 
+# # we infer the intracluster distances using data representatives
+# # So we can check our process but checking the end results, not the intermediate
+# # results along the way
+# # Note: should randomly sample and check every file saved to the "results/" directory

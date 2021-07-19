@@ -30,6 +30,6 @@ if (all(unlist(x))) {
   #   message("   $ sudo apt-get install libssl-dev\n")
   #   message("Then run env_setup.R again.")
   # }
-  cat("\nNot all packages were installed successfully. Please see logfile_env.txt for details.")  
+  cat("\nNot all packages were installed successfully. Please see logfile_env.txt for details.")
 }
 

@@ -75,7 +75,7 @@ distMatrix <- function(input_data, dtype, cnames) {
   }
 }
 
-
+# save_extremes <- TRUE; assignments <- m$assignments; fpaths <- list(dists, extremes)
 collectDistances <- function(save_extremes, assignments, parts, fpaths = NULL) {
   df <- parts$drs
   cx <- setdiff(colnames(df), c("Strain", "dr"))
