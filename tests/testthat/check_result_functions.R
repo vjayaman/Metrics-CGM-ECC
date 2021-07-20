@@ -57,3 +57,20 @@ testECCs <- function(g_cuts, epi_melt) {
     select(-members, -s1) %>% ungroup() %>% as.data.table()
   return(actual_eccs)
 }
+
+checkEncoding <- function(fp) {
+  readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
+}
+
+# function for reading raw strains and time point clusters
+readData <- function(path, check_enc = TRUE) {
+  if (check_enc) {
+    enc <- checkEncoding(file.path(path))
+  }else {
+    enc <- ""
+  }
+  
+  file.path(path) %>% 
+    read.table(sep="\t", header=TRUE, fileEncoding=enc, fill=TRUE, quote="") %>% 
+    as_tibble() %>% return()
+}

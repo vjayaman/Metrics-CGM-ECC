@@ -6,7 +6,8 @@ msg <- file("logs/logfile_distmatrices.txt", open="wt")
 sink(msg, type="message")
 
 source("scripts/ECC/ecc_opener.R")
-source("scripts/ECC/dist_functions.R")
+# source("scripts/ECC/dist_functions.R")
+source("scripts/all_distances.R")
 
 cat(paste0("\n||", paste0(rep("-", 23), collapse = ""), 
            " Generating non-redundant pairwise distances ", 
@@ -28,9 +29,32 @@ for (k in 1:2) {
   
   outputMessages(paste0("\nCollecting and saving distances for groups at TP", k))
   dists <- paste0("intermediate_data/TP", k, "/dists/")
-  extremes <- "intermediate_data/"
   parts <- sectionClusters(k, typing_data, m)
-  collectDistances(TRUE, m$assignments, parts, fpaths = list(dists, extremes))
+  
+  # inter-cluster detour
+  dr_clusters <- typing_data[[k]] %>% rownames_to_column("Strain") %>%
+    as.data.table() %>% left_join(., m$dr_matches, by = "Strain") %>% 
+    select(-Strain) %>% unique() %>% set_colnames(c("hx", "dr"))
+  b1 <- dr_clusters$dr %>% unique()
+  b2 <- t(combn(as.factor(b1), 2)) %>% as.data.table()
+  b3 <- b2 %>% set_colnames(c("dr1", "dr2"))
+  
+  b4 <- left_join(dr_clusters, b3, by = c("dr" = "dr1")) %>% rename("hx1" = "hx", "dr1" = "dr")# %>% 
+  b4 <- b4[!is.na(dr1) & !is.na(dr2)]
+  b5 <- b4 %>% left_join(., dr_clusters, by = c("dr2" = "dr")) %>% rename("hx2" = "hx")
+  # drs that are NOT in the same cluster:
+  b6 <- b5[hx1 != hx2] %>% select(-hx1, -hx2) %>% unique()
+
+  inter_dists <- c(b6$dr1, b6$dr2) %>% unique() %>% sort() %>% as_tibble() %>% 
+    set_colnames("dr") %>% left_join(., m$assignments, by = "dr")
+  
+  temp_dists <- inter_dists %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
+  geo_dists <- inter_dists %>% select(dr, Longitude, Latitude) %>% 
+    distMatrix(., "geo", c("Longitude", "Latitude"))
+  extremes <- list(maxt = max(temp_dists), mint = min(temp_dists), 
+                   maxg = max(geo_dists), ming = min(geo_dists))
+  
+  collectDistances(TRUE, m$assignments, parts, fpaths = dists, extremes)
 }
 
 outputMessages("\nFinished saving pairwise distances, in groups.")
@@ -131,8 +155,7 @@ all_avg_dists <- right_join(tp1_avg_dists, tp2_avg_dists, by = "Strain")
 saveRDS(all_avg_dists, "results/average_dists.Rds")
 
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), 
-           " End of distances collection ", 
-           paste0(rep("-", 31), collapse = ""), "||\nStarted process at: ", Sys.time()))
+           " End of distances collection ", paste0(rep("-", 31), collapse = ""), "||\n")
 
 # # Check the dist results for a few sampled at random -----------------------------------------
 # a1 <- readRDS("results/geographical_distances/group1.Rds")
