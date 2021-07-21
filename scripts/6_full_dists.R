@@ -19,8 +19,7 @@ option_list <- list(
   make_option(c("-d", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = "Comma-delimited string of heights to collect ECCs for"),
-  make_option(c("-p", "--cpus"), metavar = "numeric", default = 1, help = "CPUs"), 
-  make_option(c("-t", "--type"), metavar = "character", default = "temp", 
+  make_option(c("-t", "--typedist"), metavar = "character", default = "temp", 
               help = paste0("Provide either 'temp' or 'geo', and the full set (strain) ", 
                             "pairwise distances will be saved. Note that they are saved ", 
                             "in parts for very large datasets, to save memory and processing power.")))
@@ -58,9 +57,9 @@ rm(tp2)
 
 dr_matches <- parts$drs[,c("Strain","dr")] %>% as_tibble()
 
-if (params$type == "temp") {
+if (params$typedist == "temp") {
   type <- c("temp", "Temp.Dist", "Date", "temporal_distances")
-}else if (params$type == "geo") {
+}else if (params$typedist == "geo") {
   type <- c("geo", "Geog.Dist", "Longitude,Latitude", "geographical_distances")
 }else {
   outputMessages("Incorrect 'type' argument provided. Either 'temp' or 'geo' work at the moment.")
@@ -97,7 +96,7 @@ if (nrow(p1) < 5000000) {
   p2 <- right_join(dr_matches, p1, by = c("dr" = "dr2")) %>% rename(Strain2 = Strain)
   p3 <- p2 %>% as.data.table() %>% select(Strain1, Strain2, all_of(type[2])) %>% 
     set_colnames(c("Strain1", "Strain2", type[2]))
-  saveRDS(p3, paste0("results/", type[4], ".Rds"))
+  saveRDS(p3, paste0("results/", type[4], "/alldists.Rds"))
 }else {
   indices <- split(1:nrow(p1), ceiling(seq_along(1:nrow(p1)) / 5000000))
   gc(full = TRUE, verbose = FALSE)

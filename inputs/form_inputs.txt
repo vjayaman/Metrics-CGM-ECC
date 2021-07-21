@@ -1,0 +1,11 @@
+Region of interest: All
+Country of interest: All
+Has defined lineage information: true
+Has defined date information (day, month, and year): true
+Has province-level data: true
+Province of interest: All
+Threshold of interest: 0
+Is in a non-singleton cluster (at TP1): false
+Is in a non-singleton cluster (at TP2): false
+Filtering by date: [,]
+Column names: Country,Province,City

@@ -32,6 +32,8 @@ Metrics-CGM-ECC
 	
 The CGM data, ECC metrics, and merged files (for strains and clusters) will be saved to a newly created *results/* directory.
 
+**Note:** See the steps in `run_process.sh` for details on how to run each step individually, with arguments. I will add detailed steps here as well shortly.
+
 ## Method 2 (Stable, verified version):
 
 1. Download version [v1.0](https://github.com/vjayaman/Metrics-CGM-ECC/releases/tag/v1.0)
