@@ -2,7 +2,7 @@
 formatForSectioning <- function(df, maxsize) {
   cx <- setdiff(colnames(df), c("Strain", "dr"))
   drsizes <- df %>% select(-Strain) %>% unique() %>% group_by(!!as.symbol(cx)) %>% summarise(n = n())
-  
+
   # we take the maximum between the largest number of drs a cluster has and the user-provided maxsize
   x1 <- max(drsizes$n)
   if (which.max(c(x1, maxsize)) == 1) {
@@ -20,40 +20,40 @@ sectionTypingData <- function(x) {
   rows_x <- c()
   total <- 0
   results <- vector("list", nrow(drsizes))
-  
+
   # for each cluster, we add it to the dataframe rows_x, until we've reached the maxsize (# of drs)
   # if we reach the max size exactly, we add rows_x to the results[[]] list, and refresh the total
   # if the new updated total has more drs than the maxsize, then we set a new element in the results[[]] list
   for (i in 1:nrow(drsizes)) {
     row_i <- drsizes[i,]
     updated <- row_i$n + total
-    
+
     if (updated < m) {
       rows_x <- bind_rows(rows_x, row_i)
       total <- total + row_i$n
-      
+
     }else if (updated == m) {
       rows_x <- bind_rows(rows_x, row_i)
       total <- total + row_i$n
-      
+
       results[[i]] <- rows_x
       rows_x <- c()
       total <- 0
-      
+
     }else { # updated > m
       results[[i]] <- rows_x
       rows_x <- row_i
       total <- row_i$n
     }
   }
-  
-  # if we go through all clusters, but end with a dataframe with < maxsize drs, 
+
+  # if we go through all clusters, but end with a dataframe with < maxsize drs,
   # we add this to the results[[]] list as a new element
   if (total != 0) {
     i <- i + 1
     results[[i]] <- rows_x
   }
-  
+
   results[sapply(results, is.null)] <- NULL
   return(results)
 }
@@ -75,8 +75,8 @@ distMatrix <- function(input_data, dtype, cnames) {
   }
 }
 
-# save_extremes <- TRUE; assignments <- m$assignments; fpaths <- list(dists, extremes)
-collectDistances <- function(save_extremes, assignments, parts, fpaths = NULL) {
+# save_extremes <- TRUE; assignments <- m$assignments; fpaths <- dists
+collectDistances <- function(save_extremes, assignments, parts, fpaths = NULL, extremes) {
   df <- parts$drs
   cx <- setdiff(colnames(df), c("Strain", "dr"))
   results <- parts$results
@@ -105,9 +105,9 @@ collectDistances <- function(save_extremes, assignments, parts, fpaths = NULL) {
     max_geo <- max(max_geo, max(dm_geo))
     
     if (!is.null(fpaths)) {
-      if (length(fpaths) == 2) {
-        list(temp = dm_temp, geo = dm_geo) %>% 
-          saveRDS(., paste0(fpaths[[1]], "group", j, ".Rds"))    
+      if (length(fpaths) == 1) {
+        list(temp = dm_temp, geo = dm_geo) %>%
+          saveRDS(., paste0(fpaths[[1]], "group", j, ".Rds"))
       }
     }
     
@@ -116,17 +116,17 @@ collectDistances <- function(save_extremes, assignments, parts, fpaths = NULL) {
     gc()
   }
   
-  if (!is.null(fpaths)) {
-    if (length(fpaths) == 2) {
-      if (save_extremes) {
-        tibble(temp = list("max" = max_temp, "min" = min_temp), 
-               geo = list("max" = max_geo, "min" = min_geo)) %>% 
-          saveRDS(., paste0(fpaths[[2]], "dist_extremes.Rds"))
-      }   
-    }
+  if (save_extremes) {
+    tibble(
+      temp = list("max" = max(extremes$maxt, max_temp), "min" = min(extremes$mint, min_temp)), 
+      geo = list("max" = max(extremes$maxg, max_geo), "min" = min(extremes$ming, min_geo))
+    ) %>% 
+      saveRDS(., "intermediate_data/dist_extremes.Rds")
   }else {
-    tibble(temp = list("max" = max_temp, "min" = min_temp), 
-           geo = list("max" = max_geo, "min" = min_geo)) %>% return()
+    tibble(
+      temp = list("max" = max(extremes$maxt, max_temp), "min" = min(extremes$mint, min_temp)), 
+      geo = list("max" = max(extremes$maxg, max_geo), "min" = min(extremes$ming, min_geo))
+    ) %>% return()
   }
 }
 
@@ -178,7 +178,7 @@ sectionClusters <- function(k, typing_data, m) {
     as.data.table() %>% left_join(., m$dr_matches, by = "Strain")
   
   gc()
-  
+
   results <- formatForSectioning(df, 1000) %>% sectionTypingData(.)
   assert("No clusters overlooked", length(setdiff(pull(df,2), pull(rbindlist(results),1))) == 0)
   

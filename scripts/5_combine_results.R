@@ -65,9 +65,11 @@ assert("No clusters with unassigned type", checkTypes(step1))
 #       - in TP1, needs to have the cluster size and ECC stats from the TP1 strains they cluster with in TP2, 
 #       - need to have the TP1 cluster number
 
-cases2 <- step1 %>% filter(type == "Type2") %>% type2Inheritance(.)
-step1 <- step1[ type != "Type2" ] %>% bind_rows(cases2)
-
+cases2a <- step1 %>% filter(type == "Type2")
+if (nrow(cases2a) > 0) {
+  cases2 <- cases2a %>% type2Inheritance(.)
+  step1 <- step1[ type != "Type2" ] %>% bind_rows(cases2)
+}
 
 # Type III modifications: TP1 < 3, TP2 > 2
 # -	Main problem is that TP1 cluster doesn't have ECC stats, 

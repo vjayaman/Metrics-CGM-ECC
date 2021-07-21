@@ -17,7 +17,7 @@ arg <- parse_args(OptionParser(option_list=option_list))
 
 source("scripts/ECC/ecc_functions.R")
 source("scripts/ECC/classes_ecc.R")
-source("tests/testthat/check_result_functions.R")
+source("tests/testthat/check_ecc_functions.R")
 
 # ------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------
