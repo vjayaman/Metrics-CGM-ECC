@@ -12,7 +12,7 @@ Metrics-CGM-ECC
 3. Open **Metrics-CGM-ECC/form.html** in a browser, then fill with inputs corresponding to your input files
 	* Download the resulting text file, and move it to the *inputs/* directory
 
-4. Navigate to the *Metrics-CGM-ECC/* directory in a terminal window
+4. Navigate to the *Metrics-CGM-ECC/* directory in a terminal window. Alternatively, the scripts can be run individually in RStudio.
 
 5. Run **environment_setup.R**, to install the required R packages and check that they can be loaded.
 
