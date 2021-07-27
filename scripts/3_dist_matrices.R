@@ -30,12 +30,14 @@ for (k in 1:2) {
   dists <- paste0("intermediate_data/TP", k, "/dists/")
   parts <- sectionClusters(k, typing_data, m)
   
+  outputMessages("\nGenerating inter-cluster distances:")
   # inter-cluster detour
   dr_clusters <- typing_data[[k]] %>% 
     rownames_to_column("Strain") %>%
     as.data.table() %>% left_join(., m$dr_matches, by = "Strain") %>% 
     select(-Strain) %>% unique() %>% set_colnames(c("hx", "dr"))
   
+  # b0 <- dr_clusters$dr %>% unique()
   b1 <- dr_clusters$dr %>% unique()
   b2 <- t(combn(as.factor(b1), 2)) %>% as.data.table()
   b3 <- b2 %>% set_colnames(c("dr1", "dr2"))
@@ -59,6 +61,7 @@ for (k in 1:2) {
   extremes <- list(maxt = max(temp_dists), mint = min(temp_dists), 
                    maxg = max(geo_dists), ming = min(geo_dists))
   
+  outputMessages("\nGenerating intra-cluster distances:")
   collectDistances(TRUE, m$assignments, parts, fpaths = dists, extremes)
 }
 
