@@ -26,6 +26,14 @@ timeTaken <- function(pt, sw) {
   }
 }
 
+# Outputs the same message in two ways, one is directed to standard output and one to a log file
+outputDetails <- function(msg, newcat = FALSE) {
+  cat(msg)
+  if (newcat) {cat("\n")}
+  message(msg)
+}
+
+
 outputMessages <- function(msgs = NULL) {
   if (!is.null(msgs)) {
     cat(paste0("\n",msgs))

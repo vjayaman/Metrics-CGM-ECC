@@ -130,6 +130,43 @@ collectDistances <- function(save_extremes, assignments, parts, fpaths = NULL, e
   }
 }
 
+# Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
+# ("pt") and a two-element named vector with Sys.time() values named "start_time" and "end_time"
+timeTaken <- function(pt, sw) {
+  if (is.null(sw[["start_time"]]) & is.null(sw[["end_time"]])) {
+    paste0("Neither start nor end time were collected") %>% return()
+  }else if (is.null(sw[["end_time"]]) & !is.null(sw[["start_time"]])) {
+    paste0("End time was not collected.") %>% return()
+  }else if (!is.null(sw[["end_time"]]) & is.null(sw[["start_time"]])) {
+    paste0("Start time was not collected.") %>% return()
+  }else {
+    z <- difftime(sw[['end_time']], sw[['start_time']], units = "secs") %>% as.double()
+    m <- 60
+    h <- m^2
+    
+    if (z >= h) {
+      hrs <- trunc(z/h)
+      mins <- trunc(z/m - hrs*m)
+      paste0("\nThe ", pt, " process took ", hrs, " hour(s), ", mins, " minute(s), and ", 
+             round(z - hrs*h - mins*m), " second(s).") %>% return()
+    }else if (z < h & z >= m) {
+      mins <- trunc(z/m)
+      paste0("\nThe ", pt, " process took ", mins, " minute(s) and ", round(z - mins*m), " second(s).") %>% return()
+    }else {
+      paste0("\nThe ", pt, " process took ", round(z), " second(s).") %>% return()
+    }  
+  }
+}
+
+
+# Outputs the same message in two ways, one is directed to standard output and one to a log file
+outputDetails <- function(msg, newcat = FALSE) {
+  cat(msg)
+  if (newcat) {cat("\n")}
+  message(msg)
+}
+
+
 outputMessages <- function(msgs = NULL) {
   if (!is.null(msgs)) {
     cat(paste0("\n",msgs))
