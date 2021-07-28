@@ -69,6 +69,7 @@ distMatrix <- function(input_data, dtype, cnames) {
     
   }else if (dtype == "geo") {
     # consider using geosphere::distm() for this
+    # longitude, then latitude columns, in that order
     input_data %>% select(all_of(cnames)) %>% 
       as.data.frame() %>% earth.dist(dist = TRUE) %>% 
       as.matrix() %>% set_rownames(dm_names) %>% set_colnames(dm_names) %>% return()
