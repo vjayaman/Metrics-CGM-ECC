@@ -76,15 +76,12 @@ distMatrix <- function(input_data, dtype, cnames) {
   }
 }
 
-# save_extremes <- TRUE; assignments <- m$assignments; fpaths <- dists
-collectDistances <- function(save_extremes, assignments, parts, fpaths = NULL, extremes) {
+# assignments <- m$assignments; fpaths <- dists
+collectDistances <- function(assignments, parts, fpaths = NULL) {
   df <- parts$drs
   cx <- setdiff(colnames(df), c("Strain", "dr"))
   results <- parts$results
   p <- length(results)
-  
-  min_geo <- min_temp <- Inf
-  max_geo <- max_temp <- -Inf
   
   for (j in 1:p) {
     outputMessages(paste0("Working through group ", j, " / ", p))
@@ -98,36 +95,16 @@ collectDistances <- function(save_extremes, assignments, parts, fpaths = NULL, e
     dm_geo <- cluster_asmts %>% select(dr, Longitude, Latitude) %>% 
       distMatrix(., "geo", c("Longitude", "Latitude"))
     
-    min_temp <- min(min_temp, min(dm_temp))
-    max_temp <- max(max_temp, max(dm_temp))
-    
-    # min_geo <- min(min_geo, min(dm_geo + 10)) # necessary for the transformation step?
-    min_geo <- min(min_geo, min(dm_geo)) # necessary for the transformation step?
-    max_geo <- max(max_geo, max(dm_geo))
-    
     if (!is.null(fpaths)) {
       if (length(fpaths) == 1) {
-        list(temp = dm_temp, geo = dm_geo) %>%
-          saveRDS(., paste0(fpaths[[1]], "group", j, ".Rds"))
+        fname <- paste0(fpaths[[1]], "group", formatC(j, width=nchar(p), format="d", flag="0"), ".Rds")
+        list(temp = dm_temp, geo = dm_geo) %>% saveRDS(., fname)
       }
     }
     
     rm(dm_temp)
     rm(dm_geo)
     gc()
-  }
-  
-  if (save_extremes) {
-    tibble(
-      temp = list("max" = max(extremes$maxt, max_temp), "min" = min(extremes$mint, min_temp)), 
-      geo = list("max" = max(extremes$maxg, max_geo), "min" = min(extremes$ming, min_geo))
-    ) %>% 
-      saveRDS(., "intermediate_data/dist_extremes.Rds")
-  }else {
-    tibble(
-      temp = list("max" = max(extremes$maxt, max_temp), "min" = min(extremes$mint, min_temp)), 
-      geo = list("max" = max(extremes$maxg, max_geo), "min" = min(extremes$ming, min_geo))
-    ) %>% return()
   }
 }
 
@@ -224,10 +201,14 @@ sectionClusters <- function(k, typing_data, m) {
 }
 
 avgsFromDM <- function(tpx_dists, groups, g_cuts, type, cname, tpx) {
-  lapply(1:length(tpx_dists), function(j) {
+  lapply(1:length(groups$results), function(j) {
+    # clusters in group j
     group_j <- pull(groups$results[[j]], 1)
+    # distances between drs in group j
     dm_type <- readRDS(tpx_dists[j])[[type]]
+    # drs in the clusters in this group
     cluster_i <- groups$drs[Th %in% group_j]
+    # unique drs in this cluster
     unidrs <- unique(cluster_i$dr)
     dists_i <- dm_type[unidrs, unidrs]
     

@@ -33,8 +33,7 @@ returned_eccs <- readData(arg$ECCs) %>% as.data.table()
 
 strain_data <- readData(arg$strains, check_enc = TRUE)
 
-triples <-
-  colnames(returned_eccs) %>% grep("ECC", ., value = TRUE) %>% 
+triples <- colnames(returned_eccs) %>% grep("ECC", ., value = TRUE) %>% 
   strsplit(., split = "ECC.") %>% sapply(., '[[', 2) %>% unique()
 
 combos <- expand_grid(timepoint = c("TP1", "TP2"), triples) %>% 
@@ -93,7 +92,7 @@ checked_all_cols <- lapply(2:length(colnames(new_eccs)), function(j) {
 }) %>% unlist() %>% set_names(colnames(new_eccs)[-1])
 
 if (all(checked_all_cols)) {
-  outputMessages("All ECC columns match results generated manually.\n")
+  outputMessages("All ECC columns match results generated manually :)\n")
 }else {
   outputMessages("Not all columns of the generated ECC files match the manually generated result.\n")  
 }

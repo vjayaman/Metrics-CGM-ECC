@@ -5,7 +5,7 @@
 msg <- file("logs/logfile_inputs.txt", open="wt")
 sink(msg, type="message")
 
-libs <- c("optparse", "magrittr", "readr", "dplyr", "testit")
+libs <- c("optparse", "magrittr", "readr", "dplyr", "testit", "data.table")
 y <- lapply(libs, require, character.only = TRUE)
 
 option_list <- list(
@@ -25,14 +25,22 @@ arg <- parse_args(OptionParser(option_list=option_list))
 # FUNCTIONS ----------------------------------------------------------------------------------------------------
 source("scripts/Misc/formatprep.R")
 
-outputDetails(paste0("\n||", paste0(rep("-", 26), collapse = ""), " Prepping inputs for metric generation ", 
+outputDetails(paste0("\n||", paste0(rep("-", 26), collapse = ""), " Prepping inputs for metric generation ",
                      paste0(rep("-", 26), collapse = ""), "||\nStarted process at: ", Sys.time()), TRUE)
 outputDetails(paste0("\nWill save formatted inputs to 'processed' directory in ", arg$inputdir, " directory."), TRUE)
 
 # Results of "Form for analysis inputs" ------------------------------------------------------------------------
-params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>% 
-  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-              "th","nsTP1","nsTP2","temp_win","cnames"))
+params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ")
+
+test_params <- c("Region of interest", "Country of interest", "Has defined lineage information", 
+                 "Has defined date information (day, month, and year)", "Has province-level data", 
+                 "Province of interest", "Threshold of interest", "Is in a non-singleton cluster (at TP1)", 
+                 "Is in a non-singleton cluster (at TP2)", "Filtering by date", "Column names")
+
+assert("Input parameters are correctly labelled", identical(sapply(params, '[[', 1), test_params))
+
+params %<>% set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
+                        "th","nsTP1","nsTP2", "temp_win","cnames"))
 
 a1 <- readData(arg$metadata, FALSE)
 a2 <- suppressWarnings(readData(arg$metadata, check_enc = TRUE))
@@ -54,11 +62,16 @@ strain_data <- x$sd; time1 <- x$t1; time2 <- x$t2; initial_sizes <- x$sizes
 # COLUMN NAMES -------------------------------------------------------------------------------------------------
 reqnames <- c("Strain", "Latitude", "Longitude", "Day", "Month", "Year")
 cnames <- params$cnames[2] %>% strsplit(split = ",") %>% unlist()
-if (!("none" %in% cnames)) {
-  fullcnames <- c(reqnames, cnames)
+if (nchar(params$cnames[2]) > 3) { # nchar([,]) == 3
+  if (!("none" %in% cnames)) {
+    fullcnames <- c(reqnames, cnames)
+  }else {
+    fullcnames <- reqnames  
+  }
 }else {
   fullcnames <- reqnames
 }
+
 strain_data <- strain_data %>% select(all_of(fullcnames)) %>% 
   na.omit(Strain) %>% na.omit(Latitude) %>% na.omit(Longitude) %>% na.omit(Day) %>% 
   na.omit(Month) %>% na.omit(Year)
