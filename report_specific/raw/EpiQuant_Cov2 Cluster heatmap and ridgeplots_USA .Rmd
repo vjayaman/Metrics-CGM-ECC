@@ -1,0 +1,192 @@
+---
+title: "EpiQuant - SARS-Cov epiquant Project (2019-2020)"
+author: "Guangzhi, National Microbiology Laboratory "
+params:
+  clusters:
+    input: file
+    label: Clusters
+    value: clusters/
+  cpus:
+    input: numeric
+    label: CPUs
+    value: 1
+  gamma:
+    input: numeric
+    label: γ (geographic)
+    value: 1.0
+  sigma:
+    input: numeric
+    label: σ (source)
+    value: 0.0
+  source:
+    input: file
+    label: Source Data
+    value: source.tsv
+  strains:
+    input: file
+    label: Strain Data
+    value: strains.tsv
+  tau:
+    input: numeric
+    label: τ (temporal)
+    value: 0.0
+output:
+  html_document:
+    df_print: paged
+---
+
+
+## Introduction 
+
+Hi, thanks for making it this far! Please make sure to read the EpiQuant wiki page, and publication [link] (https://jcm.asm.org/content/55/5/1334) for a better understanding of the methodology. I'm assuming if you've made it this far, you have R and R Studio downloaded. Please read the text under each sections as I have provided additional detail about what the code is doing. I have annotated in the code for additional commments. Let's get started!*
+
+
+### Section 1: Install the packages needed for the analyses and load them into R 
+
+```{r install-packages, eval=FALSE}
+
+## Install the packages 
+install.packages("fossil")
+# install.packages("openxlsx")
+install.packages("reshape2")
+install.packages("plyr")
+install.packages("dplyr")
+install.packages("tidyr")
+install.packages("grid")
+install.packages("gridExtra")
+install.packages("ggplot2")
+install.packages("RColorBrewer")
+install.packages("gplots")
+install.packages("readr")
+install.packages("scatterplot3d")
+install.packages("d3heatmap")
+install.packages("devtools")
+install.packages("github")
+install.packages("ggpubr")
+install.packages("knitr")
+install.packages("ggrepel")
+install.packages("stringr")
+install.packages("magrittr")
+install.packages("tibble")
+install.packages("purrr")
+install.packages("ggridges")
+install.packages("forcats")
+
+```
+
+```{r load-packages}
+## Load the packages 
+suppressPackageStartupMessages({
+library(fossil)
+library(openxlsx)
+library(reshape2)
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(grid)
+library(gridExtra)
+library(ggplot2)
+library(RColorBrewer)
+library(gplots)
+library(readr)
+library(scatterplot3d)
+library(d3heatmap)
+library(devtools)
+library(knitr) 
+library(devtools)
+# library(ggpubr)
+library(ggrepel)
+library(stringr)
+library(magrittr)
+library(tibble)
+library(purrr)
+library(ggridges)
+library(lubridate)
+library(forcats)
+})
+
+```
+
+
+### Section 2: Generating the EpiMatrix 
+
+Now, we'll start by loading in a couple different data files: 
+
+1. [**source_pw**](https://www.dropbox.com/s/l1eefag519rpol5/SourcePairwise%2803-Mar-20%29.txt?dl=0) - This file contains the pairwise source similarities generated at the [EpiQuant Webserver] (https://hetmanb.shinyapps.io/EpiQuant/)
+2. [**strain_data**](https://www.dropbox.com/s/2mdxskxtma0nox6/Strain_data%2803-Mar-20%29.txt?dl=0) - This file comes from your own data, see below to look at the structure of the file, it needs to be followed precisely for the following scripts to work.  
+
+```{r load-data}
+source_pw <- read_tsv(params$source) %>% 
+  mutate(Source.Dist = 1- value) %>% 
+  select(-value)
+
+strain_data <- read_tsv(params$strains) %>% 
+  mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")),
+  Location = paste(Country, Province, City, sep = "_"))
+
+```
+
+```{r calculate-epi-table}
+source("helpers/epi-helper.R")
+
+## Coefficients for source, temporal and geographical components of the EpiQuant Model: combination of these should ad  to 1.0
+sigma  <- params$sigma #source
+tau    <- params$tau   #temporal   
+gamma  <- params$gamma #geographical 
+
+
+# TODO Testing variables: remove
+datafile <- strain_data
+source_matrix <- source_pw
+source_coeff <- sigma
+temp_coeff <- tau
+geog_coeff <- gamma
+
+## This generates a table of your comparisons based on your epidemiological data (source, time, geographical) with the  assigned weights of s, t and g and then computes the similarity/distance and generates a matrix
+epi.table <- EpiTable(strain_data, source_pw, sigma, tau, gamma)
+epi.matrix <- EpiMatrix(epi.table)
+
+```
+
+### Section 3: Heatmap for selected clusters
+
+```{r, eval=FALSE}
+source("helpers/epi-helper.R")
+Strain_Data_EU <- read_csv("Strain_data_USA.csv")
+T_3321 <-Strain_Data_EU%>%filter(TP2_cluster_size== 3321)
+Matrix_3321 <-epi.matrix[rownames(epi.matrix)%in%T_3321$Strain,colnames(epi.matrix)%in%T_3321 $Strain]
+#png("EU_3321_Geo.png")
+png("EU_3321_Temp.png")
+EpiHeatmap_pdf(Matrix_3321)
+dev.off()
+
+T_732 <-Strain_Data_EU%>%filter(TP2_cluster_size== 732)
+Matrix_732 <-epi.matrix[rownames(epi.matrix)%in%T_732 $Strain,colnames(epi.matrix)%in%T_732 $Strain]
+#png("EU_732_Geo.png")
+png("EU_732_Temp.png")
+EpiHeatmap_pdf(Matrix_732)
+dev.off()
+
+T_593 <-Strain_Data_EU%>%filter(TP2_cluster_size== 593)
+Matrix_593 <-epi.matrix[rownames(epi.matrix)%in%T_593 $Strain,colnames(epi.matrix)%in%T_593 $Strain]
+#png("EU_593_Geo.png")
+png("EU_593_Temp.png")
+EpiHeatmap_pdf(Matrix_593)
+dev.off()
+
+T_525 <-Strain_Data_EU%>%filter(TP2_cluster_size== 525)
+Matrix_525 <-epi.matrix[rownames(epi.matrix)%in%T_525 $Strain,colnames(epi.matrix)%in%T_525 $Strain]
+png("EU_525_Geo.png")
+#png("EU_525_Temp.png")
+EpiHeatmap_pdf(Matrix_525)
+dev.off()
+
+T_264 <-Strain_Data_EU%>%filter(TP2_cluster_size== 264)
+Matrix_264 <-epi.matrix[rownames(epi.matrix)%in%T_264$Strain,colnames(epi.matrix)%in%T_264 $Strain]
+png("EU_264_Geo.png")
+#png("EU_264_Temp.png")
+EpiHeatmap_pdf(Matrix_264)
+dev.off()
+```
+
+            

@@ -1,0 +1,128 @@
+---
+title: "EpiQuant - SARS-Cov epiquant Project (2019-2020)"
+author: "Guangzhi, National Microbiology Laboratory "
+params:
+  gamma:
+    input: numeric
+    label: γ (geographic)
+    value: 1.0
+  sigma:
+    input: numeric
+    label: σ (source)
+    value: 0.0
+  strains:
+    input: file
+    label: Strain Data
+    value: inputs/processed/strain_info.txt
+  tau:
+    input: numeric
+    label: τ (temporal)
+    value: 0.0
+output:
+  html_document:
+    df_print: paged
+---
+
+
+## Introduction 
+
+Hi, thanks for making it this far! Please make sure to read the EpiQuant wiki page, and publication [link] (https://jcm.asm.org/content/55/5/1334) for a better understanding of the methodology. I'm assuming if you've made it this far, you have R and R Studio downloaded. Please read the text under each sections as I have provided additional detail about what the code is doing. I have annotated in the code for additional commments. Let's get started!*
+
+
+### Section 1: Install the packages needed for the analyses and load them into R 
+
+```{r setup, install-packages, echo=FALSE}
+libs <- c("testit", "fossil", "reshape2", "plyr", "dplyr", "tidyr", "grid", "gridExtra",
+          "ggplot2", "RColorBrewer", "gplots", "readr", "scatterplot3d", "d3heatmap", 
+          "devtools", "ggpubr", "knitr", "ggrepel", "stringr", "magrittr", 
+          "tibble", "purrr", "ggridges", "forcats")#, "data.table")
+y <- suppressWarnings(
+  suppressPackageStartupMessages(
+    lapply(libs, require, character.only = TRUE)
+  )
+)
+assert("All packages loaded correctly", all(unlist(y)))
+```
+
+
+### Section 2: Generating the EpiMatrix 
+
+Now, we'll start by loading in a couple different data files: 
+
+1. [**source_pw**](https://www.dropbox.com/s/l1eefag519rpol5/SourcePairwise%2803-Mar-20%29.txt?dl=0) - This file contains the pairwise source similarities generated at the [EpiQuant Webserver] (https://hetmanb.shinyapps.io/EpiQuant/)
+2. [**strain_data**](https://www.dropbox.com/s/2mdxskxtma0nox6/Strain_data%2803-Mar-20%29.txt?dl=0) - This file comes from your own data, see below to look at the structure of the file, it needs to be followed precisely for the following scripts to work.  
+
+```{r load-data}
+strain_data <- suppressMessages(read_tsv(params$strains)) %>% 
+  mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")),
+  Location = paste(Country, Province, City, sep = "_"))
+  # slice(1:1000)
+```
+
+```{r calculate-epi-table}
+source("report_specific/epi-helper-no-source.R")
+
+## Coefficients for source, temporal and geographical components of the EpiQuant Model: combination of these should ad  to 1.0
+# sigma  <- 0 #source
+tau    <- params$tau   #temporal
+gamma  <- params$gamma #geographical
+# 
+# # TODO Testing variables: remove
+datafile <- strain_data
+# source_coeff <- sigma
+temp_coeff <- tau
+geog_coeff <- gamma
+
+## This generates a table of your comparisons based on your epidemiological data (source, time, geographical) with the  assigned weights of s, t and g and then computes the similarity/distance and generates a matrix
+epi.table <- EpiTableNoSource(strain_data, tau, gamma)
+epi.matrix <- EpiMatrix(epi.table)
+```
+
+### Section 3: Heatmap for selected clusters
+
+```{r}
+# source("report_specific/epi-helper-no-source.R")
+# cgms <- suppressMessages(read_tsv("results/CGM_strain_results.tsv")) %>% arrange(-tp2_cl_size)
+# csizes <- cgms %>% select(first_tp2_flag, tp2_cl, tp2_cl_size) %>% filter(tp2_cl_size < 6000) %>% 
+#   unique() %>% as.data.table()
+# z <- table(csizes$tp2_cl_size) %>% as.data.frame() %>% as.data.table() %>% 
+#   mutate(across(Var1, as.character)) %>% mutate(across(Var1, as.integer)) %>% 
+#   arrange(-Var1) %>% filter(Freq == 1) %>% slice(1:5)
+# clusters <- csizes[tp2_cl_size %in% z$Var1]$tp2_cl %>% gsub("c", "", .)
+# 
+# epi.matrices <- lapply(clusters, function(x) {
+#   epi.table <- readRDS(paste0("results/dists/TP2/cluster", x, ".Rds")) %>% 
+#     mutate(Total.Dist = sqrt( (((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma)) ), 
+#            Epi.Sym = 1 - Total.Dist) %>% 
+#     rename(Strain.1 = Strain1, Strain.2 = Strain2)
+#   EpiMatrix(epi.table) %>% return()
+# }) %>% set_names(clusters)
+```
+
+### Section 3: Heatmap for selected clusters
+
+```{r}
+cgms <- suppressMessages(read_tsv("results/CGM_strain_results.tsv"))
+size_details <- cgms %>% 
+  select(Strain, tp2_cl, tp2_cl_size) %>% 
+  rename(TP2_cluster_size = tp2_cl_size)# %>% as.data.table()
+
+top_five <- size_details %>% select(-Strain) %>% unique() %>% 
+  arrange(-TP2_cluster_size) %>% filter(TP2_cluster_size < 10000) %>% 
+  slice(1:5) %>% pull(tp2_cl)
+```
+
+
+```{r}
+for (i in 1:length(top_five)) {
+  cl_strains <- size_details %>% filter(tp2_cl %in% top_five[i])
+  cl_epi <- epi.matrix[rownames(epi.matrix) %in% cl_strains$Strain, 
+                       colnames(epi.matrix) %in% cl_strains$Strain]
+  cl_id <- cgms %>% filter(tp2_cl == top_five[i]) %>% slice(1) %>% pull(first_tp2_flag)
+  
+  png(paste0("report_specific/", cl_id, ".png"))
+  EpiHeatmap_pdf(cl_epi)
+  dev.off()
+}
+```
+            
