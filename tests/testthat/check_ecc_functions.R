@@ -1,17 +1,27 @@
-testDists <- function(strain_data) {
+testDists <- function(strain_data, temps = NULL, geos = NULL) {
   a2 <- strain_data %>% select(Strain, Longitude, Latitude) %>% as.data.frame() %>% 
     column_to_rownames("Strain") %>% earth.dist(dist = TRUE) %>% as.matrix() %>% 
     set_rownames(strain_data$Strain) %>% set_colnames(strain_data$Strain)
-  a3 <- a2 %>% transformData2(., "geo", min(a2), max(a2)) %>% 
-    formatData(., c("Strain1", "Strain2", "Geog.Dist"))
+  if (is.null(geos)) {
+    a3 <- a2 %>% transformData2(., "geo", min(a2), max(a2)) %>% 
+      formatData(., c("Strain1", "Strain2", "Geog.Dist"))
+  }else {
+    a3 <- a2 %>% transformData2(., "geo", geos$minval, geos$maxval) %>% 
+      formatData(., c("Strain1", "Strain2", "Geog.Dist"))
+  }
   
   b1 <- strain_data %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% select(Strain, Date)
   b2 <- b1 %>% pull(Date) %>% 
     dist(diag = FALSE, upper = FALSE, method = "euclidean") %>% 
     as.matrix(nrow = nrow(b1), ncol = nrow(b1)) %>% 
     set_rownames(b1$Strain) %>% set_colnames(b1$Strain)
-  b3 <- b2 %>% transformData2(., "temp", min(b2), max(b2)) %>% 
-    formatData(., c("Strain1", "Strain2", "Temp.Dist"))
+  if (is.null(temps)) {
+    b3 <- b2 %>% transformData2(., "temp", min(b2), max(b2)) %>% 
+      formatData(., c("Strain1", "Strain2", "Temp.Dist"))
+  }else {
+    b3 <- b2 %>% transformData2(., "temp", temps$minval, temps$maxval) %>% 
+      formatData(., c("Strain1", "Strain2", "Temp.Dist"))
+  }
   
   transformed_dists <- merge.data.table(b3, a3)
   return(transformed_dists)

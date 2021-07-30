@@ -197,19 +197,20 @@ collectECCs <- function(k, m, parts, extremes, c1, read_from, save_to) {
   tau <- c1[2]
   gamma <- c1[3]
   
+  fname <- formatC(1:length(results), width=nchar(length(results)), format="d", flag="0")
+  
   final_steps <- lapply(1:length(results), function(j) {
-    
     outputMessages(paste0("   Collecting ECCs for group of clusters ", j, " / ", length(results)))
-    cluster_x <- df[df[[cx]] %in% pull(results[[j]], cx),-"Strain"]
     
-    dms <- paste0(read_from, "group", j, ".Rds") %>% readRDS()
+    cluster_x <- df[df[[cx]] %in% pull(results[[j]], cx),-"Strain"]
+    dms <- readRDS(paste0(read_from, "group", fname[j], ".Rds"))
     
     transformed_temp <- dms$temp %>% 
-      transformData2(., "temp", extremes$temp$min, extremes$temp$max) %>% 
+      transformData2(., "temp", extremes$mint, extremes$maxt) %>% 
       formatData(., c("dr1","dr2","Temp.Dist"))
     
     transformed_geo <- dms$geo %>%
-      transformData2(., "geo", extremes$geo$min, extremes$geo$max) %>%
+      transformData2(., "geo", extremes$ming, extremes$maxg) %>%
       formatData(., c("dr1","dr2","Geog.Dist"))
     
     rm(dms); gc()
@@ -220,6 +221,6 @@ collectECCs <- function(k, m, parts, extremes, c1, read_from, save_to) {
     rm(transformed_temp); rm(transformed_geo); gc()
     
     epiCollectionByCluster(m$strain_data, tau, gamma, transformed_dists, k, cluster_x) %>% 
-      saveRDS(., paste0(save_to, "group", j, ".Rds"))
+      saveRDS(., paste0(save_to, "group", fname[j], ".Rds"))
   })
 }

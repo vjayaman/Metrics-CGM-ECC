@@ -22,7 +22,7 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 
 # COLLECT dist matrices using TP2 clusters ---------------------------------------------------------
 
-for (k in 1:2) {
+for (k in c(2,1)) {
   dir.create(paste0("intermediate_data/TP", k), showWarnings = FALSE)
   dir.create(paste0("intermediate_data/TP", k, "/dists"), showWarnings = FALSE)
   
@@ -30,49 +30,31 @@ for (k in 1:2) {
   dists <- paste0("intermediate_data/TP", k, "/dists/")
   parts <- sectionClusters(k, typing_data, m)
   
-  outputMessages("\nGenerating inter-cluster distances:")
-  # inter-cluster detour
-  dr_clusters <- typing_data[[k]] %>% 
-    rownames_to_column("Strain") %>%
-    as.data.table() %>% left_join(., m$dr_matches, by = "Strain") %>% 
-    select(-Strain) %>% unique() %>% set_colnames(c("hx", "dr"))
-  
-  # b0 <- dr_clusters$dr %>% unique()
-  b1 <- dr_clusters$dr %>% unique()
-  b2 <- t(combn(as.factor(b1), 2)) %>% as.data.table()
-  b3 <- b2 %>% set_colnames(c("dr1", "dr2"))
-  
-  b4 <- left_join(dr_clusters, b3, by = c("dr" = "dr1")) %>% rename("hx1" = "hx", "dr1" = "dr")# %>% 
-  b4 <- b4[!is.na(dr1) & !is.na(dr2)]
-  b5 <- b4 %>% left_join(., dr_clusters, by = c("dr2" = "dr")) %>% rename("hx2" = "hx")
-  # drs that are NOT in the same cluster:
-  b6 <- b5[hx1 != hx2] %>% select(-hx1, -hx2) %>% unique()
-
-  inter_dists <- c(b6$dr1, b6$dr2) %>% unique() %>% sort() %>% as_tibble() %>% 
-    set_colnames("dr") %>% left_join(., m$assignments, by = "dr") %>% as.data.table()
-  
-  temp_dists <- inter_dists %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
-  saveRDS(temp_dists, paste0("intermediate_data/TP", k, "/dists/inter_dists_temp.Rds"))
-  
-  geo_dists <- inter_dists %>% select(dr, Longitude, Latitude) %>% 
-    distMatrix(., "geo", c("Longitude", "Latitude"))
-  saveRDS(geo_dists, paste0("intermediate_data/TP", k, "/dists/inter_dists_geo.Rds"))
-  
-  extremes <- list(maxt = max(temp_dists), mint = min(temp_dists), 
-                   maxg = max(geo_dists), ming = min(geo_dists))
+  if (k == 2) {
+    geo_dists <- m$assignments %>% select(Longitude, Latitude) %>% unique() %>% 
+      rownames_to_column("id") %>% distMatrix(., "geo", c("Longitude", "Latitude"))
+    temp_dists <- m$assignments %>% select(Date) %>% unique() %>% 
+      rownames_to_column("id") %>% distMatrix(., "temp", "Date")
+    
+    extremes <- list(maxt = max(temp_dists), mint = min(temp_dists), 
+                     maxg = max(geo_dists), ming = min(geo_dists))
+    saveRDS(extremes, "intermediate_data/dist_extremes.Rds")
+  }
   
   outputMessages("\nGenerating intra-cluster distances:")
-  collectDistances(TRUE, m$assignments, parts, fpaths = dists, extremes)
+  collectDistances(m$assignments, parts, fpaths = dists)
+  # collectDistances(TRUE, m$assignments, parts, fpaths = dists, extremes)
 }
 
 outputMessages("\nFinished saving non-redundant pairwise distances, in groups.")
 
 outputMessages(paste0("\nNot saving (strain) pairwise distances for separate use. ", 
-                        "\nTo save the full set of distances, run 6_full_dists.R"))
+                        "\nTo save the full set of distances, run 6_full_dists.R\n"))
 
 # Average distances --------------------------------------------------------------------------
 assert("Distances were collected and saved", file.exists("intermediate_data/dist_extremes.Rds"))
 
+outputMessages("\nCollecting average distances ...")
 avg_dists <- lapply(1:2, function(tpx) {
   tpx_dists <- paste0("intermediate_data/TP", tpx, "/dists/") %>% 
     list.files(., pattern = "group", full.names = TRUE)
@@ -100,8 +82,7 @@ tp2_avg_dists <- tp2$proc %>% select(-TP2) %>%
   left_join(., avg_dists[["TP2"]], by = intersect(colnames(.), colnames(avg_dists[["TP2"]])))
 
 all_avg_dists <- right_join(tp1_avg_dists, tp2_avg_dists, by = "Strain")
-
-saveRDS(all_avg_dists, "results/average_dists.Rds")
+saveRDS(all_avg_dists, "intermediate_data/average_dists.Rds")
 
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), 
            " End of distances collection ", paste0(rep("-", 31), collapse = ""), "||\n"))

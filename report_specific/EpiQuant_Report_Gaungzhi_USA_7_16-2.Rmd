@@ -1,0 +1,1086 @@
+---
+title: "SARS_CoV2 EpiQuant Analysis Report" 
+output:
+  bookdown::html_document2: null
+  
+---
+ 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, eval=TRUE)
+```
+
+
+```{r load-packages}
+libs <- c("openxlsx", "reshape2", "plyr", "dplyr", "tidyr", "grid", "gridExtra", "ggplot2", 
+          "RColorBrewer", "gplots", "readr", "scatterplot3d", "d3heatmap", "devtools", 
+          "knitr", "devtools", "ggpubr", "ggrepel", "stringr", "magrittr", "tibble", 
+          "purrr", "summarytools", "lubridate", "tinytex", "png", "patchwork", "tidyverse", 
+          "ggridges", "bookdown", "testit")
+
+y <- lapply(libs, require, character.only = TRUE)
+assert("All packages loaded correctly", all(unlist(y)))
+
+## for tables
+pacman::p_load(
+  rio,          # File import
+  here,         # File locator
+  skimr,        # get overview of data
+  tidyverse,    # data management + ggplot2 graphics 
+  gtsummary,    # summary statistics and tests
+  rstatix,      # summary statistics and statistical tests
+  janitor,      # adding totals and percents to tables
+  scales,       # easily convert proportions to percents  
+  flextable,    # converting tables to pretty images
+  kableExtra)
+```
+
+# **Section 1: Outline of data analysis** {#top-link -}
+
+#### **1. Basic information** {.unnumbered}
+- **Name of analyst**: Guangzhi, Ed, Vasena, Dillon, Emily, Samantha 
+- **Date of analysis**: 7/06/2021
+- **Database version**: USAfirst wave
+- **Data Source**: [GISAID](https://www.gisaid.org)
+ 
+#### **2. Parameters**{.unnumbered}
+- **Countries/Provinces of interest**: USA and China
+- **Period of interest (T0, T1, T2,...)**: Timepoit 1 and Timepoint 2
+- **Variants of interest**
+  - VOCs:
+  - Prevalent lineages:
+  - Mutations of interest:
+
+#### **3. Overview of data visulization**   {#plot-link -}
+- **Temporal distribution:**  (see <span style="color:blue">Figure</span> \@ref(fig:plot1))
+  - by region:
+    - Faceted histogram by region
+    - Ridgeline plot by region
+- **Geospatial distribution: ** (see <span style="color:blue">Figure</span> \@ref(fig:plot2))
+   - by time (week, month ,TP):
+     - Faceted histogram by time
+     - Ridgeline plot by time
+- **Lineages prevalence:** 
+   - by time (week, month ,TP): (see <span style="color:blue">Figure</span> \@ref(fig:plot3))
+     - Faceted histogram by time
+     - Ridgeline plot by time
+   - by geography:
+     - Country (TP, month and week) (see <span style="color:blue">Figure</span> \@ref(fig:plot4))
+     - Province (TP, month and week) (see <span style="color:blue">Figure</span> \@ref(fig:plot5))
+     
+- **ECC analysis:** 
+   - ECC_0.0.1: Geo_ECC
+   - ECC_0.1.0: Temp_ECC
+  - GEO and Temp ECC histogram: (see <span style="color:blue">Figure</span> \@ref(fig:plot6))
+    - Faceted histogram by time interval
+    - Faceted histogram by region
+  - GEO vs TEMP bubble plots : (see <span style="color:blue">Figure</span> \@ref(fig:plot7))
+    - Faceted histogram by time interval
+    - Faceted histogram by region
+  - ECC Change vector analysis: 
+    - Analysis of directionality graph (see <span style="color:blue">Figure</span> \@ref(fig:plot8))
+    - Pie chart and Bar chart(TP1 Size, Geo_ECC, Temp_Ecc, delta_Geo_ECC, delta_Temp_Ecc)    (see <span style="color:blue">Figure</span> \@ref(fig:plot9))
+    
+  
+- **Variants of interest:**  (see <span style="color:blue">Figure</span> \@ref(fig:plot10))
+  - GEO heatmap
+  - TEMP heatmap
+  
+#### **4. Data summary tables**  {#tab-link -} 
+- **Summary of SARS-Cov2 genomes by geograpy and time**   
+  - by country and TP/month by time (week, month ,TP):
+  - by country and week
+- **Summary of SARS-Cov2 genomes by PANGO lineages** 
+   -  by PANGO lineages and country
+   -  by PANGO lineages and Timepoint/Month
+   -  by PANGO lineages and week
+   -  Summary table for change vector directionality
+   \
+   (see[Tables](#table-link))
+ 
+#### **5. Data interpretaion**{.unnumbered}
+   
+```{r }
+## loading data
+EU_long  <- read.csv("Merged_strain_results_USA.csv", encoding="UTF-8", stringsAsFactors=FALSE)
+a1 <- read.csv("results/CGM_strain_results.tsv")
+Lineages <-  read.csv("GISAID Lineages (77000 isolates).csv", 
+                      encoding="UTF-8", stringsAsFactors=FALSE) %>% 
+  select("Strain", "T0.original") # Add Lineage information
+
+EU_long <- merge(x = EU_long, y = Lineages, by = "Strain", all.x=TRUE)
+# create an new date varible in T0000_long , need to load the package: ‘lubridate'
+EU_long <- EU_long  %>% mutate(Date = make_datetime(Year, Month, Day))
+# create new varibles Week and Running day
+EU_long$Week = week(EU_long$Date)
+EU_long$Running_Day = difftime(EU_long$Date, min(EU_long$Date), units = "days")
+# create  Multistrain_Cluster vriable
+EU_long <- EU_long%>%mutate(Multistrain_Cluster = ifelse(Cluster_size >2,"Multistrain","Singleton" ))
+EU_final <-rbind(EU_long%>%filter(TP =="TP1",TP1==1),EU_long%>%filter(TP== "TP2",TP2==1))
+EU_T20_clusters <- EU_final%>%group_by(TP, T0.original)%>%dplyr::summarise(n=n())%>%top_n(20)
+EU_final<-EU_final%>% mutate(PANGO_lineage = ifelse (T0.original%in%EU_T20_clusters$T0.original,T0.original,"Others"))%>%as.data.frame()
+
+```
+
+### **Section 2: Temporal and geographic distribution of genomes**{.unnumbered}
+
+```{r  plot1,fig.cap="**Temporal distribution of genomes**", fig.topcaption = TRUE,echo=FALSE,message=FALSE,fig.height= 18, fig.width= 18}
+###Temporal distribution: (TP2 data only)
+
+Plot_Theme = theme( 
+           #axis.text.x = element_text( size = 20 ),
+           axis.title = element_text( size = 16, face = "bold" ),
+           #legend.position="none",
+           strip.text = element_text(size = 14,face = "bold"),
+           strip.background = element_rect(fill = "lightblue", colour = "black",size = 1),
+           plot.title = element_text(size = 20),
+           plot.tag = element_text(size =20,face = "bold"))
+
+Tag_Theme_1 = theme(plot.tag = element_text(size =20,face = "bold"),
+                 plot.margin = unit(c(1,0,0,1), "cm"),
+                 plot.tag.position = c(0.02,1),
+                 plot.title = element_text(hjust= 0.043, vjust = 2.85)
+                )
+
+Legend_Theme =theme(legend.title = element_text(size=16),
+        legend.text = element_text(size=14))
+        #legend.position="none")
+
+#g+theme(text = element_text(size=rel(3.5))
+
+
+Data <-EU_final%>%filter(TP =="TP2")%>%group_by(Country,Month, Day)%>%mutate(Genome_count=n(),height = Genome_count / sum(Genome_count))%>%mutate(Country = factor(Country, levels=c("China","USA" )))
+# -Faceted histogram by region
+P1 <-ggplot(EU_final%>%filter(TP =="TP2"),aes(x = Date,   fill = Multistrain_Cluster)) +
+  theme_bw()+
+  geom_histogram(position="dodge") +
+  facet_wrap(~ Country) +
+  scale_fill_manual(values = c("#0077b6","#FCA311")) +
+  labs(y = "Genome Count", x = "Month",tag ="Figure 1A." ) +ggtitle("USA and China_genome count ")+
+  Plot_Theme+ Tag_Theme_1  +Legend_Theme
+# -Ridgeline plot by region 
+P2 <-ggplot(data = Data,aes(x = Date, y = Country, height = scales::rescale(Genome_count))) +
+  geom_ridgeline(fill = "#0077b6")+
+  theme_bw()+
+   labs(y = "Country", x = "Month",tag ="Figure 1B.") + 
+   ggtitle("USA and China_frequency")+ Plot_Theme+ Tag_Theme_1  +Legend_Theme
+P1/P2
+```
+
+
+```{r echo=FALSE,message=FALSE,fig.height= 18, fig.width= 18}
+Data <-EU_final%>%filter(TP =="TP2")%>%group_by(Country,Province,Month, Day)%>%mutate(Genome_count=n(),height = Genome_count / sum(Genome_count))%>%mutate(Country = factor(Country, levels=c("China","USA" )))
+EU_final1 <- EU_final%>%mutate(Province = ifelse(Country == "China","China",Province ))
+P3 <-ggplot(EU_final1%>%filter(TP =="TP2"),aes(x = Date,   fill = Multistrain_Cluster)) +
+  theme_bw()+
+  geom_histogram(position="dodge") +
+  facet_wrap(~ Province) +
+  scale_fill_manual(values = c("#0077b6","#FCA311")) +
+  labs(y = "Genome Count", x = "Month",tag= "Figure 1C.")  + Plot_Theme +Legend_Theme+theme(axis.text.x=element_text( size = 12,face = "bold", angle = 90,  hjust = 1),
+                                                                                            strip.text = element_text(size = 10,face = "bold"))
+
+P3+ggtitle("USA provinces-genome count")+ Tag_Theme_1 +
+  theme(plot.tag = element_text(size =20,face = "bold"),
+        plot.title = element_text(hjust= 0.047, vjust = 2.85)
+                )
+
+
+```
+
+```{r  echo=FALSE,message=FALSE,fig.height= 18, fig.width= 18}
+# -Ridgeline plot by region 
+P4 <-ggplot(data = Data,aes(x = Date, y = Province, height = scales::rescale(Genome_count))) +
+  geom_ridgeline(fill = "#0077b6")+
+  theme_bw()+
+   labs(y = "Province", x = "Month", tag ="Figure 1D.") +
+    ggtitle("USA provinces-frequency")+
+     Plot_Theme +
+       Legend_Theme +
+         theme(axis.text.x=element_text(size = 12,face = "bold", angle = 90))
+              
+# combine plot
+P4+  theme(plot.tag = element_text(size =20,face = "bold"),
+                 plot.margin = unit(c(1,0,0,1), "cm"),
+                 plot.tag.position = c(0.02,1),
+                 plot.title = element_text(hjust= -0.049, vjust = 2.85)
+                )
+```
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Overview of data visulization](#plot-link)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+
+`````{r plot2,fig.cap="**Geographic distribution of genomes**", fig.topcaption = TRUE, echo=FALSE,message=FALSE,fig.height=18, fig.width= 18}
+## Geospatial Distributon (TP2 Data for Month and Week)
+TP2_final<-EU_final%>%filter(TP =="TP2")
+
+Data4 <- EU_final%>%group_by(Province,TP,Multistrain_Cluster )%>% dplyr::summarise(n=n())%>%arrange(desc(n))
+
+Data3 <- EU_final%>%group_by(Country,TP,Multistrain_Cluster )%>% dplyr::summarise(n=n())%>%mutate(Country = factor(Country, levels=c("China","USA")))%>%arrange(desc(n))
+
+Data1 <-TP2_final%>%group_by(Country,Month, Multistrain_Cluster )%>% dplyr::summarise(n=n())%>%mutate(Country = factor(Country, levels=c("China","USA")))
+
+Data2 <-TP2_final%>%group_by(Country,Week, Multistrain_Cluster )%>% dplyr::summarise(n=n())%>%mutate(Country = factor(Country, levels=c("China","USA" )))%>%arrange(desc(n))                                                                                                                                                                                                                                                           
+P6 <- ggplot(Data3, aes(x = Country, y = n, fill= Multistrain_Cluster )) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge")+
+   facet_wrap(~ TP) +
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+  theme(axis.text.x=element_text(color = "black", size = 6, angle = 90,hjust = 1))+
+    labs(y = "Country", x = "Genome count",tag ="Figure 2A.") +
+     ggtitle("Country-Timepoint")+  Plot_Theme+ Tag_Theme_1  +Legend_Theme
+P7 <- ggplot(Data4, aes(x = Province, y = n, fill= Multistrain_Cluster )) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge")+
+   facet_wrap(~ TP) +
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+  theme(axis.text.x=element_text(color = "black", size = 6, angle = 90,hjust = 1))+
+    labs(y = "Province", x = "Genome count",tag ="Figure 2B.")+    
+      ggtitle("Province-Timepoint")+  Plot_Theme+ Tag_Theme_1  +Legend_Theme
+
+P6/P7 + plot_layout(widths = c(1, 1),guides = 'collect')
+
+```
+
+
+`````{r  echo=FALSE,message=FALSE,fig.height=18, fig.width= 18}
+
+
+P8 <- ggplot(Data1, aes(x = Country, y=n,fill= Multistrain_Cluster )) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge")+
+   facet_wrap(~ Month) +
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+   theme(axis.text.x=element_text( size = 12, angle = 90,  hjust = 1))+
+    labs(y = "Country", x = "Genome count",tag ="Figure 2C.")+
+     ggtitle("Country_Month") +  Plot_Theme+ Tag_Theme_1  +Legend_Theme
+P9 <- ggplot(Data2, aes(x = Country, y = n, fill= Multistrain_Cluster )) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge")+
+   facet_wrap(~ Week) +
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+   theme(axis.text.x=element_text( size = 12, angle = 90,  hjust = 1))+
+    labs(y = "Country", x = "Genome count",tag ="Figure 2D.") +
+      ggtitle("Country_Week")+  Plot_Theme+ Tag_Theme_1  +Legend_Theme+theme(legend.position="none")
+
+P8/P9+ plot_layout(widths = c(1, 1),guides = 'collect')
+
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Overview of Data Visulization](#plot-link)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+### **Section 3: Lineage prevalence**{.unnumbered}
+
+```{r plot3,fig.cap="**Lineage prevalence by genome count**", fig.topcaption = TRUE, echo=FALSE,message=FALSE,results=FALSE,fig.keep="all",fig.height= 9, fig.width= 18}
+EU_T20_clusters <- EU_final%>%group_by(TP, T0.original)%>%dplyr::summarise(n=n())%>%top_n(20)
+EU_T10_clusters <- EU_final%>%filter (TP == "TP2")%>%group_by( T0.original)%>%dplyr::summarise(n=n())%>%top_n(10)
+EU_T5_clusters <- EU_final%>%filter (TP == "TP2")%>%group_by( T0.original)%>%dplyr::summarise(n=n())%>%top_n(5)
+Variant_prevelance<-EU_final%>% select ("Strain","TP", "Country","Province", "Month", "Week","PANGO_lineage")
+Lineage_Order <- read_csv("lineage_order_USA.csv")
+
+# -Faceted histogram by Country
+Data <-Variant_prevelance %>%group_by(Country, TP,PANGO_lineage)%>%filter (PANGO_lineage%in%EU_T20_clusters$T0.original)%>%mutate(Genome_count=n())%>%mutate(Country = factor(Country, levels=c("China","USA" )))
+P1 <-ggplot(Data,aes(x = reorder(PANGO_lineage, -Genome_count),   fill = TP)) +
+  theme_bw()+
+  geom_histogram(stat="count",position="dodge") +
+  facet_wrap(~ Country) +
+  scale_fill_manual(values = c("#0077b6","#FCA311")) +
+  theme(axis.text.x = element_text(size = 12, angle = 90, vjust = 0.6)) +
+  labs(y = "Genome Count", x = "PANGO_lineage",tag ="Figure 3A.")+
+      ggtitle("Timepoint") +  Plot_Theme+ Tag_Theme_1  +Legend_Theme
+  
+
+P1
+```
+
+
+```{r  echo=FALSE,message=FALSE,results=FALSE,fig.keep="all",fig.height= 9, fig.width= 18}
+#-Ridgeline plot by region
+Data <-EU_final%>%group_by(PANGO_lineage, Day)%>%mutate(Genome_count=n(),height = Genome_count / sum(Genome_count))%>%mutate(PANGO_lineage = factor(PANGO_lineage,levels= Lineage_Order$`PANGO_lineage/Country`))
+ P2 <-ggplot(data = Data,
+       aes(x = Date, y = fct_rev(PANGO_lineage ), height = scales::rescale(Genome_count))) +
+  geom_ridgeline(fill="#0077b6")+
+  theme_bw()+
+   labs(y = "PANGO_lineage", x = "Month",tag ="Figure 3B.") +
+   ggtitle("Month") + Plot_Theme+ Tag_Theme_1  +Legend_Theme
+    
+ 
+P2+theme(plot.tag.position = c(0.017,1),
+                 plot.title = element_text(hjust= -0.035, vjust = 2.9)
+                )
+ 
+##Month
+Data <-Variant_prevelance %>%filter (PANGO_lineage%in%EU_T5_clusters$T0.original,TP == "TP2")%>%group_by(PANGO_lineage,Country,Month,)%>%mutate(Genome_count=n())%>%mutate(Country = factor(Country, levels=c("China","USA" )))
+```
+
+
+```{r  echo=FALSE,message=FALSE,results=FALSE,fig.keep="all",fig.height= 9, fig.width= 18}
+
+##Month
+Data <-Variant_prevelance %>%filter (PANGO_lineage%in%EU_T5_clusters$T0.original,TP == "TP2")%>%group_by(PANGO_lineage,Country,Month,)%>%mutate(Genome_count=n())%>%mutate(Country = factor(Country, levels=c("China","USA" )))
+P3 <-ggplot(Data,aes(x =Month, y= Genome_count,group = PANGO_lineage, color = PANGO_lineage)) +
+  theme_bw()+
+  geom_line(size = 1.3) +
+  facet_wrap(~ Country) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(y = "Genome Count", x = "Month",tag ="Figure 3C.")+
+    ggtitle("Month")
+P3 <-P3 + Plot_Theme +Legend_Theme
+P3+Tag_Theme_1
+```
+
+
+```{r  echo=FALSE,message=FALSE,results=FALSE,fig.keep="all",fig.height= 9, fig.width= 18}
+## WeeK
+Data <-Variant_prevelance %>%filter (TP=="TP2",PANGO_lineage%in%EU_T5_clusters$T0.original,)%>%group_by(PANGO_lineage,Country, Week)%>%mutate(Genome_count=n())%>%mutate(Country = factor(Country, levels=c("China","USA")))
+
+P4 <-ggplot(Data,aes(x = Week, y= Genome_count,group = PANGO_lineage, color = PANGO_lineage)) +
+  theme_bw()+
+  geom_line(size = 1.3) +
+  facet_wrap(~ Country) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(y = "Genome Count", x = "Week",tag ="Figure 3D.")+
+  ggtitle("Week")+ Plot_Theme +Legend_Theme
+
+P4+Tag_Theme_1
+
+```
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Overview of data visulization](#plot-link)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+\
+
+```{r plot4,fig.cap="**Prevalent lineages in countries**", fig.topcaption = TRUE,echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+## Country count in TP, Month and Week 
+EU_T6_clusters <- EU_final%>%filter (TP == "TP2")%>%group_by( T0.original)%>%dplyr::summarise(n=n())%>%top_n(6)
+ Country_TP <- Variant_prevelance%>%group_by(PANGO_lineage,TP) %>% 
+  dplyr::summarise(Frequency = n_distinct(Country))
+
+ Country_Month <- Variant_prevelance%>% filter(TP == "TP2",PANGO_lineage%in%EU_T6_clusters$T0.original)%>%group_by(PANGO_lineage,Month) %>% 
+  dplyr::summarise(Frequency = n_distinct(Country))
+  
+ Country_Week <- Variant_prevelance%>% filter(TP == "TP2",PANGO_lineage%in%EU_T6_clusters$T0.original)%>%group_by(PANGO_lineage,Week) %>% 
+  dplyr::summarise(Frequency = n_distinct(Country))
+  
+C_TP <- ggplot( Country_TP, aes(x =reorder(PANGO_lineage, -Frequency), y =Frequency, fill= TP)) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge")+
+    labs(y = "Number of country", x = "PANGO Lineages",tag ="Figure 4A.")+
+    scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    coord_flip()+ 
+   ggtitle ("Timepoint") + Plot_Theme +Legend_Theme+theme(axis.text.x=element_text( angle = 90, hjust = 1))
+
+C_TP +Tag_Theme_1+theme(plot.tag.position = c(0.017,1),
+                 plot.title = element_text(hjust= -0.035, vjust = 2.9)
+                )
+```
+
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+C_Month  <-ggplot(Country_Month,aes(x =Month, y = Frequency,group = PANGO_lineage, color = PANGO_lineage)) +
+  theme_bw()+
+  geom_line(size = 1.3) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(y = "Country Count", x = "Month",tag ="Figure 4B.")+
+    ggtitle("Month")+  Plot_Theme +Legend_Theme
+C_Month +Tag_Theme_1
+```
+
+
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+C_Week <-ggplot(Country_Week,aes(x =Week, y = Frequency,group = PANGO_lineage, color = PANGO_lineage)) +
+  theme_bw()+
+  geom_line(size = 1.3) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(y = "Country Count", x = "Week",tag ="Figure 4C.")+
+    ggtitle("Week") + Plot_Theme +Legend_Theme
+C_Week +Tag_Theme_1
+```
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Overview of data visulization](#plot-link)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+```{r plot5,fig.cap="**Prevalent lineages in provinces**", fig.topcaption = TRUE,echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+## Province count in TP,Month, and Week
+
+Province_TP <- Variant_prevelance%>%group_by(PANGO_lineage,TP) %>% 
+  dplyr::summarise(Frequency = n_distinct( Province))
+
+Province_Month <- Variant_prevelance %>% filter(TP == "TP2",PANGO_lineage%in%EU_T6_clusters$T0.original)%>%group_by(PANGO_lineage,Month) %>% 
+  dplyr::summarise(Frequency = n_distinct(Province))
+  
+Province_Week <- Variant_prevelance %>% filter(TP == "TP2",PANGO_lineage%in%EU_T6_clusters$T0.original)%>%group_by(PANGO_lineage,Week) %>% 
+  dplyr::summarise(Frequency = n_distinct( Province))
+  
+P_TP <- ggplot(Province_TP, aes(x =reorder(PANGO_lineage, -Frequency), y =Frequency, fill= TP)) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge")+
+    labs(y = "Number of province", x = "PANGO Lineages",tag ="Figure 5A.")+
+    scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    coord_flip()+ 
+   ggtitle ("Timepoint") + Plot_Theme +Legend_Theme+theme(axis.text.x=element_text( angle = 90, hjust = 1))
+
+P_TP +Tag_Theme_1+theme(plot.tag.position = c(0.017,1),
+                 plot.title = element_text(hjust= -0.039, vjust = 2.9)
+                )
+
+```
+
+
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+P_Month <-ggplot(Province_Month,aes(x =Month, y= Frequency,group = PANGO_lineage, color = PANGO_lineage)) +
+  theme_bw()+
+  geom_line(size = 1.3) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(y = "Province Count", x = "Month",tag ="Figure 5B.")+
+    ggtitle("Month")+  Plot_Theme +Legend_Theme
+
+P_Month +Tag_Theme_1
+   
+```
+
+
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+P_Week <-ggplot(Province_Week,aes(x =Week, y = Frequency,group = PANGO_lineage, color = PANGO_lineage)) +
+  theme_bw()+
+  geom_line(size = 1.3) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(y = "Province Count", x = "Week",tag = "Figure 5C.")+
+    ggtitle("Week") + Plot_Theme +Legend_Theme
+
+P_Week +Tag_Theme_1
+    
+```
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Overview of data visulization](#plot-link)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+
+### **Section 4: ECC analysis**{.unnumbered}
+  
+  
+```{r,plot6,fig.cap="**Geospatial and temporal ECC distribution**", fig.topcaption = TRUE,fig.height= 18, fig.width= 18} 
+# GEO ECC histogram: 
+  #-Faceted histogram by time interval
+  #-Faceted histogram by region
+
+P1 <-ggplot(EU_final,aes(x = ECC_0.0.1,fill = TP)) +
+  theme_bw()+
+  geom_histogram(binwidth = 0.02,position="dodge")+
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+  labs(y = "Genome Count",x = "Geo_ECC",tag = "A")+
+  ggtitle(" Timepoint")+ Plot_Theme +Legend_Theme
+
+P2 <- ggplot(EU_final,aes(x = ECC_0.0.1,fill = TP)) +
+  theme_bw()+
+  geom_histogram(binwidth = 0.02,position="dodge")+
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+  facet_wrap(~ Country) +
+  labs(y = "Genome Count",x = "Geo_ECC",tag = "B")+
+  ggtitle("Country")+Plot_Theme +Legend_Theme
+# TEMP ECC histogram: 
+  # -Faceted histogram by time interval
+  # -Faceted histogram by region
+P3 <-ggplot(EU_final,aes(x = ECC_0.1.0,fill = TP)) +
+  theme_bw()+
+   geom_histogram(binwidth = 0.02,position="dodge")+
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+  labs(y = "Genome Count",x = "Temp_ECC",tag = "C")+
+  ggtitle(" Timepoint")+Plot_Theme +Legend_Theme
+
+P4 <- ggplot(EU_final,aes(x = ECC_0.1.0,fill = TP)) +
+  theme_bw()+
+   geom_histogram(binwidth = 0.02,position="dodge")+
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+  facet_wrap(~ Country) +
+  labs(y = "Genome Count",x = "Temp_ECC",tag = "D") +
+  ggtitle("Country")+Plot_Theme +Legend_Theme
+P5<-P1+P2+P3+P4+ plot_layout(widths = c(1, 1), guides = 'collect')
+P5 
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Overview of data visulization](#plot-link)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+
+
+```{r  plot7,fig.cap="**Geospatial and temporal ECC distribution-bubble plot**", fig.topcaption = TRUE,echo=FALSE,message=FALSE,results='hide',fig.height= 18, fig.width= 18}
+## data: Eu_final
+#TP1 plot
+P1 <- ggplot(EU_final%>%filter(TP=="TP1"), aes(x=ECC_0.0.1, y= ECC_0.1.0,size = Cluster_size-1, fill=I("#0077b6"))) +
+    theme_bw()+
+    geom_point(alpha=0.2, shape=21, color= "black")+
+     scale_size_continuous(limits = c(0, 3400), range = c(1,17), breaks =  c(10,50,100,250,500,2000))+
+       xlim(0, 1)+
+       ylim(0,1)+
+        geom_text(aes(label = Cluster_size-1),size=2,  hjust = 0.5)+
+        labs(y = "Temp_ECC", x = "Geo_ECC",tag = "A")+
+        ggtitle(" Timepoint")+ Plot_Theme +theme(legend.position = "none")
+      
+
+# TP2 plot
+P2 <-ggplot(EU_final%>%filter(TP=="TP2"), aes(x=ECC_0.0.1, y= ECC_0.1.0,size = Cluster_size-1, fill=I("#FCA311"))) +
+     theme_bw()+
+       geom_point(alpha=0.5, shape=21, color= "black")+
+     scale_size_continuous(limits = c(0, 3400), range = c(1,17), breaks =  c(10,50,100,250,500,2000))+
+       xlim(0, 1)+
+       ylim(0,1)+
+       geom_text(aes(label = Cluster_size-1),size=2,  hjust = 0.5)+
+        labs(y = "Temp_ECC", x = "Geo_ECC",tag = "B")+
+      ggtitle("Timepoint2")+Plot_Theme + theme(legend.position = "none")
+# TP1+ TP2 plot 
+P3 <- ggplot(EU_final, aes(x=ECC_0.0.1, y= ECC_0.1.0,size = Cluster_size-1, fill=TP)) +
+    theme_bw()+
+    geom_point(alpha=0.5, shape=21, color= "black")+
+     scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    scale_size_continuous(limits = c(0, 3400), range = c(1,17), breaks = c(10,50,100,250,500,2000))+
+       xlim(0, 1)+
+       ylim(0,1)+
+       geom_text(aes(label = Cluster_size-1),size=2,  hjust = 0.5)+
+        labs(y = "Temp_ECC", x = "Geo_ECC",tag = "C")+
+   ggtitle("Timepoint1 and Timepoint2")+Plot_Theme +theme(legend.position = "none")
+P3$labels$size = "Size"
+
+# TP and country plot 
+ P4 <-ggplot(EU_final, aes(x=ECC_0.0.1, y= ECC_0.1.0,size = Cluster_size-1, fill=TP)) +
+    theme_bw()+
+    facet_wrap(~ Country)+
+    geom_point(alpha=0.5, shape=21, color= "black")+
+    scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    scale_size_continuous(limits = c(0, 3400), range = c(1,17), breaks = c(10,50,100,250,500,2000))+
+       xlim(0, 1)+
+       ylim(0,1)+
+       geom_text(aes(label = Cluster_size-1),size=2,  hjust = 0.5)+
+        labs(y = "Temp_ECC", x = "Geo_ECC",tag = "D")+
+   ggtitle("Timepoint and country")+Plot_Theme +Legend_Theme
+        
+# P4$labels$fill ="Timepoint"
+P4$labels$size ="Size"
+# put together
+ 
+P5 <-P1+P2+P3+P4+ plot_layout(widths = c(1, 1), guides = 'collect')
+P5
+
+ 
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Overview of data visulization](#plot-link)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+
+
+  
+```{r,plot8,fig.cap="**ECC change vector directionality analysis_1**", fig.topcaption = TRUE,error=FALSE, warning=FALSE, message=FALSE, results=FALSE,fig.keep="all",fig.height= 18, fig.width= 18}
+# import data 
+
+EU <- read_csv("Merged_strain_results_USA.csv")
+
+TP1_TP2_lable <- EU%>%filter(TP2_cluster_size > 2)%>%filter(TP == "TP1")%>%group_by(Cluster1,`TP2_cluster`)%>%dplyr::summarise(Cluster_size2=n())%>%rowid_to_column()
+
+Label_EU<-rbind(TP1_TP2_lable[,c(3,1,4)]%>%dplyr::rename(Cluster1=TP2_cluster),TP1_TP2_lable[,c(2,1,4)])
+Bubble_Plot_data <- EU%>%filter(TP2_cluster_size > 2)%>%group_by(TP, Cluster1)%>%summarise_at(vars(Cluster_size:delta_ECC_0.0.1), mean, na.rm = TRUE)%>%right_join(Label_EU)%>%unique()
+TP1_data <-Bubble_Plot_data%>%filter(TP == "TP1")
+TP_clustersize1 <-Bubble_Plot_data%>%filter( Cluster_size == 1)
+TP_clustersize2 <-Bubble_Plot_data%>%filter( Cluster_size == 2)
+TP1_data <-Bubble_Plot_data%>%filter( Cluster_size > 2,TP == "TP1")
+## Change vector bubble plots
+##TP1 size >2
+P1Data <-Bubble_Plot_data%>%filter(!rowid%in%TP_clustersize1$rowid,!rowid%in%TP_clustersize2$rowid)
+P1 <- ggplot(P1Data,aes(x=ECC_0.0.1, y=   ECC_0.1.0,size = Cluster_size-1, fill=TP)) +
+    theme_bw()+
+    geom_point(alpha=0.8, shape=21, color= "black")+
+    scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    scale_size_continuous(limits = c(0, 3400), range = c(1,17), breaks = c(10,50,100,250,500,2000))+
+       xlim(0, 1)+
+       ylim(0,1)+
+    geom_text(aes(label = Cluster_size-1),size=3,  hjust = 0.5)+
+     geom_point(data = TP1_data,aes(x=ECC_0.0.1, y= ECC_0.1.0),alpha = 0)+ 
+  geom_segment(aes(x=ECC_0.0.1, y= ECC_0.1.0, xend= ECC_0.0.1+delta_ECC_0.0.1, yend= ECC_0.1.0+delta_ECC_0.1.0), data   =TP1_data,alpha = 0.3,size = 0.3,arrow = arrow(length = unit(0.1, "cm")))+
+     labs(y = "Temp_ECC", x = "Geo_ECC",tag = "A")+
+      ggtitle(" TP1 size > 2 ")  +Plot_Theme +theme(legend.position = "none")
+ 
+ # TP1  Cluster size =0
+ TP_clustersize1 <-Bubble_Plot_data%>%filter( Cluster_size == 1)
+ TP1_data <-Bubble_Plot_data%>%filter( Cluster_size == 1,TP == "TP1")
+P2data <-Bubble_Plot_data%>%filter(rowid%in%TP_clustersize1$rowid )
+P2 <- ggplot(P2data, aes(x=ECC_0.0.1, y= ECC_0.1.0,size = Cluster_size-1, fill=TP)) +
+    theme_bw()+
+    geom_point(alpha=0.5, shape=21, color= "black")+
+     scale_fill_manual(values = c("#0077b6","#FCA311"))+
+     scale_size_continuous(limits = c(0, 3400), range = c(1,17), breaks = c(10,50,100,250,500,2000))+
+       xlim(0, 1)+
+       ylim(0,1)+
+    geom_text(aes(label = Cluster_size-1),size=3,  hjust = 0.5)+
+    geom_point(data = TP1_data,aes(x=ECC_0.0.1, y= ECC_0.1.0),alpha = 0)+ 
+  geom_segment(aes(x=ECC_0.0.1, y= ECC_0.1.0, xend= ECC_0.0.1+delta_ECC_0.0.1, yend= ECC_0.1.0+delta_ECC_0.1.0), data   =TP1_data,alpha = 0.3,size = 0.3,arrow = arrow(length = unit(0.2, "cm")))+
+     labs(y = "Temp_ECC", x = "Geo_ECC",tag = "B")+
+      ggtitle(" TP1 size = 0 ")+Plot_Theme +theme(legend.position = "none")
+  # TP1  Cluster size =1
+ TP_clustersize2 <-Bubble_Plot_data%>%filter( Cluster_size == 2)
+ TP1_data <-Bubble_Plot_data%>%filter( Cluster_size == 2,TP == "TP1")
+P3data <- Bubble_Plot_data%>%filter(rowid%in%TP_clustersize2$rowid )
+P3 <- ggplot(P3data, aes(x=ECC_0.0.1, y= ECC_0.1.0,size = Cluster_size-1, fill=TP)) +
+    theme_bw()+
+    geom_point(alpha=0.5, shape=21, color= "black")+
+     scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    scale_size_continuous(limits = c(0, 3400), range = c(1,17), breaks = c(10,50,100,250,500,2000))+
+       xlim(0, 1)+
+       ylim(0,1)+
+    geom_text(aes(label = Cluster_size-1),size=3,  hjust = 0.5)+
+     geom_point(data = TP1_data,aes(x=ECC_0.0.1, y= ECC_0.1.0),alpha = 0)+ 
+     geom_segment(aes(x=ECC_0.0.1, y= ECC_0.1.0, xend= ECC_0.0.1+delta_ECC_0.0.1, yend= ECC_0.1.0+delta_ECC_0.1.0), data   =TP1_data,alpha = 0.3,size = 0.3,arrow = arrow(length = unit(0.2, "cm")))+
+     labs(y = "Temp_ECC", x = "Geo_ECC",tag = "C")+
+      ggtitle(" TP1 size = 1 ")+Plot_Theme + Legend_Theme
+P3$labels$size = "Size"
+
+
+P2+P3+P1+ plot_layout(widths = c(1, 1),guides = 'collect')
+ 
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Overview of data visulization](#plot-link)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+
+
+```{r, plot9,fig.cap="**ECC change vector directionality analysis_2**", fig.topcaption = TRUE,error=FALSE, warning=FALSE, message=FALSE, results=FALSE,fig.keep="all",fig.height= 18, fig.width= 18}
+
+### pie plot for change vector on pango-lineages
+
+## angle calcualtion
+ang <- function(x,y) { 
+  z <- x + 1i * y
+  res <- 90 - Arg(z) / pi * 180
+  res %% 360
+}
+## Calcualte degree with the dataset and convert Radians to degrees
+Angel_data<- Bubble_Plot_data %>%mutate(Angle = ang(delta_ECC_0.1.0,delta_ECC_0.0.1))
+
+#### calculate direction
+library(rvest)
+url <- 'http://snowfence.umn.edu/Components/winddirectionanddegreeswithouttable3.htm'
+page <- read_html(url)
+directions_raw <- page %>% html_node('td table') %>% html_table(header = TRUE)
+
+directions <- directions_raw %>% 
+    set_names(~tolower(sub(' Direction', '', .x))) %>% 
+    slice(-1) %>% 
+  separate(degree, c('degree_min', 'degree_max'), sep = '\\s+-\\s+', convert = TRUE)
+
+Eu_dir <- Angel_data %>% mutate(Vector_cardinal = cut(Angle, breaks = c(0, directions$degree_max, 360),labels = c(directions$cardinal, 'N')))
+TP1_Eu_dir <- Eu_dir%>%filter(TP == "TP1")%>%select("Cluster_size","rowid")
+TP2_Eu_dir <- Eu_dir%>%filter(TP == "TP2")
+TP2_Eu_dir <- merge(TP2_Eu_dir[,-3],TP1_Eu_dir[,c(2,3)])
+TP2_Eu_dir <- TP2_Eu_dir %>%group_by(Vector_cardinal)%>%mutate(Vector_Count = n())%>%mutate(TP1_Size= ifelse (Cluster_size == 1,"TP1_size=0", ifelse (Cluster_size == 2,"TP1_size=1","TP1_size >2")))%>%mutate(Cluster_Growth = Cluster_size2 - Cluster_size) 
+
+### pie plotting
+EU_Missed_Direction <- read_csv("EU_Missed Direction.csv")
+Missed_direction <- EU_Missed_Direction%>%filter(!Vector_cardinal%in%unique(TP2_Eu_dir$Vector_cardinal))
+Vector_Order <- read_csv("Vector_Order.csv")
+Pie_data <- rbind( TP2_Eu_dir,Missed_direction)
+Vector_Order <- read_csv("Vector_Order.csv")
+Pie_data <-left_join(Pie_data,Vector_Order)
+my_image <- readPNG("C:/Users/guzhang/Desktop/Europe_April 6 2021/Compass direction 2.png", native = TRUE)
+
+P1 <-Pie_data %>%
+mutate(Vector_cardinal= fct_reorder(Vector_cardinal, Order)) %>%
+  ggplot(aes(Vector_cardinal,  fill= TP1_Size)) +
+   geom_bar() +
+   coord_polar(start = -pi/16) +
+  theme_bw()+
+  scale_colour_brewer(palette = "Set1")+
+labs(y = "Lineage count", x = "Change vector direction",tag = "A")+
+       ggtitle ("Lineage size")+Plot_Theme + Legend_Theme
+## Bar
+P6<-Pie_data %>%
+mutate(Vector_cardinal= fct_reorder(Vector_cardinal, Order)) %>%
+  ggplot(aes(Vector_cardinal,  fill= TP1_Size)) +
+   geom_bar() +
+  theme_bw()+
+  scale_colour_brewer(palette = "Set1") +
+labs(y = "Lineage count", x = "Change vector direction",tag = "B")+
+   theme(axis.text.x=element_text(angle = 90,hjust = 1))+
+       ggtitle ("Lineage size")+Plot_Theme + Legend_Theme
+
+### pie plot for change vector on Geo_ECC Temp_ECC, deta_Geo and delat Temp
+
+# set Timepoint, Multistrain_cluster Geo level and Temp_level as factor
+ECC_Pie <-EU_final%>%filter(TP == "TP2", TP2_cluster_size >2)%>%select(1,4:9)
+
+EU_ECC_level_pie <- ECC_Pie%>%mutate(Geo_level = cut_interval(ECC_0.0.1, n = 6),Temp_level = cut_interval(ECC_0.1.0, n = 6), Delta_Geo_level = cut_interval(delta_ECC_0.0.1, n = 6),  Delta_Temp_level = cut_interval(delta_ECC_0.1.0, n = 6))
+
+ECC_Pie_1 <-TP2_Eu_dir%>%select(3,9:10)%>%left_join(EU_ECC_level_pie)
+ECC_Pie_2 <-ECC_Pie_1[1:5,]
+ECC_Pie_2$Vector_cardinal=Missed_direction$Vector_cardinal
+#write.csv(ECC_Pie_2,"ECC missed direction.csv")
+
+#ECC_missed_direction <- read_csv("ECC missed direction.csv")
+EU_ECC_level_final <-rbind(ECC_Pie_1,ECC_Pie_2)%>%left_join(Vector_Order)
+# Geo_Level Pie
+P2 <-EU_ECC_level_final %>%
+  arrange(Order) %>%
+  mutate(Vector_cardinal = factor(Vector_cardinal, levels= Vector_Order$Vector_cardinal))%>% 
+ ggplot(aes(Vector_cardinal,  fill= Geo_level)) +
+  scale_colour_brewer(palette = "Set1") +
+   geom_bar() +
+  theme_bw()+
+   scale_colour_brewer(palette = "Set1") +
+labs(y = "Genome count", x = "Change vector direction",tag = "C")+
+    theme(axis.text.x=element_text( angle = 90,hjust = 1))+
+       ggtitle ("Geo_level")+Plot_Theme + Legend_Theme
+# Temp_Level Pie
+
+P3 <-EU_ECC_level_final %>%
+  arrange(Order) %>%
+  mutate(Vector_cardinal = factor(Vector_cardinal, levels= Vector_Order$Vector_cardinal))%>% 
+ ggplot(aes(Vector_cardinal,  fill= Temp_level)) +
+   geom_bar() +
+  scale_colour_brewer(palette = "Set1") +
+  theme_bw()+
+  scale_colour_brewer(palette = "Set1") +
+labs(y = "Genome count", x = "Change vector direction")+
+    theme(axis.text.x=element_text( angle = 90,hjust = 1))+
+       ggtitle ("Temp_level")+Plot_Theme + Legend_Theme
+# Delta_Temp_Level Pie
+
+P4 <-EU_ECC_level_final %>%
+  arrange(Order) %>%
+  mutate(Vector_cardinal = factor(Vector_cardinal, levels= Vector_Order$Vector_cardinal))%>% 
+ ggplot(aes(Vector_cardinal,  fill= Delta_Temp_level)) +
+   geom_bar() +
+  theme_bw()+
+  scale_colour_brewer(palette = "Set1") +
+labs(y = "Genome count", x = "Change vector direction")+
+   theme(axis.text.x=element_text( angle = 90,hjust = 1))+
+       ggtitle ("Delta_Temp_level")+Plot_Theme + Legend_Theme
+# Delta_Geo_Level Pie
+
+P5 <-EU_ECC_level_final %>%
+  arrange(Order) %>%
+  mutate(Vector_cardinal = factor(Vector_cardinal, levels= Vector_Order$Vector_cardinal))%>% 
+ ggplot(aes(Vector_cardinal,  fill=Delta_Geo_level )) +
+   geom_bar() +
+  theme_bw()+
+   scale_colour_brewer(palette = "Set1") +
+  labs(y = "Genome count", x = "Change vector direction")+
+   theme(axis.text.x=element_text( angle = 90,hjust = 1))+
+       ggtitle ("Delta_Geo_level")+Plot_Theme + Legend_Theme
+
+P7<- P1+(P6+inset_element(my_image,left = 0.8,bottom = 0.8,right = 0.99,top = 0.99))+P2+P3+P4+P5+ plot_layout(widths = c(1, 1))
+P7 
+
+```
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Overview of Data Visulization](#plot-link)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+
+### **Section 5: Variants of interest** {.unnumbered}
+
+```{r,plot10,fig.cap="**Heatmap for Top 5 TP2 clusters**", fig.topcaption = TRUE,fig.height= 18, fig.width= 18 }
+
+Tag_Theme_2 = theme(plot.tag = element_text(size =20),
+                 plot.margin = unit(c(1,0,0,1), "cm"),
+                 plot.tag.position = c(0.15,1.03),
+                 plot.title = element_text(vjust =0.98))
+
+TempHeatmap <- readPNG("C:/Users/guzhang/Desktop/USA first Wave/USheatmap/EU_264_Temp.png")
+P1 <-ggplot(mapping = aes(1:8, 1:8)) + geom_blank()+
+  annotation_raster(TempHeatmap, xmin = -Inf, xmax = Inf, ymin = -Inf,  ymax = Inf) +geom_point(colour = "green", size = 0.001,alpha = 1/10)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+        theme (panel.border = element_blank())+
+         ggtitle("Temp")+labs(tag = "A.03.000.000_19B_S_264")+Plot_Theme +Tag_Theme_2
+
+GeoHeatmap<- readPNG("C:/Users/guzhang/Desktop/USA first Wave/USheatmap/EU_264_Geo.png")
+P2 <-ggplot(mapping = aes(1:8, 1:8)) + geom_blank()+
+  annotation_raster(GeoHeatmap, xmin = -Inf, xmax = Inf, ymin = -Inf,  ymax = Inf) +geom_point(colour = "green", size = 0.001,alpha = 1/10)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+        theme (panel.border = element_blank())+
+         ggtitle("Geo")+labs(tag = " ")+Plot_Theme +Tag_Theme_2
+         
+
+#(P1 + P2)+ plot_annotation(tag_levels = 'A')+ theme(plot.tag = element_text(size = 10))
+
+TempHeatmap<- readPNG("C:/Users/guzhang/Desktop/USA first Wave/USheatmap/EU_525_Temp.png")
+P3 <-ggplot(mapping = aes(1:8, 1:8)) + geom_blank()+
+  annotation_raster(TempHeatmap, xmin = -Inf, xmax = Inf, ymin = -Inf,  ymax = Inf) +geom_point(colour = "green", size = 0.001,alpha = 1/10)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+        theme (panel.border = element_blank())+
+         ggtitle("Temp")+ labs(tag = "B.01.000.000_20A_G_525")+Plot_Theme+Tag_Theme_2
+
+GeoHeatmap<- readPNG("C:/Users/guzhang/Desktop/USA first Wave/USheatmap/EU_525_Geo.png")
+P4 <-ggplot(mapping = aes(1:8, 1:8)) + geom_blank()+
+  annotation_raster(GeoHeatmap, xmin = -Inf, xmax = Inf, ymin = -Inf,  ymax = Inf) +geom_point(colour = "green", size = 0.001,alpha = 1/10)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+        theme (panel.border = element_blank())+
+  ggtitle("Geo")+ labs(tag = " ")+Plot_Theme+Tag_Theme_2
+TempHeatmap<- readPNG("C:/Users/guzhang/Desktop/USA first Wave/USheatmap/EU_593_Temp.png")
+P5 <-ggplot(mapping = aes(1:8, 1:8)) + geom_blank()+
+  annotation_raster(TempHeatmap, xmin = -Inf, xmax = Inf, ymin = -Inf,  ymax = Inf) +geom_point(colour = "green", size = 0.001,alpha = 1/10)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+        theme (panel.border = element_blank())+
+         ggtitle("Temp") + 
+         labs(tag = "B.01.000.000_20A_GH_593")+Plot_Theme+Tag_Theme_2
+
+GeoHeatmap<- readPNG("C:/Users/guzhang/Desktop/USA first Wave/USheatmap/EU_593_Geo.png")
+P6 <-ggplot(mapping = aes(1:8, 1:8)) + geom_blank()+
+  annotation_raster(GeoHeatmap, xmin = -Inf, xmax = Inf, ymin = -Inf,  ymax = Inf) +geom_point(colour = "green", size = 0.001,alpha = 1/10)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+        theme (panel.border = element_blank())+
+         ggtitle("Geo") + 
+         labs(tag = " ")+Plot_Theme +Tag_Theme_2
+
+
+TempHeatmap<- readPNG("C:/Users/guzhang/Desktop/USA first Wave/USheatmap/EU_732_Temp.png")
+P7 <-ggplot(mapping = aes(1:8, 1:8)) + geom_blank()+
+  annotation_raster(TempHeatmap, xmin = -Inf, xmax = Inf, ymin = -Inf,  ymax = Inf) +geom_point(colour = "green", size = 0.001,alpha = 1/10)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+        theme (panel.border = element_blank())+
+         ggtitle("Temp")+labs(tag = "A.01.000.000_19B_S_732")+Plot_Theme+Tag_Theme_2
+
+GeoHeatmap<- readPNG("C:/Users/guzhang/Desktop/USA first Wave/USheatmap/EU_732_Geo.png")
+P8 <-ggplot(mapping = aes(1:8, 1:8)) + geom_blank()+
+  annotation_raster(GeoHeatmap, xmin = -Inf, xmax = Inf, ymin = -Inf,  ymax = Inf) +geom_point(colour = "green", size = 0.001,alpha = 1/10)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+        theme (panel.border = element_blank())+ggtitle("Geo")+labs(tag = " ")+Plot_Theme+Tag_Theme_2
+TempHeatmap<- readPNG("C:/Users/guzhang/Desktop/USA first Wave/USheatmap/EU_3321_Temp.png")
+P9 <-ggplot(mapping = aes(1:8, 1:8)) + geom_blank()+
+  annotation_raster(TempHeatmap, xmin = -Inf, xmax = Inf, ymin = -Inf,  ymax = Inf) +geom_point(colour = "green", size = 0.001,alpha = 1/10)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+        theme (panel.border = element_blank())+
+         ggtitle("Temp")+labs(tag = " B.01.000.000_20C_GH_3321")+Plot_Theme+Tag_Theme_2
+
+
+GeoHeatmap<- readPNG("C:/Users/guzhang/Desktop/USA first Wave/USheatmap/EU_3321_Geo.png")
+P10 <-ggplot(mapping = aes(1:8, 1:8)) + geom_blank()+
+  annotation_raster(GeoHeatmap, xmin = -Inf, xmax = Inf, ymin = -Inf,  ymax = Inf) +geom_point(colour = "green", size = 0.001,alpha = 1/10)+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y =element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+        theme (panel.border = element_blank())+ggtitle("Geo")+labs(tag = " ")+Plot_Theme+ Tag_Theme_2
+(P1+P2)/(P3+P4) 
+```
+
+
+```{r fig.height= 18, fig.width= 18 }
+(P5+P6) /(P7+P8)  
+```
+
+
+```{r fig.height= 9, fig.width= 18 }
+P9+P10 
+```
+  
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Overview of Data Visulization](#plot-link)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+### **Section 6: Data tables**  {#table-link -}
+
+
+```{r table1a}
+pacman::p_load(
+  rio,          # File import
+  here,         # File locator
+  skimr,        # get overview of data
+  tidyverse,    # data management + ggplot2 graphics 
+  gtsummary,    # summary statistics and tests
+  rstatix,      # summary statistics and statistical tests
+  janitor,      # adding totals and percents to tables
+  scales,       # easily convert proportions to percents  
+  flextable,    # converting tables to pretty images
+  kableExtra)
+# Table 1a, Summary of SARS-Cov2 genomes by country and TP/month
+Table1a <-EU_final %>% 
+  tabyl(Country, TP) %>% 
+  adorn_totals(where = "col") %>%
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% 
+  arrange(desc(Total)) 
+Table1a <-Table1a[c(2,3,1),1:3]
+rownames(Table1a) <- c()
+ # table for month
+Table1a1<-EU_final %>%filter(TP== "TP2") %>%
+  tabyl(Country, Month) %>% 
+  adorn_totals(where = "col") %>% 
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% 
+  arrange(desc(Total)) 
+  
+rownames(Table1a1) <- c() 
+
+Table1a <-left_join(Table1a,Table1a1) 
+kable(Table1a,caption = "<b><left><strong>**Summary of SARS-Cov2 genomes by country and timepoint/month**</b></strong></left>", escape = FALSE,format = 'html')%>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed","responsive"),full_width = F, position = "float_left")%>%row_spec(3, bold=T)%>%column_spec(9, bold=T)%>%add_header_above(c(" " = 1, "Timepoint" = 2, "Month" = 5," " = 1))
+```
+
+
+```{r table1b}
+# Table 1b, Summary of SARS-Cov2 genomes by country and week
+Table1b<-EU_final %>%filter(TP == "TP2") %>% 
+  tabyl(Country, Week) %>% 
+  adorn_totals(where = "col") %>%
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% 
+  adorn_title(
+    row_name = "Country",
+    col_name = "week",
+    placement = "combined")%>%arrange(desc(Total)) 
+Table1b <-Table1b[,c(1,13:19,2:12,20)]
+rownames(Table1b) <- c()
+Table1b<-kable(Table1b,caption = "<b><left><strong>Summary of SARS-Cov2 genomes by country and week</b></strong></left> ", escape = FALSE,format = 'html',table.attr = "style='width:50%;'")%>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed","responsive"),full_width = F, position = "float_left",font_size = 8)%>%row_spec(3, bold=T) %>%column_spec(20, bold=T)
+
+Table1b
+```
+
+
+```{r table2a}
+### Summary of SARS-Cov2 genomes by PANGO lineages 
+ ## Summary of SARS-Cov2 genomes by PANGO lineages and country
+Table2a <-EU_final %>%filter(TP == "TP2") %>% 
+  tabyl(PANGO_lineage,Country ) %>% 
+  adorn_totals(where = "col") %>%
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% 
+  adorn_title(
+    row_name = "PANGO_lineage",
+    col_name = "Country",
+    placement = "combined")%>%arrange(desc(Total)) 
+Table2a <-Table2a[c(2,4:27,3,1),]
+write.csv(Table2a, "lineage_order_USA.csv")
+rownames(Table2a) <- c() 
+Lineage_Order = Table2a$`PANGO_lineage/Country`
+kable(Table2a,caption = "<b><left><strong>Summary of SARS-Cov2 genomes by PANGO_lineage and country </b></strong></left>", escape = FALSE,format = 'html')%>%kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed","responsive"),full_width = T)%>%row_spec(27, bold=T)%>%column_spec(4, bold=T)
+```
+
+
+```{r table2b}
+## Summary of SARS-Cov2 genomes by PANGO lineages and Timepoint/Month
+Table2b <-EU_final %>% 
+  tabyl(PANGO_lineage, TP) %>% 
+  adorn_totals(where = "col") %>%
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% arrange(desc(Total)) 
+   
+Table2b <-Table2b[c(2,4:27,3,1),1:3]
+rownames(Table2b) <- c()
+Table2b1<-EU_final %>%filter(TP== "TP2") %>%
+  tabyl(PANGO_lineage, Month) %>% 
+  adorn_totals(where = "col") %>% 
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% 
+  arrange(desc(Total))
+
+rownames(Table2b1) <- c() 
+
+Table2b <-left_join(Table2b,Table2b1)
+kable(Table2b,caption = "<b><left><strong>Summary of SARS-Cov2 genomes by PANGO_lineage and timepoint/month</b></strong></left> ", escape = FALSE,format = 'html')%>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed","responsive"),full_width = F, position = "float_left")%>%row_spec(27, bold=T)%>%column_spec(9, bold=T)%>%add_header_above(c(" " = 1, "Timepoint" = 2, "Month" = 5," " = 1))
+```
+
+
+```{r table2c}
+##Table 2c. Summary of SARS-Cov2 genomes byPANGO lineages and week
+
+Table2c<-EU_final %>%filter(TP== "TP2") %>%
+  tabyl(PANGO_lineage, Week) %>% 
+  adorn_totals(where = "col") %>% 
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% 
+  adorn_title(
+    row_name = "PANGO_lineage",
+    col_name = "Week",
+    placement = "combined") %>%arrange(desc(Total))
+Table2c <-Table2c[c(2,4:28,3,1),c(1,13:19,2:12,20)]
+rownames(Table2c) <- c() 
+kable(Table2c,align=rep('c', 19),caption ="<b><left><strong>Summary of SARS-Cov2 genomes by PANGO-lineage and week </b></strong></left>")%>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed","responsive"),full_width = F, position = "float_left",font_size = 9)%>%row_spec(28, bold=T)%>%column_spec(20, bold=T)
+
+```
+
+
+```{r}
+library(labelled)
+var.labels = c(rowid="ID",TP= "Timepoint",Cluster="TP1_Size1", ECC_0.1.0="Temp_ECC", ECC_0.0.1="Geo_ECC", delta_ECC_0.1.0="Delta_Temp_ECC",delta_ECC_0.0.1= "Delta_Geo_ECC", Cluster_size2= "Cluster_Size_TP2", Angle = "Vector_Angle_",Vector_cardinal="Vector_cardinal",Cluster_size="Cluster_Size_TP1", Vector_Count="Count_cardinal",TP1_Size="TP1_Size", Cluster_Growth="Cluster_Growth") 
+
+TP2_Eu_dir <- labelled::set_variable_labels(TP2_Eu_dir,.labels = var.labels)
+TP2_Eu_dir[,c(-1,-2,-3,-8,-12)]%>%tbl_summary(by =  Vector_cardinal,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} / {N} ({p}%)"),
+    digits = all_continuous() ~ 2,
+    missing_text = "(Missing)")%>%bold_labels() %>%
+  as_kable(caption = "<b><left><strong> Summary of change vector directions</b></strong></left>", escape = FALSE,format = 'html')%>%kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed","responsive"),full_width = F, position = "float_left")
+  
+```
+
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Outline of data analysis:Summary data table](#tab-link)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+

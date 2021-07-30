@@ -29,11 +29,13 @@ for (i in 1:nrow(dfx)) {
   
   outputMessages(paste0("\nCollecting and saving ECCs for groups of clusters at TP", 
                         dfx$k[i], ", for ECC coefficient triple ", as.character(dfx$x[i])))
-  sectionClusters(dfx$k[i], typing_data, m) %>% 
-    collectECCs(dfx$k[i], m, ., extremes, c1, 
-                read_from = paste0("intermediate_data/TP", dfx$k[i], "/dists/"), 
-                save_to = paste0("intermediate_data/TP", dfx$k[i], "/ecc_groups/", 
-                                 as.character(dfx$x[i]), "/"))
+    
+  k <- dfx$k[i]
+  parts <- sectionClusters(k, typing_data, m)
+  read_from <- paste0("intermediate_data/TP", k, "/dists/")
+  save_to <- paste0("intermediate_data/TP", k, "/ecc_groups/", as.character(dfx$x[i]), "/")
+  
+  collectECCs(k, m, parts, extremes, c1, read_from, save_to)
   
   c1 %>% paste0(., collapse = ", ") %>% 
     paste0("\nMerging ECC files at TP", dfx$k[i], ", for ECC parameters ", .) %>% 
@@ -74,8 +76,9 @@ num_others <- all_eccs[inf_inds,] %>% filter(!is.na(!!as.symbol(tp1size))) %>%
 assert("The -Infs are because of TP1 singletons", num_others == 0)
 all_eccs[all_eccs == -Inf] <- NA
 
-assert("Average distances were collected and saved", file.exists("results/average_dists.Rds"))
-all_avg_dists <- readRDS("results/average_dists.Rds")
+assert("Average distances were collected and saved", 
+       file.exists("intermediate_data/average_dists.Rds"))
+all_avg_dists <- readRDS("intermediate_data/average_dists.Rds")
 
 cat(paste0("\n\nStep ", nrow(dfx) + 2, " / ", nrow(dfx) + 2, ":"))
 outputMessages("   Merging collected ECCs ...\n")
