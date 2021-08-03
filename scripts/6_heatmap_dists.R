@@ -1,21 +1,20 @@
 #! /usr/bin/env Rscript
 
+msg <- file("logs/logfile_heatmaps.txt", open="wt")
+sink(msg, type="message")
+
 libs <- c("optparse", "magrittr", "fossil", "tidyr", "plyr", "dplyr", "readr", 
           "testit", "tibble", "reshape2", "RColorBrewer", "gplots", "data.table", "R6")
 y <- suppressWarnings(
   suppressPackageStartupMessages(
-    lapply(libs, require, character.only = TRUE)
-  )
-)
-
-msg <- file("logs/logfile_heatmaps.txt", open="wt")
-sink(msg, type="message")
+    lapply(libs, require, character.only = TRUE)))
 
 source("scripts/ECC/classes_ecc.R")
 source("scripts/ECC/dist_functions.R")
 source("scripts/ECC/ecc_functions.R")
 source("report_specific/epi-helper-no-source.R")
-dir.create("report_specific/automated_heatmaps/", showWarnings = FALSE)
+
+dir.create("report_specific/heatmaps/", showWarnings = FALSE)
 
 fnames <- list.files("intermediate_data/TP2/dists/", full.names = TRUE)
 distfiles <- lapply(fnames, function(f) readRDS(fnames))
@@ -103,6 +102,8 @@ epi.tables <- lapply(1:length(clusters), function(j) {
   return(dists)
 })
 
+saveRDS(epi.tables, "report_specific/heatmaps/epitables_for_heatmaps.Rds")
+
 epi.matrix <- lapply(1:length(clusters), function(j) EpiMatrix(epi.tables[[j]]))
 
 for (i in 1:length(top_clusters)) {
@@ -111,7 +112,7 @@ for (i in 1:length(top_clusters)) {
     cl_epi <- epi.matrix[[i]]
     cl_id <- cgms %>% filter(tp2_cl == top_clusters[i]) %>% slice(1) %>% pull(first_tp2_flag)
     
-    png(paste0("report_specific/automated_heatmaps/", cl_id, ".png"))
+    png(paste0("report_specific/heatmaps/", cl_id, ".png"))
     EpiHeatmap_pdf(cl_epi)
     dev.off()
   }else {
