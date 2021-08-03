@@ -73,38 +73,38 @@ hx <- Heightdata$new(starter = heights[1], t1_comps = tp1$comps, hvals = heights
   clust_tracking(tp2$comps, tp2$cnames, tp1$coded, tp2$coded, TRUE)$
   update_iteration()
 
-# REST OF THE HEIGHTS ------------------------------------------------------------------------------------------
-if (length(heights) > 1) {
-  outputDetails(paste0("\nStep 3 OF 3: Tracking and flagging clusters for the rest of the heights (",
-                       length(heights) - 1, " of them) ..........."), newcat = TRUE)
-  outputDetails(paste0("  This may take some time. \n  For a more detailed look at progress, ", 
-                       "see the logfile in the logs directory.\n"))
-  outputDetails("  Collecting data for other heights: ", newcat = TRUE)
-  
-  fcb <- txtProgressBar(min = 0, max = length(heights[-1])*2, initial = 0, style = 3)
-  for (j in 1:length(heights[-1])) {
-    hx$h_after <- heights[-1][j]
-    message(paste0("  Height ", j + 1, " / ", length(heights)))
-    
-    # Part 1: unchanged(): identifying clusters that have not changed from the previous height
-    # Part 2: takes comps for new height, previous height, and the tracked data for the previous height
-    #   --> identifies clusters that have not changed since the previous height, and reuses their tracking data
-    hx$post_data(tp1$comps)$unchanged()
-    
-    # Part 2: tracking clusters that changed, saving to results list, and prepping variable for next height
-    hx$comps <- hx$aft %>% filter(!(id_aft %in% hx$same$tp1_id)) %>% set_colnames(colnames(tp1$comps))
-    
-    setTxtProgressBar(fcb, j*2 - 1)
-    
-    hx$clust_tracking(tp2$comps, tp2$cnames, tp1$coded, tp2$coded, FALSE)$
-      update_iteration()$reset_values()
-    
-    setTxtProgressBar(fcb, j*2)
-  }
-  close(fcb)
-}else {
-  outputDetails(paste0("\nStep 3 OF 3: Only one threshold provided, so no further tracking necessary"), newcat = TRUE)
-}
+# # REST OF THE HEIGHTS ------------------------------------------------------------------------------------------
+# if (length(heights) > 1) {
+#   outputDetails(paste0("\nStep 3 OF 3: Tracking and flagging clusters for the rest of the heights (",
+#                        length(heights) - 1, " of them) ..........."), newcat = TRUE)
+#   outputDetails(paste0("  This may take some time. \n  For a more detailed look at progress, ", 
+#                        "see the logfile in the logs directory.\n"))
+#   outputDetails("  Collecting data for other heights: ", newcat = TRUE)
+#   
+#   fcb <- txtProgressBar(min = 0, max = length(heights[-1])*2, initial = 0, style = 3)
+#   for (j in 1:length(heights[-1])) {
+#     hx$h_after <- heights[-1][j]
+#     message(paste0("  Height ", j + 1, " / ", length(heights)))
+#     
+#     # Part 1: unchanged(): identifying clusters that have not changed from the previous height
+#     # Part 2: takes comps for new height, previous height, and the tracked data for the previous height
+#     #   --> identifies clusters that have not changed since the previous height, and reuses their tracking data
+#     hx$post_data(tp1$comps)$unchanged()
+#     
+#     # Part 2: tracking clusters that changed, saving to results list, and prepping variable for next height
+#     hx$comps <- hx$aft %>% filter(!(id_aft %in% hx$same$tp1_id)) %>% set_colnames(colnames(tp1$comps))
+#     
+#     setTxtProgressBar(fcb, j*2 - 1)
+#     
+#     hx$clust_tracking(tp2$comps, tp2$cnames, tp1$coded, tp2$coded, FALSE)$
+#       update_iteration()$reset_values()
+#     
+#     setTxtProgressBar(fcb, j*2)
+#   }
+#   close(fcb)
+# }else {
+#   outputDetails(paste0("\nStep 3 OF 3: Only one threshold provided, so no further tracking necessary"), newcat = TRUE)
+# }
 
 outputDetails("  Identifying and counting 'additional TP1 strains'.\n", newcat = FALSE)
 
