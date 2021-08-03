@@ -73,7 +73,7 @@ else
   echo "Not all required files found for part 5."
 fi
 
-if [ -f "results/CGM_strain_results.tsv" -a -f "intermediate_data/TP2/dists/group1.Rds" -a -f $STRAINS ]; then
+if [ -f "results/CGM_strain_results.tsv" -a -f "intermediate_data/TP2/dists/group01.Rds" -a -f $STRAINS ]; then
 	Rscript scripts/6_heatmap_dists.R -m $STRAINS -a $tp1_data -b $tp2_data -c results/CGM_strain_results.tsv -t 0.0 -g 1.0 -l 5 -x $HEIGHT
 else
 	echo "Not all required files found for part 6."

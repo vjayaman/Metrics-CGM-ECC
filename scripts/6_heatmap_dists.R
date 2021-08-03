@@ -17,7 +17,7 @@ source("report_specific/epi-helper-no-source.R")
 dir.create("report_specific/heatmaps/", showWarnings = FALSE)
 
 fnames <- list.files("intermediate_data/TP2/dists/", full.names = TRUE)
-distfiles <- lapply(fnames, function(f) readRDS(fnames))
+distfiles <- lapply(fnames, function(f) readRDS(f))
 extremes <- readRDS("intermediate_data/dist_extremes.Rds")
 
 option_list <- list(
