@@ -107,5 +107,5 @@ tp2_avg_dists <- tp2$proc %>% select(-TP2) %>%
 all_avg_dists <- right_join(tp1_avg_dists, tp2_avg_dists, by = "Strain")
 saveRDS(all_avg_dists, "intermediate_data/average_dists.Rds")
 
-cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), 
+cat(paste0("\nEnded process at ", Sys.time(), "\n||", paste0(rep("-", 31), collapse = ""), 
            " End of distances collection ", paste0(rep("-", 31), collapse = ""), "||\n"))

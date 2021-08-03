@@ -13,7 +13,7 @@ option_list <- list(
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"), 
   make_option(c("-e", "--ECCs"), metavar = "file", default = "results/ECCs.tsv", help = "ECC result file")
-  )
+)
 
 arg <- parse_args(OptionParser(option_list=option_list))
 

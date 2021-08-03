@@ -97,6 +97,8 @@ collectDistances <- function(assignments, parts, fpaths = NULL) {
     if (!is.null(fpaths)) {
       if (length(fpaths) == 1) {
         fname <- paste0(fpaths[[1]], "group", formatC(j, width=nchar(p), format="d", flag="0"), ".Rds")
+        print(fname)
+        print(dim(dm_temp))
         dm <- list(temp = dm_temp, geo = dm_geo)
         saveRDS(dm, fname)
       }
