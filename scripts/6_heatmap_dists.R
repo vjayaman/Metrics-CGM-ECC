@@ -104,17 +104,18 @@ epi.tables <- lapply(1:length(clusters), function(j) {
 
 saveRDS(epi.tables, "report_specific/heatmaps/epitables_for_heatmaps.Rds")
 
-epi.matrix <- lapply(1:length(clusters), function(j) EpiMatrix(epi.tables[[j]]))
+# epi.matrix <- lapply(1:length(clusters), function(j) EpiMatrix(epi.tables[[j]]))
 
 for (i in 1:length(top_clusters)) {
   cl_strains <- size_details %>% filter(tp2_cl %in% top_clusters[i])
   if (length(cl_strains$Strain) > 1) {
-    cl_epi <- epi.matrix[[i]]
+    cl_epi <- EpiMatrix(epi.tables[[i]])
     cl_id <- cgms %>% filter(tp2_cl == top_clusters[i]) %>% slice(1) %>% pull(first_tp2_flag)
     
     png(paste0("report_specific/heatmaps/", cl_id, ".png"))
     EpiHeatmap_pdf(cl_epi)
     dev.off()
+    rm(cl_epi)
   }else {
     print(paste0("TP2 cluster ", top_clusters[i], " has only one strain, no heatmap generated"))
   }
