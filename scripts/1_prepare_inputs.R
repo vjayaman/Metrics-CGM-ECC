@@ -9,15 +9,13 @@ libs <- c("optparse", "magrittr", "readr", "dplyr", "testit", "data.table")
 y <- lapply(libs, require, character.only = TRUE)
 
 option_list <- list(
-  make_option(c("-i", "--inputdir"), metavar = "dir", 
-              default = "inputs", help = "Raw inputs directory"), 
   make_option(c("-m", "--metadata"), metavar = "file", 
               default = "inputs/strain_info.txt", help = "Metadata file"),
   make_option(c("-a", "--tp1"), metavar = "file", 
               default = "inputs/tp1_clusters_init.txt", help = "TP1 cluster assignments"), 
   make_option(c("-b", "--tp2"), metavar = "file", 
               default = "inputs/tp2_clusters_init.txt", help = "TP2 cluster assignments"), 
-  make_option(c("-x", "--details"), metavar = "file", 
+  make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
 arg <- parse_args(OptionParser(option_list=option_list))
@@ -27,7 +25,7 @@ source("scripts/Misc/formatprep.R")
 
 outputDetails(paste0("\n||", paste0(rep("-", 26), collapse = ""), " Prepping inputs for metric generation ",
                      paste0(rep("-", 26), collapse = ""), "||\nStarted process at: ", Sys.time()), TRUE)
-outputDetails(paste0("\nWill save formatted inputs to 'processed' directory in ", arg$inputdir, " directory."), TRUE)
+outputDetails(paste0("\nWill save formatted inputs to 'processed' directory in inputs directory."), TRUE)
 
 # Results of "Form for analysis inputs" ------------------------------------------------------------------------
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ")
@@ -152,13 +150,13 @@ if (as.logical(params$nsTP2[2])) {
   initial_sizes %<>% add_row(tibble(type="tp2_ns", a=nrow(strain_data), b=nrow(time1), d=nrow(time2)))
 }
 
-writeData(strain_data, file.path(arg$inputdir, "processed", "strain_info.txt"))
+writeData(strain_data, file.path("inputs", "processed", "strain_info.txt"))
 
-writeData(processed_tp1$new_cols, file.path(arg$inputdir, "processed", "tp1_clusters.txt"))
-saveRDS(processed_tp1, file.path(arg$inputdir, "processed", "allTP1.Rds"))
+writeData(processed_tp1$new_cols, file.path("inputs", "processed", "tp1_clusters.txt"))
+saveRDS(processed_tp1, file.path("inputs", "processed", "allTP1.Rds"))
 
-writeData(processed_tp2$new_cols, file.path(arg$inputdir, "processed", "tp2_clusters.txt"))
-saveRDS(processed_tp2, file.path(arg$inputdir, "processed", "allTP2.Rds"))
+writeData(processed_tp2$new_cols, file.path("inputs", "processed", "tp2_clusters.txt"))
+saveRDS(processed_tp2, file.path("inputs", "processed", "allTP2.Rds"))
 
 outputDetails(paste0("\nFinished process at: ", Sys.time(), "\n||", paste0(rep("-", 14), collapse = ""), " Saved formatted inputs to 'processed' in the ",
-                     arg$inputdir, " directory", paste0(rep("-", 15), collapse = ""), "||"), TRUE)
+                     "inputs", " directory", paste0(rep("-", 15), collapse = ""), "||"), TRUE)

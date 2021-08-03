@@ -5,8 +5,33 @@
 msg <- file("logs/logfile_generatedists.txt", open="wt")
 sink(msg, type="message")
 
-source("scripts/ECC/ecc_opener.R")
-source("scripts/ECC/dist_functions.R")
+libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
+          "reshape2","fossil","tidyr","purrr", "data.table")
+y <- lapply(libs, require, character.only = TRUE)
+assert("All packages loaded correctly", all(unlist(y)))
+
+# Current working directory should be Metrics-CGM-ECC/
+files <- c("scripts/ECC/classes_ecc.R", "scripts/ECC/ecc_functions.R", "scripts/ECC/dist_functions.R")
+invisible(sapply(files, source))
+
+option_list <- list(
+  make_option(c("-m", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
+  make_option(c("-a", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "TP1 cluster assignments"),
+  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
+  make_option(c("-x", "--heights"), metavar = "character", default = "0",
+              help = "Comma-delimited string of heights to collect ECCs for"))
+
+stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
+
+params <- parse_args(OptionParser(option_list=option_list))
+
+hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
+
+tp1 <- Timepoint$new(params$tp1, "tp1")$Process(hx)$listHeights(hx)
+tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
+typing_data <- tp1$height_list %>% append(tp2$height_list)
+
+m <- read_tsv(params$strains) %>% processedStrains()
 
 cat(paste0("\n||", paste0(rep("-", 23), collapse = ""), 
            " Generating non-redundant pairwise distances ", 
@@ -42,14 +67,12 @@ for (k in c(2,1)) {
   }
   
   outputMessages("\nGenerating intra-cluster distances:")
+  # assignments <- m$assignments; fpaths <- dists
   collectDistances(m$assignments, parts, fpaths = dists)
   # collectDistances(TRUE, m$assignments, parts, fpaths = dists, extremes)
 }
 
 outputMessages("\nFinished saving non-redundant pairwise distances, in groups.")
-
-outputMessages(paste0("\nNot saving (strain) pairwise distances for separate use. ", 
-                        "\nTo save the full set of distances, run 6_full_dists.R\n"))
 
 # Average distances --------------------------------------------------------------------------
 assert("Distances were collected and saved", file.exists("intermediate_data/dist_extremes.Rds"))

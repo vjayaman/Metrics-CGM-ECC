@@ -4,15 +4,16 @@ libs <- c("optparse","magrittr","tibble", "dplyr", "readr", "testit", "data.tabl
 y <- suppressMessages(lapply(libs, require, character.only = TRUE))
 
 option_list <- list(
-  make_option(c("-e", "--ECCs"), metavar = "file", default = "results/ECCs.tsv", help = "ECC result file"),
+  make_option(c("-m", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain metadata file"), 
   make_option(c("-a", "--tp1"), metavar = "file", 
               default = "inputs/processed/allTP1.Rds", help = "TP1 cluster assignments"), 
   make_option(c("-b", "--tp2"), metavar = "file", 
               default = "inputs/processed/allTP2.Rds", help = "TP2 cluster assignments"), 
   make_option(c("-c", "--CGMs"), metavar = "file", default = "results/CGM_strain_results.tsv", help = "CGM result file"),
-  make_option(c("-s", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain metadata file"), 
-  make_option(c("-x", "--details"), metavar = "file", 
-              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
+  make_option(c("-d", "--details"), metavar = "file", 
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"), 
+  make_option(c("-e", "--ECCs"), metavar = "file", default = "results/ECCs.tsv", help = "ECC result file")
+  )
 
 arg <- parse_args(OptionParser(option_list=option_list))
 

@@ -12,12 +12,11 @@ invisible(sapply(files, source))
 # Responsible for changes made during and after merge with CGM process: Vasena Jayamanna
 
 option_list <- list(
-  make_option(c("-b", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
-  make_option(c("-c", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "TP1 cluster assignments"),
-  make_option(c("-d", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
+  make_option(c("-m", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
+  make_option(c("-a", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "TP1 cluster assignments"),
+  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = "Comma-delimited string of heights to collect ECCs for"),
-  make_option(c("-p", "--cpus"), metavar = "numeric", default = 1, help = "CPUs"),
   make_option(c("-t", "--trio"), metavar = "character", default = "0-1-0,0-0-1",
               help = "source, temporal, geographic coefficients"))
 

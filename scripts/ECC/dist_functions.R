@@ -76,7 +76,6 @@ distMatrix <- function(input_data, dtype, cnames) {
   }
 }
 
-# assignments <- m$assignments; fpaths <- dists
 collectDistances <- function(assignments, parts, fpaths = NULL) {
   df <- parts$drs
   cx <- setdiff(colnames(df), c("Strain", "dr"))
@@ -98,7 +97,8 @@ collectDistances <- function(assignments, parts, fpaths = NULL) {
     if (!is.null(fpaths)) {
       if (length(fpaths) == 1) {
         fname <- paste0(fpaths[[1]], "group", formatC(j, width=nchar(p), format="d", flag="0"), ".Rds")
-        list(temp = dm_temp, geo = dm_geo) %>% saveRDS(., fname)
+        dm <- list(temp = dm_temp, geo = dm_geo)
+        saveRDS(dm, fname)
       }
     }
     

@@ -56,7 +56,8 @@ geog_calc <- function(geogdata){
   #### Create a matrix containing the pair-wise distances (in km) between all the locations using the fossil package ####
   geog_matrix <-
     geogdata %>% 
-    select(Latitude, Longitude) %>%
+    # select(Latitude, Longitude) %>% # X must have longitude first
+    select(Longitude, Latitude) %>%
     as.data.frame() %>% 
     earth.dist(dist=TRUE) %>% 
     as.matrix() %>%

@@ -105,7 +105,7 @@ transformData2 <- function(dm, dtype, min_dist, max_dist) {
     if(x2 == 1){
       logdata[1:nrow(logdata), 1:nrow(logdata)] <- 0
     } else {
-      logdata <- ((logdata-x1) / (x2-x1))
+      logdata <- ((logdata - x1) / (x2 - x1))
     }
   }
   return(logdata)
