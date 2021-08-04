@@ -14,6 +14,10 @@ source("scripts/ECC/dist_functions.R")
 source("scripts/ECC/ecc_functions.R")
 source("report_specific/epi-helper-no-source.R")
 
+getCoeff <- function(x, y) {
+  x %>% strsplit("-") %>% unlist() %>% extract2(y) %>% as.double()
+}
+
 dir.create("report_specific/heatmaps/", showWarnings = FALSE)
 
 fnames <- list.files("intermediate_data/TP2/dists/", full.names = TRUE)
@@ -27,17 +31,32 @@ option_list <- list(
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"), 
   make_option(c("-c", "--CGMs"), metavar = "file", 
               default = "results/CGM_strain_results.tsv", help = "CGM result file"),
-  make_option(c("-t", "--tau"), metavar = "numeric", help = "temporal coefficient", 
-              default = 0.0), 
-  make_option(c("-g", "--gamma"), metavar = "numeric", help = "geographic coefficient", 
-              default = 1.0), 
-  make_option(c("-l", "--clusters"), metavar = "numeric", 
-              help = "Number of clusters to get heatmaps for", default = 5),
-  make_option(c("-x", "--heights"), metavar = "character", default = "0",
-              help = "Comma-delimited string of heights to collect ECCs for"))
+  make_option(c("-d", "--details"), metavar = "file", 
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
+# Extract threshold of interest and coefficients from form inputs ----------------------------------------------
+params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ")
+
+test_params <- c("Region of interest", "Country of interest", "Has defined lineage information", 
+                 "Has defined date information (day, month, and year)", "Has province-level data", 
+                 "Province of interest", "Threshold of interest", "Is in a non-singleton cluster (at TP1)", 
+                 "Is in a non-singleton cluster (at TP2)", "Filtering by date", "Column names", 
+                 "Source-temporal-geographic coefficents", "Generate heatmaps for top __ largest clusters")
+
+assert("Input parameters are correctly labelled", identical(sapply(params, '[[', 1), test_params))
+
+params %<>% set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
+                        "th","nsTP1","nsTP2", "temp_win","cnames","coeffs", "numcl"))
+
+# Comma-delimited string of heights to collect ECCs for, e.g. '50,75,100' 
+hx <- as.character(params$th[2]) %>% strsplit(., split = ",") %>% unlist() %>% 
+  tibble(h = ., th = paste0("T", .))
+
+combos <- params$coeffs[2] %>% strsplit(., ",") %>% unlist()
+
+# Everything else ----------------------------------------------------------------------------------------------
 cgms <- suppressMessages(read_tsv(arg$CGMs))
 
 strain_data <- suppressMessages(read_tsv(arg$metadata)) %>% 
@@ -50,11 +69,9 @@ size_details <- cgms %>% arrange(-tp2_cl_size) %>% select(Strain, tp2_cl, tp2_cl
 
 top_clusters <- size_details %>% select(-Strain) %>% unique() %>%
   arrange(-TP2_cluster_size) %>% filter(TP2_cluster_size < 10000) %>%
-  slice(1:arg$clusters) %>% pull(tp2_cl)
+  slice(1:as.integer(params$numcl[2])) %>% pull(tp2_cl)
 
 clusters <- top_clusters %>% gsub("c", "", .) %>% as.integer()
-
-hx <- arg$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
 
 tp1 <- Timepoint$new(arg$tp1, "tp1")$Process(hx)$listHeights(hx)
 tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
@@ -69,6 +86,9 @@ cl_drs <- lapply(1:length(clusters), function(i) {
   x1 <- assignments[tp_cl %in% clusters[i]] %>% pull(Strain)
   m$dr_matches %>% filter(Strain %in% x1) %>% pull(dr) %>% unique()
 }) %>% set_names(clusters)
+
+tau <- list("set1" = getCoeff(combos[1], 2), "set2" = getCoeff(combos[2], 2))
+gamma <- list("set1" = getCoeff(combos[1], 3), "set2" = getCoeff(combos[2], 3))
 
 epi_tables <- lapply(1:length(clusters), function(j) {
   clx <- clusters[j]
@@ -95,14 +115,16 @@ epi_tables <- lapply(1:length(clusters), function(j) {
   
   dists <- inner_join(x3, x2, by = c("dr2" = "dr")) %>% rename(Strain.2 = Strain) %>% 
     select(Strain.1, Strain.2, Temp.Dist, Geog.Dist) %>% 
-    mutate(Total.Dist = sqrt( (((Temp.Dist^2)*arg$tau) + ((Geog.Dist^2)*arg$gamma)) ),
-           Epi.Sym = 1 - Total.Dist) %>% unique()
+    mutate(Total.Dist.Set1 = sqrt( (((Temp.Dist^2)*tau$set1) + ((Geog.Dist^2)*gamma$set1)) ),
+           Epi.Sym.Set1 = 1 - Total.Dist.Set1, 
+           Total.Dist.Set2 = sqrt( (((Temp.Dist^2)*tau$set2) + ((Geog.Dist^2)*gamma$set2)) ),
+           Epi.Sym.Set2 = 1 - Total.Dist.Set2) %>% unique()
   
   return(dists)
 }) %>% set_names(top_clusters)
 
 saveRDS(epi_tables, "report_specific/heatmaps/epitables_for_heatmaps.Rds")
-# epi_tables <- readRDS("report_specific/heatmaps/epitables_for_heatmaps.Rds")
+
 rm(typing_data)
 rm(m)
 rm(cl_drs)
@@ -111,14 +133,19 @@ rm(cl_drs)
 for (i in length(top_clusters):1) {
   cl_strains <- size_details %>% filter(tp2_cl %in% top_clusters[i])
   if (length(cl_strains$Strain) > 1) {
-    epi_matrix <- epi_tables[[top_clusters[i]]]
-    cl_epi <- EpiMatrix(epi_matrix)
-    cl_id <- cgms %>% filter(tp2_cl == top_clusters[i]) %>% slice(1) %>% pull(first_tp2_flag)
-    
-    png(paste0("report_specific/heatmaps/", cl_id, ".png"))
-    EpiHeatmap_pdf(cl_epi)
-    dev.off()
-    rm(cl_epi)
+    for (j in 1:2) { # the two parameter sets (e.g. 0-1-0, 0-0-1)
+      epi_matrix <- epi_tables[[top_clusters[i]]] %>% 
+        select(Strain.1, Strain.2, Temp.Dist, Geog.Dist, 
+               paste0("Total.Dist.Set", j), paste0("Epi.Sym.Set", j)) %>% 
+        set_colnames(gsub(paste0(".Set", j), "", colnames(.)))
+      cl_epi <- EpiMatrix(epi_matrix)
+      cl_id <- cgms %>% filter(tp2_cl == top_clusters[i]) %>% slice(1) %>% pull(first_tp2_flag)
+      
+      png(paste0("report_specific/heatmaps/", cl_id, ".png"))
+      EpiHeatmap_pdf(cl_epi)
+      dev.off()
+      rm(cl_epi)
+    }
   }else {
     print(paste0("TP2 cluster ", top_clusters[i], " has only one strain, no heatmap generated"))
   }

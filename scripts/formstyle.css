@@ -54,6 +54,9 @@ form input[type="text"] {
 	width: 110px;
 }
 
+form input[type="number"] {
+  width: 50px;
+}
 
 /*Checkbox handling*/
 .chkbox {
@@ -117,3 +120,4 @@ form input[type="text"] {
 th, td {
   padding: 5px;
 }
+

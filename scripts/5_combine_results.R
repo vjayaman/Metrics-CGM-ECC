@@ -31,7 +31,8 @@ cgms <- readData(arg$CGMs)
 filtering_params <- readLines(arg$details, warn = FALSE) %>% 
   strsplit(., split = ": ") %>%
   set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-              "th","nsTP1","nsTP2","temp_win","cnames"))
+              "th","nsTP1","nsTP2", "temp_win","cnames","coeffs", "numcl"))
+
 cnames <- filtering_params$cnames[2] %>% strsplit(split = ",") %>% unlist()
 
 # actually assigned a cluster at TP2, not NA (just in case we don't have typing data for some strains)

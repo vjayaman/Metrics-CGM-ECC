@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-# USER-SPECIFIED INPUTS, change these if necessary before running:
-
 # Strain metadata file, with "Strain" identifier column
 RAWSTRAINS=inputs/strain_info.txt
 
@@ -10,14 +8,7 @@ TP1_CLUSTERS=inputs/tp1_clusters_init.txt
 TP2_CLUSTERS=inputs/tp2_clusters_init.txt
 FORM=inputs/form_inputs.txt
 
-# Height of interest
-HEIGHT="0"
-
-# Two pairs of coefficient sets, each in order "source, temporal geographic". 
-# Example: "010" means source = 0, temporal = 1, geographic = 0
-PARAMS="0-1-0,0-0-1"
-
-# Do not change these variables unless necessary:
+# DO NOT CHANGE pdata, it's a flag used to check for success
 pdata=0
 
 printf "\n\nPart 0/5:"
@@ -44,7 +35,7 @@ fi
 
 printf "\n\n\nPart 2/5:"
 if [ $pdata == 1 ]; then
-	Rscript scripts/2_cgm_collection.R -a $tp1_data -b $tp2_data -x $HEIGHT
+	Rscript scripts/2_cgm_collection.R -a $tp1_data -b $tp2_data -d $FORM
 else
 	echo "Not all required files found for part 2."
 fi
@@ -52,7 +43,7 @@ fi
 
 printf "\n\n\nPart 3/5:"
 if [ $pdata == 1 ]; then
-	Rscript scripts/3_dist_matrices.R -m $STRAINS -a $tp1_data -b $tp2_data -x $HEIGHT
+	Rscript scripts/3_dist_matrices.R -m $STRAINS -a $tp1_data -b $tp2_data -d $FORM
 else
 	echo "Not all required files found for part 3."
 fi
@@ -60,7 +51,7 @@ fi
 
 printf "\n\n\nPart 4/5:"
 if [ $pdata == 1 ]; then
-	Rscript scripts/4_ecc_collection.R -m $STRAINS -a $tp1_data -b $tp2_data -x $HEIGHT -t $PARAMS
+	Rscript scripts/4_ecc_collection.R -m $STRAINS -a $tp1_data -b $tp2_data -d $FORM
 else
 	echo "Not all required files found for part 4."
 fi
@@ -74,7 +65,7 @@ else
 fi
 
 if [ -f "results/CGM_strain_results.tsv" -a -f "intermediate_data/TP2/dists/group01.Rds" -a -f $STRAINS ]; then
-	Rscript scripts/6_heatmap_dists.R -m $STRAINS -a $tp1_data -b $tp2_data -c results/CGM_strain_results.tsv -t 0.0 -g 1.0 -l 5 -x $HEIGHT
+	Rscript scripts/6_heatmap_dists.R -m $STRAINS -a $tp1_data -b $tp2_data -c results/CGM_strain_results.tsv -d $FORM
 else
 	echo "Not all required files found for part 6."
 fi

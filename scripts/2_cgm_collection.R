@@ -17,9 +17,8 @@ invisible(sapply(files, source))
 option_list <- list(
   make_option(c("-a", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "Time point 1 file name (TP1)"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "Time point 2 file name (TP2)"),
-  make_option(c("-x", "--heights"), metavar = "character", default = "0",
-              help = paste0("A string of comma-delimited numbers, e.g. '50,75,100' to ", 
-                            "use as heights for metric generation (strain table outputs)")))
+  make_option(c("-d", "--details"), metavar = "file", 
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
@@ -31,12 +30,28 @@ outputDetails("\nStep 1 OF 3: Data processing ", newcat = TRUE)
 
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
+# Extract threshold of interest from form inputs ---------------------------------------------------------------
+params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ")
+
+test_params <- c("Region of interest", "Country of interest", "Has defined lineage information", 
+                 "Has defined date information (day, month, and year)", "Has province-level data", 
+                 "Province of interest", "Threshold of interest", "Is in a non-singleton cluster (at TP1)", 
+                 "Is in a non-singleton cluster (at TP2)", "Filtering by date", "Column names", 
+                 "Source-temporal-geographic coefficents", "Generate heatmaps for top __ largest clusters")
+
+assert("Input parameters are correctly labelled", identical(sapply(params, '[[', 1), test_params))
+
+params %<>% set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
+                        "th","nsTP1","nsTP2", "temp_win","cnames","coeffs", "numcl"))
+
+# A string of comma-delimited numbers, e.g. '50,75,100' to use as heights for metric 
+# generation (strain table outputs): 
+heights <- strsplit(as.character(params$th[2]), split = ",") %>% unlist()
+
 # TP DATA PREPARATION ------------------------------------------------------------------------------------------
 f1 <- readBaseData(arg$tp1, 1, reader::get.delim(arg$tp1))
 f2 <- readBaseData(arg$tp2, 2, reader::get.delim(arg$tp2))
 colnames(f1)[1] <- colnames(f2)[1] <- "isolate"
-
-heights <- strsplit(as.character(arg$heights), split = ",") %>% unlist()
 
 all_isolates <- unique(c(f1$isolate, f2$isolate)) %>% as_tibble() %>% 
   set_colnames("char_isolate") %>% rowid_to_column("num_isolate")

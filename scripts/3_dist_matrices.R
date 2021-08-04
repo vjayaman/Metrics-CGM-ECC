@@ -18,20 +18,38 @@ option_list <- list(
   make_option(c("-m", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
   make_option(c("-a", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "TP1 cluster assignments"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
-  make_option(c("-x", "--heights"), metavar = "character", default = "0",
-              help = "Comma-delimited string of heights to collect ECCs for"))
+  make_option(c("-d", "--details"), metavar = "file", 
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
-params <- parse_args(OptionParser(option_list=option_list))
+arg <- parse_args(OptionParser(option_list=option_list))
 
-hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
+# Extract threshold of interest from form inputs ---------------------------------------------------------------
+params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ")
 
-tp1 <- Timepoint$new(params$tp1, "tp1")$Process(hx)$listHeights(hx)
-tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
+test_params <- c("Region of interest", "Country of interest", "Has defined lineage information", 
+                 "Has defined date information (day, month, and year)", "Has province-level data", 
+                 "Province of interest", "Threshold of interest", "Is in a non-singleton cluster (at TP1)", 
+                 "Is in a non-singleton cluster (at TP2)", "Filtering by date", "Column names", 
+                 "Source-temporal-geographic coefficents", "Generate heatmaps for top __ largest clusters")
+
+assert("Input parameters are correctly labelled", identical(sapply(params, '[[', 1), test_params))
+
+params %<>% set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
+                        "th","nsTP1","nsTP2", "temp_win","cnames","coeffs", "numcl"))
+
+# Comma-delimited string of heights to collect ECCs for, e.g. '50,75,100' 
+hx <- as.character(params$th[2]) %>% strsplit(., split = ",") %>% unlist() %>% 
+  tibble(h = ., th = paste0("T", .))
+
+# TP preparation -----------------------------------------------------------------------------------------------
+
+tp1 <- Timepoint$new(arg$tp1, "tp1")$Process(hx)$listHeights(hx)
+tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
 typing_data <- tp1$height_list %>% append(tp2$height_list)
 
-m <- read_tsv(params$strains) %>% processedStrains()
+m <- read_tsv(arg$strains) %>% processedStrains()
 
 cat(paste0("\n||", paste0(rep("-", 23), collapse = ""), 
            " Generating non-redundant pairwise distances ", 
