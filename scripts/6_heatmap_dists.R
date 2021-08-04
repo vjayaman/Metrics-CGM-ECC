@@ -34,8 +34,7 @@ option_list <- list(
   make_option(c("-l", "--clusters"), metavar = "numeric", 
               help = "Number of clusters to get heatmaps for", default = 5),
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
-              help = "Comma-delimited string of heights to collect ECCs for")
-  )
+              help = "Comma-delimited string of heights to collect ECCs for"))
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
@@ -71,7 +70,7 @@ cl_drs <- lapply(1:length(clusters), function(i) {
   m$dr_matches %>% filter(Strain %in% x1) %>% pull(dr) %>% unique()
 }) %>% set_names(clusters)
 
-epi.tables <- lapply(1:length(clusters), function(j) {
+epi_tables <- lapply(1:length(clusters), function(j) {
   clx <- clusters[j]
   
   rawdists <- lapply(1:length(distfiles), function(i) {
@@ -97,19 +96,23 @@ epi.tables <- lapply(1:length(clusters), function(j) {
   dists <- inner_join(x3, x2, by = c("dr2" = "dr")) %>% rename(Strain.2 = Strain) %>% 
     select(Strain.1, Strain.2, Temp.Dist, Geog.Dist) %>% 
     mutate(Total.Dist = sqrt( (((Temp.Dist^2)*arg$tau) + ((Geog.Dist^2)*arg$gamma)) ),
-           Epi.Sym = 1 - Total.Dist)
+           Epi.Sym = 1 - Total.Dist) %>% unique()
   
   return(dists)
-})
+}) %>% set_names(top_clusters)
 
-saveRDS(epi.tables, "report_specific/heatmaps/epitables_for_heatmaps.Rds")
+saveRDS(epi_tables, "report_specific/heatmaps/epitables_for_heatmaps.Rds")
+# epi_tables <- readRDS("report_specific/heatmaps/epitables_for_heatmaps.Rds")
+rm(typing_data)
+rm(m)
+rm(cl_drs)
+# epi.matrix <- lapply(1:length(clusters), function(j) EpiMatrix(epi_tables[[j]]))
 
-# epi.matrix <- lapply(1:length(clusters), function(j) EpiMatrix(epi.tables[[j]]))
-
-for (i in 1:length(top_clusters)) {
+for (i in length(top_clusters):1) {
   cl_strains <- size_details %>% filter(tp2_cl %in% top_clusters[i])
   if (length(cl_strains$Strain) > 1) {
-    cl_epi <- EpiMatrix(epi.tables[[i]])
+    epi_matrix <- epi_tables[[top_clusters[i]]]
+    cl_epi <- EpiMatrix(epi_matrix)
     cl_id <- cgms %>% filter(tp2_cl == top_clusters[i]) %>% slice(1) %>% pull(first_tp2_flag)
     
     png(paste0("report_specific/heatmaps/", cl_id, ".png"))

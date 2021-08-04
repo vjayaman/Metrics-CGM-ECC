@@ -193,9 +193,10 @@ EpiMatrix <- function(epi.matrix){
   # epi.matrix <- epi.matrix[,c(1,2,12)] 
   
   epi.matrix <- epi.matrix %>% # I think, TODO: check
-    select(Strain.1, Strain.2, Total.Dist)
+    select(Strain.1, Strain.2, Total.Dist) %>% as.data.table()
   
-  epi.cast <- dcast(epi.matrix, formula= Strain.1 ~ Strain.2, value.var = "Total.Dist")
+  epi.cast <- dcast.data.table(epi.matrix, formula = Strain.1 ~ Strain.2, value.var = "Total.Dist")
+  # epi.cast <- dcast(epi.matrix, formula = Strain.1 ~ Strain.2, value.var = "Total.Dist")
   epi.cast <- as.matrix(epi.cast[,2:ncol(epi.cast)]) 
   rownames(epi.cast) <- colnames(epi.cast)
 #   epi.sym <- 1 - epi.cast
