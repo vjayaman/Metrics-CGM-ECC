@@ -10,4 +10,4 @@ Is in a non-singleton cluster (at TP2): false
 Filtering by date: [,]
 Column names: Source,Country,Province,City
 Source-temporal-geographic coefficents: 0-1-0,0-0-1
-Generate heatmaps for top __ largest clusters: 5
+Generate heatmaps for top __ largest clusters: 0
