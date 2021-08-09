@@ -6,7 +6,9 @@ sink(msg, type="message")
 
 dir.create("results", showWarnings = FALSE)
 dir.create("intermediate_data", showWarnings = FALSE)
+
 dir.create(file.path("inputs", "processed"))
+dir.create(file.path("intermediate_data", "cgms"))
 # This should be run first, to make sure the required packages are installed
 
 required_packages <- c("R6", "testit", "optparse", "magrittr", "dplyr", "tibble", "readr", "reshape2", 

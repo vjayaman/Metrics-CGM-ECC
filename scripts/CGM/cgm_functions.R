@@ -423,3 +423,91 @@ findingSneakers <- function(novels, q1, q2, matched) {
   
   results %>% return()
 }
+
+# August 9, 2021
+# --------------------------------------------------------------------------------------------
+tpDataSetup <- function(tpx1, tpx2, ph, pc) {
+  all_isolates <- unique(c(tpx1$isolate, tpx2$isolate)) %>% as_tibble() %>% 
+    set_colnames("char_isolate") %>% rowid_to_column("num_isolate")
+  
+  outputDetails("  Processing timepoint clusters for easier data handling and flagging clusters", newcat = TRUE)
+  tp1 <- Timedata$new("tp1", raw = tpx1, all_isolates, pad_height = ph, 
+                      pad_cluster = pc, msg = TRUE, ind_prog = TRUE)$
+    set_comps()$flag_clusters()
+  
+  tp2 <- Timedata$new("tp2", raw = tpx2, all_isolates, pad_height = ph, 
+                      pad_cluster = pc, msg = TRUE, ind_prog = TRUE)$
+    set_comps()$set_cnames()
+  
+  outputDetails("  Collecting and counting novel isolates in TP2 clusters ...", newcat = TRUE)
+  novels <- setdiff(tp2$coded$isolate, tp1$coded$isolate)
+  
+  tp2$comps <- tp2$coded %>% filter(isolate %in% novels) %>% 
+    group_by(tp2_id) %>% 
+    summarise(num_novs = n(), .groups = "drop") %>% 
+    left_join(tp2$comps, ., by = "tp2_id") %>% 
+    mutate(num_novs = ifelse(is.na(num_novs), 0, num_novs))
+  
+  tp2$flag_clusters()$coded_status(novels)
+  tp1$coded_status(novels)
+  
+  return(list("tp1" = tp1, "tp2" = tp2, "novs" = novels))
+}
+
+
+novelHandling <- function(tp1, tp2, clusters_just_tp1) {
+  isolates_base <- tp1$melted %>% mutate(across(tp1_h, as.integer)) %>% 
+    filter(tp1_h %in% heights) %>% 
+    left_join(., clusters_just_tp1, by = c("tp1_id", "tp1_h", "tp1_cl")) %>% 
+    arrange(tp1_h, tp1_cl, tp2_h, tp2_cl)
+  
+  # NOVELS -------------------------------------------------------------------------------------------------------
+  first_nov_flag <- tp2$status %>% filter(!is.na(status)) %>% group_by(isolate) %>% slice(1) %>% ungroup() %>% pull(tp2_id)
+  
+  novels_only_tracking <- tp2$flagged %>% filter(tp2_id %in% first_nov_flag) %>% 
+    left_join(., tp2$comps[,c("tp2_id", "num_novs")]) %>% arrange(tp2_h, tp2_cl) %>% 
+    add_column(tp1_id = NA, tp1_h = NA, tp1_cl = NA, first_tp1_flag = NA, last_tp1_flag = NA)
+  
+  novel_asmts <- tp2$melted %>% mutate(across(tp2_h, as.integer)) %>% 
+    filter(isolate %in% setdiff(tp2$raw$isolate, tp1$raw$isolate))
+  
+  # Pure novel TP2 cluster
+  pure_novels <- novels_only_tracking %>% filter(num_novs == tp2_cl_size) %>% 
+    mutate(tp1_cl_size = 0, add_TP1 = 0) %>% 
+    right_join(novel_asmts, ., by = c("tp2_h", "tp2_cl", "tp2_id")) %>% select(colnames(isolates_base))
+  
+  # Mixed novel TP2 clusters
+  mixed_novels <- novels_only_tracking %>% filter(num_novs != tp2_cl_size) %>% 
+    left_join(., novel_asmts, by = c("tp2_id", "tp2_h", "tp2_cl"))
+  
+  # Mixed novels clusters should inherit data from the tracked TP1 strains
+  all_mixed <- isolates_base %>% 
+    select(-isolate, -tp1_id, -tp1_h, -tp1_cl, -first_tp1_flag, -last_tp1_flag) %>% 
+    unique() %>% left_join(mixed_novels, .) %>% select(colnames(isolates_base))
+  
+  # FULL STRAIN FILE ---------------------------------------------------------------------------------------------
+  # note: two types of novel clusters, those that are fully novel, and those that are not
+  
+  if (nrow(pure_novels) > 0) {
+    isolates_file <- bind_rows(isolates_base, pure_novels)  
+  }else {
+    isolates_file <- isolates_base
+  }
+  
+  rm(isolates_base)
+  gc()
+  
+  if (nrow(all_mixed) > 0) {isolates_file %<>% bind_rows(., all_mixed)}
+  return(isolates_file)
+}
+
+addInterval <- function(isolates_file, n1, n2) {
+  tmp2 <- apply(isolates_file, 2, function(y) gsub("TP2_", paste0("TP", n2, "_"), y)) %>% as.data.frame() %>% as.data.table()
+  tmp3 <- apply(tmp2, 2, function(y) gsub("TP1_", paste0("TP", n1, "_"), y)) %>% as.data.frame() %>% as.data.table() %>% 
+    rownames_to_column("id")
+  
+  melt.data.table(tmp3, id.vars = "id") %>% arrange(id) %>% 
+    add_column(Interval = paste0(n1, "-", n2), .after = 1) %>% 
+    set_colnames(c("Cluster", "Interval", "Field", "Value")) %>% return()  
+}
+
