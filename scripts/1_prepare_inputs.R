@@ -33,12 +33,13 @@ params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ")
 test_params <- c("Region of interest", "Country of interest", "Has defined lineage information", 
                  "Has defined date information (day, month, and year)", "Has province-level data", 
                  "Province of interest", "Threshold of interest", "Is in a non-singleton cluster (at TP1)", 
-                 "Is in a non-singleton cluster (at TP2)", "Filtering by date", "Column names")
+                 "Is in a non-singleton cluster (at TP2)", "Filtering by date", "Column names", 
+                 "Source-temporal-geographic coefficents", "Generate heatmaps for top __ largest clusters")
 
 assert("Input parameters are correctly labelled", identical(sapply(params, '[[', 1), test_params))
 
 params %<>% set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-                        "th","nsTP1","nsTP2", "temp_win","cnames"))
+                        "th","nsTP1","nsTP2", "temp_win","cnames","coeffs", "numcl"))
 
 a1 <- readData(arg$metadata, FALSE)
 a2 <- suppressWarnings(readData(arg$metadata, check_enc = TRUE))
@@ -49,6 +50,17 @@ if (!exists("time1")) {time1 <- readData(arg$tp1, FALSE)}
 
 time2 <- suppressWarnings(readData(arg$tp2, check_enc = TRUE))
 if (!exists("time2")) {time2 <- readData(arg$tp2, FALSE)}
+
+# Check that coefficient sets each add up to 1 -----------------------------------------------------------------
+coeffset <- params$coeffs[2] %>% strsplit(",") %>% unlist()
+
+for (i in 1:length(coeffset)) {
+  x1 <- coeffset[i] %>% strsplit("-") %>% unlist() %>% as.double() %>% sum()
+  assert(paste0("Parameter set ", i, " sums to 1"), x1 == 1)  
+}
+
+# Check that number of clusters (to generate heatmaps for) is a positive integer (or 0) ------------------------
+assert("Number of clusters (for heatmap generation) is an integer >= 0", as.integer(params$numcl[2]) >= 0)
 
 # LINEAGE INFO -------------------------------------------------------------------------------------------------
 initial_sizes <- tibble(type="initial", a=nrow(strain_data), b=nrow(time1), d=nrow(time2))
@@ -103,7 +115,7 @@ if (nchar(params$temp_win[2]) > nchar("[,]")) {
   
   strain_data %<>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
     filter(Date >= tempwindow[1] & Date <= tempwindow[2])
-
+  
   # Strains with metadata and defined lineage info at TP1
   y <- updateStrains("temp_win", strain_data, time1, time2, initial_sizes)
   strain_data <- y$sd; time1 <- y$t1; time2 <- y$t2; initial_sizes <- y$sizes

@@ -426,11 +426,14 @@ findingSneakers <- function(novels, q1, q2, matched) {
 
 # August 9, 2021
 # --------------------------------------------------------------------------------------------
-tpDataSetup <- function(tpx1, tpx2, ph, pc) {
+tpDataSetup <- function(tpx1, tpx2, ph, pc, show_msg) {
   all_isolates <- unique(c(tpx1$isolate, tpx2$isolate)) %>% as_tibble() %>% 
     set_colnames("char_isolate") %>% rowid_to_column("num_isolate")
   
-  outputDetails("  Processing timepoint clusters for easier data handling and flagging clusters", newcat = TRUE)
+  if (show_msg) {
+    outputDetails("  Processing timepoint clusters for easier data handling and flagging clusters", newcat = TRUE)  
+  }
+  
   tp1 <- Timedata$new("tp1", raw = tpx1, all_isolates, pad_height = ph, 
                       pad_cluster = pc, msg = TRUE, ind_prog = TRUE)$
     set_comps()$flag_clusters()
@@ -439,7 +442,10 @@ tpDataSetup <- function(tpx1, tpx2, ph, pc) {
                       pad_cluster = pc, msg = TRUE, ind_prog = TRUE)$
     set_comps()$set_cnames()
   
-  outputDetails("  Collecting and counting novel isolates in TP2 clusters ...", newcat = TRUE)
+  if (show_msg) {
+    outputDetails("  Collecting and counting novel isolates in TP2 clusters ...", newcat = TRUE)  
+  }
+  
   novels <- setdiff(tp2$coded$isolate, tp1$coded$isolate)
   
   tp2$comps <- tp2$coded %>% filter(isolate %in% novels) %>% 
@@ -464,8 +470,11 @@ novelHandling <- function(tp1, tp2, clusters_just_tp1, heights) {
   # NOVELS -------------------------------------------------------------------------------------------------------
   first_nov_flag <- tp2$status %>% filter(!is.na(status)) %>% group_by(isolate) %>% slice(1) %>% ungroup() %>% pull(tp2_id)
   
-  novels_only_tracking <- tp2$flagged %>% filter(tp2_id %in% first_nov_flag) %>% 
-    left_join(., tp2$comps[,c("tp2_id", "num_novs")]) %>% arrange(tp2_h, tp2_cl) %>% 
+  partA <- tp2$flagged %>% filter(tp2_id %in% first_nov_flag)
+  novels_only_tracking <- left_join(partA, tp2$comps[,c("tp2_id", "num_novs")], 
+                                    by = intersect(colnames(partA), 
+                                                   colnames(tp2$comps[,c("tp2_id", "num_novs")]))) %>% 
+    arrange(tp2_h, tp2_cl) %>% 
     add_column(tp1_id = NA, tp1_h = NA, tp1_cl = NA, first_tp1_flag = NA, last_tp1_flag = NA)
   
   novel_asmts <- tp2$melted %>% mutate(across(tp2_h, as.integer)) %>% 

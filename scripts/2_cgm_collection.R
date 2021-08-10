@@ -16,7 +16,6 @@ invisible(sapply(files, source))
 # Change the default values to read in your own files, or feed through terminal arguments
 option_list <- list(
   make_option(c("-m", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain metadata file"), 
-  make_option(c("-a", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "Time point 1 file name (TP1)"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "Time point 2 file name (TP2)"),
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = paste0("A string of comma-delimited numbers, e.g. '50,75,100' to ", 
@@ -77,35 +76,41 @@ for (i in 1:(length(wk_list)-1)) {
     unchanged_data <- tmp %>% filter(Strain %in% strains)
   }
   
-  outputDetails(paste0("  Week ", n1, " has ", nrow(tpx1), " strains"), newcat = TRUE)
-  outputDetails(paste0("  Week ", n2, " has ", nrow(tpx2), " strains"), newcat = TRUE)
+  outputDetails(paste0("  Week ", n1, " has ", nrow(tpx1), " strains", 
+                       " (", i, " / ", length(wk_list), ")"), newcat = TRUE)
+  outputDetails(paste0("  Week ", n2, " has ", nrow(tpx2), " strains", 
+                       " (", i+1, " / ", length(wk_list), ")"), newcat = TRUE)
+  
+  outputDetails(paste0(length(wk_list), " weeks in total"), newcat = TRUE)
   
   ph <- max(nchar(colnames(tpx1)[-1]), nchar(colnames(tpx2)[-1]))
   pc <- tpx2 %>% select(-isolate) %>% max(., tpx2 %>% select(-isolate)) %>% nchar()
   
-  tplist <- tpDataSetup(tpx1, tpx2, ph, pc)
+  tplist <- tpDataSetup(tpx1, tpx2, ph, pc, FALSE)
   tp1 <- tplist[["tp1"]]
   tp2 <- tplist[["tp2"]]
   novels <- tplist[["novs"]]
   
   # BASE CASE (FIRST HEIGHT) -------------------------------------------------------------------------------------
-  outputDetails("\nStep 2 OF 3: Tracking and flagging clusters for base case ", newcat = TRUE)
+  # outputDetails("\nStep 2 OF 3: Tracking and flagging clusters for base case ", newcat = TRUE)
   outputDetails(paste0("  Collecting height data for base case, height ", heights[1], "..."), newcat = TRUE)
   
   hx <- Heightdata$new(starter = heights[1], t1_comps = tp1$comps, hvals = heights)$
     clust_tracking(tp2$comps, tp2$cnames, tp1$coded, tp2$coded, TRUE)$
     update_iteration()
   
-  outputDetails("  Identifying and counting 'additional TP1 strains'.\n", newcat = FALSE)
+  # outputDetails("  Identifying and counting 'additional TP1 strains'.\n", newcat = FALSE)
   
   clusters_just_tp1 <- lapply(heights, function(h) {
-    hx$results[[h]] %>% left_join(., tp1$flagged) %>% 
-      left_join(., tp2$flagged) %>% 
+    df1 <- hx$results[[h]]
+    df2 <- left_join(df1, tp1$flagged, by = intersect(colnames(df1), colnames(tp1$flagged)))
+    
+    left_join(df2, tp2$flagged, by = intersect(colnames(df2), colnames(tp2$flagged))) %>% 
       arrange(tp1_h, tp1_cl, tp2_h, tp2_cl) %>% 
       findingSneakers(novels, tp1$status, tp2$status, .) %>% return()
   }) %>% bind_rows()
   
-  outputDetails("  Handling novel tracking, adding to dataset.\n", newcat = FALSE)
+  # outputDetails("  Handling novel tracking, adding to dataset.\n", newcat = FALSE)
   
   isolates_file <- novelHandling(tp1, tp2, clusters_just_tp1, heights)
   
@@ -116,8 +121,8 @@ for (i in 1:(length(wk_list)-1)) {
   isolates_file[,c("tp1_h", "tp2_h")] %<>% apply(., 2, padCol, padval = ph, padchr = "h")
   isolates_file[,c("tp1_cl", "tp2_cl")] %<>% apply(., 2, padCol, padval = pc, padchr = "c")
   
-  outputDetails("  Incrementing all cluster sizes by 1, then calculating growth columns.\n", newcat = FALSE)
-  outputDetails("  Also adding 'type' column to CGM results table.\n", newcat = FALSE)
+  # outputDetails("  Incrementing all cluster sizes by 1, then calculating growth columns.\n", newcat = FALSE)
+  # outputDetails("  Also adding 'type' column to CGM results table.\n", newcat = FALSE)
   
   isolates_file %<>% 
     mutate(tp1_cl_size = tp1_cl_size + 1, tp2_cl_size = tp2_cl_size + 1) %>% 
@@ -130,7 +135,7 @@ for (i in 1:(length(wk_list)-1)) {
   tmp <- isolates_file
   isolates_file %<>% addingType(.)
   
-  outputDetails("  Saving the data in a file with cluster identifiers.\n", newcat = FALSE)
+  # outputDetails("  Saving the data in a file with cluster identifiers.\n", newcat = FALSE)
   # strains removed
   isolates_file <- isolates_file %>% 
     select(tp1_id, tp1_cl_size, first_tp1_flag, last_tp1_flag, 
