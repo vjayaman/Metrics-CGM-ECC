@@ -81,8 +81,6 @@ for (i in 1:(length(wk_list)-1)) {
   outputDetails(paste0("  Week ", n2, " has ", nrow(tpx2), " strains", 
                        " (", i+1, " / ", length(wk_list), ")"), newcat = TRUE)
   
-  outputDetails(paste0(length(wk_list), " weeks in total"), newcat = TRUE)
-  
   ph <- max(nchar(colnames(tpx1)[-1]), nchar(colnames(tpx2)[-1]))
   pc <- tpx2 %>% select(-isolate) %>% max(., tpx2 %>% select(-isolate)) %>% nchar()
   
@@ -178,3 +176,5 @@ timeTaken(pt = "CGM data collection", stopwatch) %>% outputDetails(., newcat = T
 outputDetails(paste0("||", paste0(rep("-", 28), collapse = ""), " End of cluster metric generation ", 
                      paste0(rep("-", 29), collapse = ""), "||\n"))
 closeAllConnections()
+
+# for 264052 strains, and 53 weeks, took 32 min and 10 sec to run the whole thing
