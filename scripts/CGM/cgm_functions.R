@@ -455,7 +455,7 @@ tpDataSetup <- function(tpx1, tpx2, ph, pc) {
 }
 
 
-novelHandling <- function(tp1, tp2, clusters_just_tp1) {
+novelHandling <- function(tp1, tp2, clusters_just_tp1, heights) {
   isolates_base <- tp1$melted %>% mutate(across(tp1_h, as.integer)) %>% 
     filter(tp1_h %in% heights) %>% 
     left_join(., clusters_just_tp1, by = c("tp1_id", "tp1_h", "tp1_cl")) %>% 
@@ -501,13 +501,4 @@ novelHandling <- function(tp1, tp2, clusters_just_tp1) {
   return(isolates_file)
 }
 
-addInterval <- function(isolates_file, n1, n2) {
-  tmp2 <- apply(isolates_file, 2, function(y) gsub("TP2_", paste0("TP", n2, "_"), y)) %>% as.data.frame() %>% as.data.table()
-  tmp3 <- apply(tmp2, 2, function(y) gsub("TP1_", paste0("TP", n1, "_"), y)) %>% as.data.frame() %>% as.data.table() %>% 
-    rownames_to_column("id")
-  
-  melt.data.table(tmp3, id.vars = "id") %>% arrange(id) %>% 
-    add_column(Interval = paste0(n1, "-", n2), .after = 1) %>% 
-    set_colnames(c("Cluster", "Interval", "Field", "Value")) %>% return()  
-}
 

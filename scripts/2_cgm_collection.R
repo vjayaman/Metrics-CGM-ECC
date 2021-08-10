@@ -2,8 +2,8 @@
 
 # Current working directory should be Metrics-CGM-ECC/
 
-# msg <- file("logs/logfile_datacollection.txt", open="wt")
-# sink(msg, type="message")
+msg <- file("logs/logfile_datacollection.txt", open="wt")
+sink(msg, type="message")
 
 libs <- c("R6", "tibble", "optparse", "magrittr", "dplyr", "reshape2", "progress", 
           "testit", "data.table", "readr")
@@ -35,25 +35,51 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 # TP DATA PREPARATION ------------------------------------------------------------------------------------------
 metadata <- suppressMessages(read_tsv(arg$strains)) %>% 
   mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
-  mutate(Week = strftime(Date, format = "%V")) %>% select(-TP1, -TP2) %>% 
-  mutate(num_week = as.integer(Week)) %>% 
-  arrange(Week) %>% as.data.table()
+  mutate(wk = strftime(Date, format = "%V")) %>% select(-TP1, -TP2) %>% 
+  mutate(num_wk = as.integer(wk)) %>% 
+  arrange(wk) %>% as.data.table()
 
-f2 <- readBaseData(arg$tp2, 2, reader::get.delim(arg$tp2)) %>% as.data.table()
+heights <- strsplit(as.character(arg$heights), split = ",") %>% unlist()
 
-week_list <- sort(unique(metadata$num_week))
+f2 <- readBaseData(arg$tp2, 2, reader::get.delim(arg$tp2)) %>% as.data.table() %>% 
+  select(Strain, all_of(heights)) %>% rename(isolate = Strain) %>% 
+  arrange(isolate)
 
-for (n2 in week_list[length(week_list):2]) {
-  n1 <- n2 - 1
+wk_list <- sort(unique(metadata$num_wk))
+
+wk_clusters <- metadata %>% select(c(Strain,num_wk)) %>% 
+  inner_join(., f2, by = c("Strain" = "isolate")) %>% 
+  set_colnames(c("isolate", "num_wk", "heightx"))
+
+clusters <- vector(mode = "list", length = length(wk_list)) %>% 
+  set_names(wk_list)
+
+for (j in wk_list) {
+  # cluster assignments for clusters that changed when Week i strains were added
+  wkj <- wk_clusters[heightx %in% wk_clusters[num_wk == j]$heightx]
+  sofar <- wk_clusters[heightx %in% wk_clusters[num_wk <= j]$heightx]
+  clusters[[as.character(j)]] <- list(wkj, sofar) %>% set_names(c("wk", "sofar"))
+}
+
+for (i in 1:(length(wk_list)-1)) {
+  # print(i)
   
-  tpx2 <- f2 %>% filter(Strain %in% metadata[num_week <= n2, Strain])
-  tpx1 <- tpx2 %>% filter(Strain %in% metadata[num_week <= n1, Strain])
+  n1 <- as.character(wk_list[i])
+  tpx1 <- clusters[[n1]]$sofar %>% select(-num_wk) %>% set_colnames(colnames(f2))
+  n2 <- as.character(wk_list[i+1])
+  tpx2 <- clusters[[n2]]$sofar %>% select(-num_wk) %>% set_colnames(colnames(f2))
   
-  print(paste0(n2, ": ", nrow(tpx2)))
-  print(paste0(n1, ": ", nrow(tpx1)))
+  if (i > 1) {
+    fullset <- clusters[[n1]]$sofar
+    wki <- clusters[[n1]]$wk
+    unchanged_clusters <- setdiff(fullset, wki) %>% pull(heightx) %>% unique()
+    strains <- fullset[heightx %in% unchanged_clusters] %>% pull(isolate)
+    unchanged_data <- tmp %>% filter(Strain %in% strains)
+  }
   
-  colnames(tpx1)[1] <- colnames(tpx2)[1] <- "isolate"
-  heights <- strsplit(as.character(arg$heights), split = ",") %>% unlist()
+  outputDetails(paste0("  Week ", n1, " has ", nrow(tpx1), " strains"), newcat = TRUE)
+  outputDetails(paste0("  Week ", n2, " has ", nrow(tpx2), " strains"), newcat = TRUE)
+  
   ph <- max(nchar(colnames(tpx1)[-1]), nchar(colnames(tpx2)[-1]))
   pc <- tpx2 %>% select(-isolate) %>% max(., tpx2 %>% select(-isolate)) %>% nchar()
   
@@ -61,7 +87,7 @@ for (n2 in week_list[length(week_list):2]) {
   tp1 <- tplist[["tp1"]]
   tp2 <- tplist[["tp2"]]
   novels <- tplist[["novs"]]
- 
+  
   # BASE CASE (FIRST HEIGHT) -------------------------------------------------------------------------------------
   outputDetails("\nStep 2 OF 3: Tracking and flagging clusters for base case ", newcat = TRUE)
   outputDetails(paste0("  Collecting height data for base case, height ", heights[1], "..."), newcat = TRUE)
@@ -81,7 +107,7 @@ for (n2 in week_list[length(week_list):2]) {
   
   outputDetails("  Handling novel tracking, adding to dataset.\n", newcat = FALSE)
   
-  isolates_file <- novelHandling(tp1, tp2, clusters_just_tp1)
+  isolates_file <- novelHandling(tp1, tp2, clusters_just_tp1, heights)
   
   isolates_file %<>% 
     mutate(novel = ifelse(isolate %in% setdiff(tp2$raw$isolate, tp1$raw$isolate), 1, 0)) %>% 
@@ -95,20 +121,48 @@ for (n2 in week_list[length(week_list):2]) {
   
   isolates_file %<>% 
     mutate(tp1_cl_size = tp1_cl_size + 1, tp2_cl_size = tp2_cl_size + 1) %>% 
-    oneHeight() %>% 
-    addingType(.)
+    oneHeight()
+  
+  if (i > 1) {
+    isolates_file <- unchanged_data %>% bind_rows(isolates_file, .)
+  }
+  
+  tmp <- isolates_file
+  isolates_file %<>% addingType(.)
   
   outputDetails("  Saving the data in a file with cluster identifiers.\n", newcat = FALSE)
-  
-  isolates_file %>% 
+  # strains removed
+  isolates_file <- isolates_file %>% 
     select(tp1_id, tp1_cl_size, first_tp1_flag, last_tp1_flag, 
            first_tp2_flag, tp2_cl_size, last_tp2_flag, add_TP1, novel, 
            num_novs, actual_size_change, actual_growth_rate, new_growth, type) %>% 
-    unique() %>% as.data.table() %>% 
-    addInterval(., n1, n2) %>% 
-    saveRDS(., paste0("intermediate_data/cgms/interval-", 
-                      unique(metadata[num_week==n1,Week]), "-", 
-                      unique(metadata[num_week==n2,Week]), ".Rds"))
+    unique() %>% as.data.table()
+  
+  indices <- which(is.na(isolates_file$tp1_id) & isolates_file$tp1_cl_size == 1)
+  isolates_file[indices]$tp1_id <- isolates_file$first_tp2_flag[indices] %>% 
+    sapply(., strsplit, "_") %>% sapply(., '[[', 3) %>% 
+    paste0("AbsentAtTP1-", "TP2_", .)
+  
+  wk1_id <- unique(metadata[num_wk==n1,wk])
+  wk2_id <- unique(metadata[num_wk==n2,wk])
+  cgm_results <- isolates_file %>% 
+    mutate(across(colnames(isolates_file), as.character)) %>% 
+    melt.data.table(id.vars = "tp1_id") %>% 
+    add_column(Interval = paste0(wk1_id, "-", wk2_id), .after = 1) %>% 
+    set_colnames(c("Cluster", "wkInterval", "Field", "Value"))
+  
+  saveRDS(cgm_results, paste0("intermediate_data/cgms/interval-",
+                              wk1_id, "-", wk2_id, ".Rds"))
+}
+
+cgmfiles <- list.files("intermediate_data/cgms/", full.names = TRUE) %>%
+  lapply(., function(fi) {readRDS(fi)}) %>% bind_rows()
+saveRDS(cgmfiles, "results/CGM_week_intervals.Rds")
+
+if (file.exists("results/CGM_week_intervals.Rds")) {
+  for (fi in list.files("intermediate_data/cgms/", full.names = TRUE)) {
+    file.remove(fi)
+  }
 }
 
 # WRAPPING THINGS UP -------------------------------------------------------------------------------------------
