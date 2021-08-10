@@ -19,13 +19,10 @@ option_list <- list(
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "Time point 2 file name (TP2)"),
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = paste0("A character-type number, heights for metric generation (default is '0')")), 
-  make_option(c("-i", "--intervaltype"), metavar = "char", default = "twoset", 
+  make_option(c("-i", "--intervaltype"), metavar = "char", default = "weekly", 
               help = "Type of intervals, choices are: weekly, monthly, twoset. If twoset, provide a time to split the dataset at."))
 
 arg <- parse_args(OptionParser(option_list=option_list))
-
-save_to <- file.path(paste0("intermediate_data/cgms/", tolower(arg$intervaltype)))
-dir.create(save_to, showWarnings = FALSE)
 
 # BASIC STARTUP MESSAGES ---------------------------------------------------------------------------------------
 outputDetails(paste0("\n||", paste0(rep("-", 32), collapse = ""), " Cluster metric generation ", 
@@ -51,81 +48,47 @@ f2 <- readBaseData(arg$tp2, 2, reader::get.delim(arg$tp2)) %>% as.data.table() %
 
 if (arg$intervaltype == "weekly") {
   print("weekly")
-  interval <- "Week"
-  interval_list <- metadata$wk %>% unique() %>% sort()
-  
-  interval_clusters <- metadata %>% select(c(Strain, wk)) %>% 
-    inner_join(., f2, by = c("Strain" = "isolate")) %>% 
-    set_colnames(c("isolate", "ivl", "heightx"))
-  
 }else if (arg$intervaltype == "monthly") {
   print("monthly")
-  interval <- "Month"
-  interval_list <- metadata$YearMonth %>% unique() %>% sort()
-  
-  interval_clusters <- metadata %>% select(c(Strain, YearMonth)) %>% 
-    inner_join(., f2, by = c("Strain" = "isolate")) %>% 
-    set_colnames(c("isolate", "ivl", "heightx"))
-  
-
 }else if (arg$intervaltype == "twoset") {
-  if (interactive()) {
-    divider <- readline(paste0("Enter date between ", min(metadata$Date), " and ", 
-                               max(metadata$Date), " to split set into two timepoints ", 
-                               "(YYYY-MM-DD): "))  
-  }else {
-    cat(paste0("Enter date between ", min(metadata$Date), " and ", 
-               max(metadata$Date), " to split set into two timepoints ", 
-               "(YYYY-MM-DD): "))
-    divider <- readLines("stdin", n = 1)
-  }
-  
-  assert("Provided input has 10 characters", nchar(divider)==10)
-  assert("Provided input is date type, correct format", 
-         !is.na(as.Date(divider, format = "%Y-%m-%d")))
-  assert("Provided input is between min date and max date", 
-         divider >= min(metadata$Date) & divider <= max(metadata$Date))
-  
-  metadata %<>% mutate(Tpt = ifelse(Date <= divider, "set1", "set2"))
-  
-  interval <- "Twoset"
-  interval_list <- metadata$Tpt %>% unique() %>% sort()
-  
-  interval_clusters <- metadata %>% select(c(Strain, Tpt)) %>% 
-    inner_join(., f2, by = c("Strain" = "isolate")) %>% 
-    set_colnames(c("isolate", "ivl", "heightx"))
+  print("need this to trigger the option of inputting a date to split the data at")
 }
 
-clusters <- vector(mode = "list", length = length(interval_list)) %>% 
-  set_names(interval_list)
+wk_list <- sort(unique(metadata$wk))
 
-for (xj in interval_list) {
-  # cluster assignments for clusters that changed when interval i strains were added
-  int_j <- interval_clusters[heightx %in% interval_clusters[ivl == xj]$heightx]
-  sofar <- interval_clusters[heightx %in% interval_clusters[ivl <= xj]$heightx]
-  clusters[[xj]] <- list(int_j, sofar) %>% set_names(c("ivl", "sofar"))
+wk_clusters <- metadata %>% select(c(Strain, wk)) %>% 
+  inner_join(., f2, by = c("Strain" = "isolate")) %>% 
+  set_colnames(c("isolate", "wk", "heightx"))
+
+clusters <- vector(mode = "list", length = length(wk_list)) %>% set_names(wk_list)
+
+for (xj in wk_list) {
+  # cluster assignments for clusters that changed when Week i strains were added
+  wkj <- wk_clusters[heightx %in% wk_clusters[wk == xj]$heightx]
+  sofar <- wk_clusters[heightx %in% wk_clusters[wk <= xj]$heightx]
+  clusters[[xj]] <- list(wkj, sofar) %>% set_names(c("wk", "sofar"))
 }
 
-for (i in 1:(length(interval_list)-1)) {
+for (i in 1:(length(wk_list)-1)) {
+
+  n1 <- as.character(wk_list[i])
+  tpx1 <- clusters[[n1]]$sofar %>% select(-wk) %>% set_colnames(colnames(f2))
   
-  n1 <- as.character(interval_list[i])
-  tpx1 <- clusters[[n1]]$sofar %>% select(-ivl) %>% set_colnames(colnames(f2))
-  
-  n2 <- as.character(interval_list[i+1])
-  tpx2 <- clusters[[n2]]$sofar %>% select(-ivl) %>% set_colnames(colnames(f2))
+  n2 <- as.character(wk_list[i+1])
+  tpx2 <- clusters[[n2]]$sofar %>% select(-wk) %>% set_colnames(colnames(f2))
   
   if (i > 1) {
     fullset <- clusters[[n1]]$sofar
-    ivl_i <- clusters[[n1]]$ivl
-    unchanged_clusters <- setdiff(fullset, ivl_i) %>% pull(heightx) %>% unique()
+    wki <- clusters[[n1]]$wk
+    unchanged_clusters <- setdiff(fullset, wki) %>% pull(heightx) %>% unique()
     strains <- fullset[heightx %in% unchanged_clusters] %>% pull(isolate)
     unchanged_data <- tmp %>% filter(Strain %in% strains)
   }
   
-  outputDetails(paste0("  ", interval, " ", n1, " has ", nrow(tpx1), " strains", 
-                       " (", i, " / ", length(interval_list), ")"), newcat = TRUE)
-  outputDetails(paste0("  ", interval, " ", n2, " has ", nrow(tpx2), " strains", 
-                       " (", i+1, " / ", length(interval_list), ")"), newcat = TRUE)
+  outputDetails(paste0("  Week ", n1, " has ", nrow(tpx1), " strains", 
+                       " (", i, " / ", length(wk_list), ")"), newcat = TRUE)
+  outputDetails(paste0("  Week ", n2, " has ", nrow(tpx2), " strains", 
+                       " (", i+1, " / ", length(wk_list), ")"), newcat = TRUE)
   
   ph <- max(nchar(colnames(tpx1)[-1]), nchar(colnames(tpx2)[-1]))
   pc <- tpx2 %>% select(-isolate) %>% max(., tpx2 %>% select(-isolate)) %>% nchar()
@@ -196,26 +159,20 @@ for (i in 1:(length(interval_list)-1)) {
     mutate(across(colnames(isolates_file), as.character)) %>% 
     melt.data.table(id.vars = "tp1_id") %>% 
     add_column(Interval = paste0(n1, "-", n2), .after = 1) %>% 
-    set_colnames(c("Cluster", paste0(arg$intervaltype, "Interval"), "Field", "Value"))
+    set_colnames(c("Cluster", "wkInterval", "Field", "Value"))
   
-  saveRDS(cgm_results, paste0(save_to, "/interval", n1, "-", n2, ".Rds"))
+  saveRDS(cgm_results, paste0("intermediate_data/cgms/interval",
+                              n1, "-", n2, ".Rds"))
 }
 
-cgmfiles <- list.files(save_to, full.names = TRUE) %>%
+cgmfiles <- list.files("intermediate_data/cgms/", full.names = TRUE) %>%
   lapply(., function(fi) {readRDS(fi)}) %>% bind_rows()
+saveRDS(cgmfiles, "results/CGM_week_intervals.Rds")
 
-if (arg$intervaltype == "twoset") {
-  res_file <- paste0("results/CGM_", divider, "_midpoint.Rds")  
-}else {
-  res_file <- paste0("results/CGM_", tolower(arg$intervaltype), "_intervals.Rds")
-}
-saveRDS(cgmfiles, res_file)
-
-if (file.exists(res_file)) {
-  for (fi in list.files(save_to, full.names = TRUE)) {
+if (file.exists("results/CGM_week_intervals.Rds")) {
+  for (fi in list.files("intermediate_data/cgms/", full.names = TRUE)) {
     file.remove(fi)
   }
-  unlink(save_to, recursive = TRUE)
 }
 
 # WRAPPING THINGS UP -------------------------------------------------------------------------------------------
