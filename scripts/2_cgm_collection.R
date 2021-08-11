@@ -19,8 +19,8 @@ option_list <- list(
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "Time point 2 file name (TP2)"),
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = paste0("A character-type number, heights for metric generation (default is '0')")), 
-  make_option(c("-i", "--intervaltype"), metavar = "char", default = "twoset", 
-              help = "Type of intervals, choices are: weekly, monthly, twoset. If twoset, provide a time to split the dataset at."))
+  make_option(c("-i", "--intervaltype"), metavar = "char", default = "monthly", 
+              help = "Type of intervals, choices are: weekly, monthly, multiset. If multiset, provide a time to split the dataset at."))
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
@@ -68,32 +68,48 @@ if (arg$intervaltype == "weekly") {
     set_colnames(c("isolate", "ivl", "heightx"))
   
 
-}else if (arg$intervaltype == "twoset") {
+}else if (arg$intervaltype == "multiset") {
   if (interactive()) {
-    divider <- readline(paste0("Enter date between ", min(metadata$Date), " and ", 
-                               max(metadata$Date), " to split set into two timepoints ", 
-                               "(YYYY-MM-DD): "))  
+    divider <- paste0("Enter date(s) between ", min(metadata$Date), " and ", 
+                      max(metadata$Date), " to split set into two timepoints ", 
+                      "\n(YYYY-MM-DD format, separated by commas): ") %>% 
+      readline() %>% as.character()
   }else {
-    cat(paste0("Enter date between ", min(metadata$Date), " and ", 
+    cat(paste0("Enter date(s) between ", min(metadata$Date), " and ", 
                max(metadata$Date), " to split set into two timepoints ", 
-               "(YYYY-MM-DD): "))
-    divider <- readLines("stdin", n = 1)
+               "\n(YYYY-MM-DD format, separated by commas): "))
+    divider <- readLines("stdin", n = 1) %>% as.character()
   }
   
-  assert("Provided input has 10 characters", nchar(divider)==10)
-  assert("Provided input is date type, correct format", 
-         !is.na(as.Date(divider, format = "%Y-%m-%d")))
-  assert("Provided input is between min date and max date", 
-         divider >= min(metadata$Date) & divider <= max(metadata$Date))
+  setdivider <- strsplit(divider, split = ",") %>% unlist() %>% 
+    as.Date(., format = "%Y-%m-%d")
   
-  metadata %<>% mutate(Tpt = ifelse(Date <= divider, "set1", "set2"))
+  assertion1 <- lapply(setdivider, function(x) nchar(as.character(x)) == 10) %>% unlist()
+  assert("Provided input(s) has/have 10 characters", all(assertion1))
   
-  interval <- "Twoset"
-  interval_list <- metadata$Tpt %>% unique() %>% sort()
+  assert("Provided input(s) is/are date type, correct format", !any(is.na(setdivider)))
   
-  interval_clusters <- metadata %>% select(c(Strain, Tpt)) %>% 
-    inner_join(., f2, by = c("Strain" = "isolate")) %>% 
-    set_colnames(c("isolate", "ivl", "heightx"))
+  assertion3 <- lapply(setdivider, function(x) x >= min(metadata$Date) & x <= max(metadata$Date)) %>% unlist()
+  assert("Provided input(s) is/are between min date and max date", all(assertion3))
+  
+  divisions <- lapply(1:length(setdivider), function(i) paste0("set", i + 1)) %>% 
+    unlist() %>% tibble(ivl = ., Date = setdivider) %>% 
+    add_row(ivl = "set1", Date = min(metadata$Date), .before = 1) %>% 
+    add_row(ivl = paste0("set", length(setdivider)+2), Date = max(metadata$Date))
+  
+  metadata %<>% add_column(Tpt = "")
+  for (i in nrow(divisions):1) {
+    metadata[Date <= divisions$Date[i]]$Tpt <- divisions$ivl[i]
+  }
+  
+  # metadata %<>% mutate(Tpt = ifelse(Date <= divider, "set1", "set2"))
+  metadata %>% select(Date, Tpt) %>% unique() %>% View()
+  # interval <- "Multiset"
+  # interval_list <- metadata$Tpt %>% unique() %>% sort()
+  # 
+  # interval_clusters <- metadata %>% select(c(Strain, Tpt)) %>% 
+  #   inner_join(., f2, by = c("Strain" = "isolate")) %>% 
+  #   set_colnames(c("isolate", "ivl", "heightx"))
 }
 
 clusters <- vector(mode = "list", length = length(interval_list)) %>% 
@@ -204,7 +220,7 @@ for (i in 1:(length(interval_list)-1)) {
 cgmfiles <- list.files(save_to, full.names = TRUE) %>%
   lapply(., function(fi) {readRDS(fi)}) %>% bind_rows()
 
-if (arg$intervaltype == "twoset") {
+if (arg$intervaltype == "multiset") {
   res_file <- paste0("results/CGM_", divider, "_midpoint.Rds")  
 }else {
   res_file <- paste0("results/CGM_", tolower(arg$intervaltype), "_intervals.Rds")

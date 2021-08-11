@@ -189,7 +189,7 @@ avgDists <- function(g_cuts, dm, cname, newname) {
 }
 # -----------------------------------------------------------------------------------------------------
 sectionClusters <- function(k, typing_data, m) {
-  df <- typing_data[[k]] %>% rownames_to_column("Strain") %>%
+  df <- typing_data[[as.character(k)]] %>% rownames_to_column("Strain") %>%
     as.data.table() %>% left_join(., m$dr_matches, by = "Strain")
   
   gc()

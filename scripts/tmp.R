@@ -58,7 +58,7 @@ for (i in 1:nrow(dfx)) {
   
   outputMessages(paste0("\nCollecting and saving ECCs for groups of clusters at TP", 
                         dfx$k[i], ", for ECC coefficient triple ", as.character(dfx$x[i])))
-    
+  
   k <- dfx$k[i]
   parts <- sectionClusters(k, typing_data, m)
   read_from <- paste0("intermediate_data/TP", k, "/dists/")

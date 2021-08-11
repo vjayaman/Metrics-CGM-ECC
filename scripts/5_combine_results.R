@@ -58,7 +58,7 @@ assert("No clusters with unassigned type", checkTypes(step1))
 
 
 # Type II modifications: TP1 > 2, TP2 > 2, TP2 > TP1
-#   -	Main problem is that the novel strains in TP2 don’t have TP1 data
+#   -	Main problem is that the novel strains in TP2 do not have TP1 data
 #   -	TP1, no modification required
 #   -	TP2: 
 #     - no change for strains also in TP1; 
@@ -76,7 +76,7 @@ if (nrow(cases2a) > 0) {
 # -	Main problem is that TP1 cluster doesn't have ECC stats, 
 #   - impacts the change vector calculation; 
 #   - also, if TP1 = 0 then cluster size for bubble plot & the cluster growth have no data 
-#     - (no bubble for TP1 & “Inf” growth rate)
+#     - (no bubble for TP1 & -Inf growth rate)
 # - TP1 needs to have a size of 1 
 #   - (+ 1 adjustment for every cluster) so that the denominator is not 0 for cluster growth
 #   - (initially wanted ECC bubbles of size at least 1, NOW not doing cluster size increment for the ECCs)
