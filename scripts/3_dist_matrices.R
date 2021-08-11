@@ -99,6 +99,7 @@ avg_dists <- lapply(1:2, function(tpx) {
              by = intersect(colnames(temp_dists), colnames(geo_dists))) %>% return()
 }) %>% set_names(c("TP1", "TP2"))
 
+outputMessages("Average distances collected, now saving ...")
 tp1_avg_dists <- tp1$proc %>% select(-TP1) %>% 
   left_join(., avg_dists[["TP1"]], by = intersect(colnames(.), colnames(avg_dists[["TP1"]])))
 tp2_avg_dists <- tp2$proc %>% select(-TP2) %>% 
@@ -106,6 +107,8 @@ tp2_avg_dists <- tp2$proc %>% select(-TP2) %>%
 
 all_avg_dists <- right_join(tp1_avg_dists, tp2_avg_dists, by = "Strain")
 saveRDS(all_avg_dists, "intermediate_data/average_dists.Rds")
+
+assert("Averages were saved", file.exists("intermediate_data/average_dists.Rds"))
 
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), 
            " End of distances collection ", paste0(rep("-", 31), collapse = ""), "||\n"))
