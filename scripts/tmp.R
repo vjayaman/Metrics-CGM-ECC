@@ -150,7 +150,7 @@ for (i in 1:length(interval_list)) {
     
     parts <- m$dr_matches %>% filter(Strain %in% rownames(typing_data$`2`[1])) %>% 
       sectionClusters(k, typing_data, .)
-    read_from <- paste0("intermediate_data/TP", k, "/dists/")
+    read_from <- paste0("intermediate_data/TP", 2, "/dists/")
     save_to <- paste0("intermediate_data/TP", k, "/ecc_groups/", as.character(dfx$x[i]), "/")
   
     collectECCs(k, m, parts, extremes, c1, read_from, save_to)

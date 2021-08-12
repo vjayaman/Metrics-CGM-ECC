@@ -196,9 +196,10 @@ collectECCs <- function(k, m, parts, extremes, c1, read_from, save_to) {
   
   tau <- c1[2]
   gamma <- c1[3]
-  
-  fname <- formatC(1:length(results), width=nchar(length(results)), format="d", flag="0")
-  
+  # m2 <- nchar(length(results))
+  m2 <- 2
+  fname <- formatC(1:length(results), width=m2, format="d", flag="0")
+  # list.files(read_from, full.names = TRUE)
   final_steps <- lapply(1:length(results), function(j) {
     outputMessages(paste0("   Collecting ECCs for group of clusters ", j, " / ", length(results)))
     
