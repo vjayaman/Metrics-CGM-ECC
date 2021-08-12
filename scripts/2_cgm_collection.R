@@ -81,8 +81,7 @@ if (arg$intervaltype == "weekly") {
     divider <- readLines("stdin", n = 1) %>% as.character()
   }
   
-  setdivider <- strsplit(divider, split = ",") %>% unlist() %>% 
-    as.Date(., format = "%Y-%m-%d")
+  setdivider <- strsplit(divider, split = ",") %>% unlist() %>% as.Date(., format = "%Y-%m-%d")
   
   assertion1 <- lapply(setdivider, function(x) nchar(as.character(x)) == 10) %>% unlist()
   assert("Provided input(s) has/have 10 characters", all(assertion1))
@@ -92,24 +91,22 @@ if (arg$intervaltype == "weekly") {
   assertion3 <- lapply(setdivider, function(x) x >= min(metadata$Date) & x <= max(metadata$Date)) %>% unlist()
   assert("Provided input(s) is/are between min date and max date", all(assertion3))
   
-  divisions <- lapply(1:length(setdivider), function(i) paste0("set", i + 1)) %>% 
-    unlist() %>% tibble(ivl = ., Date = setdivider) %>% 
-    add_row(ivl = "set1", Date = min(metadata$Date), .before = 1) %>% 
-    add_row(ivl = paste0("set", length(setdivider)+2), Date = max(metadata$Date))
-  
-  metadata %<>% add_column(Tpt = "")
-  for (i in nrow(divisions):1) {
-    metadata[Date <= divisions$Date[i]]$Tpt <- divisions$ivl[i]
+  sdiv <- c(min(metadata$Date), setdivider, max(metadata$Date))
+  fdivs <- tibble(start = sdiv[1:(length(sdiv)-1)], end = sdiv[2:length(sdiv)]) %>% 
+    mutate(ivl = paste0("set", 1:nrow(.)))
+
+  metadata <- metadata %>% add_column(Tpt = "")
+  for (i in 1:nrow(fdivs)) {
+    metadata[metadata$Date >= fdivs$start[i] & metadata$Date < fdivs$end[i]]$Tpt <- fdivs$ivl[i]
   }
+  metadata[metadata$Date == fdivs$end[i]]$Tpt <- fdivs$ivl[i]
   
-  # metadata %<>% mutate(Tpt = ifelse(Date <= divider, "set1", "set2"))
-  metadata %>% select(Date, Tpt) %>% unique() %>% View()
-  # interval <- "Multiset"
-  # interval_list <- metadata$Tpt %>% unique() %>% sort()
-  # 
-  # interval_clusters <- metadata %>% select(c(Strain, Tpt)) %>% 
-  #   inner_join(., f2, by = c("Strain" = "isolate")) %>% 
-  #   set_colnames(c("isolate", "ivl", "heightx"))
+  interval <- "Multiset"
+  interval_list <- metadata$Tpt %>% unique() %>% sort()
+
+  interval_clusters <- metadata %>% select(c(Strain, Tpt)) %>%
+    inner_join(., f2, by = c("Strain" = "isolate")) %>%
+    set_colnames(c("isolate", "ivl", "heightx"))
 }
 
 clusters <- vector(mode = "list", length = length(interval_list)) %>% 

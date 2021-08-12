@@ -23,7 +23,9 @@ option_list <- list(
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = "Comma-delimited string of heights to collect ECCs for"),
   make_option(c("-t", "--trio"), metavar = "character", default = "0-1-0",
-              help = "source, temporal, geographic coefficients"))
+              help = "source, temporal, geographic coefficients"), 
+  make_option(c("-i", "--intervaltype"), metavar = "char", default = "monthly", 
+              help = "Type of intervals, choices are: weekly, monthly, multiset. If multiset, provide a time to split the dataset at."))
 
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
@@ -34,10 +36,16 @@ z <- vector("list", length = length(combos)) %>% set_names(combos)
 
 hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
 
+m <- read_tsv(params$strains) %>% processedStrains()
+
+m$strain_data <- m$strain_data %>% 
+  mutate(YearMonth = format(Date, "%Y-%m")) %>% 
+  mutate(wk = strftime(Date, format = "%V")) %>% 
+  select(-TP1, -TP2) %>% 
+  arrange(wk) %>% as.data.table()
+
 tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
 typing_data <- tp2$height_list %>% set_names("2")
-
-m <- read_tsv(params$strains) %>% processedStrains()
 
 extremes <- readRDS("intermediate_data/dist_extremes.Rds")
 

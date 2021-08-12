@@ -188,15 +188,21 @@ avgDists <- function(g_cuts, dm, cname, newname) {
   }) %>% unlist() %>% tibble(clusters, .) %>% set_colnames(c(newname, x))
 }
 # -----------------------------------------------------------------------------------------------------
-sectionClusters <- function(k, typing_data, m) {
-  df <- typing_data[[as.character(k)]] %>% rownames_to_column("Strain") %>%
-    as.data.table() %>% left_join(., m$dr_matches, by = "Strain")
-  
-  gc()
+# sectionClusters <- function(k, typing_data, m) {
+#   df <- typing_data[[as.character(k)]] %>% rownames_to_column("Strain") %>%
+#     as.data.table() %>% left_join(., m$dr_matches, by = "Strain")
+#   gc()
+#   results <- formatForSectioning(df, 1000) %>% sectionTypingData(.)
+#   assert("No clusters overlooked", length(setdiff(pull(df,2), pull(rbindlist(results),1))) == 0)
+#   return(list("drs" = df, "results" = results))
+# }
 
+sectionClusters <- function(k, typing_data, dr_matches) {
+  df <- typing_data[[as.character(k)]] %>% rownames_to_column("Strain") %>%
+    as.data.table() %>% left_join(., dr_matches, by = "Strain")
+  gc()
   results <- formatForSectioning(df, 1000) %>% sectionTypingData(.)
   assert("No clusters overlooked", length(setdiff(pull(df,2), pull(rbindlist(results),1))) == 0)
-  
   return(list("drs" = df, "results" = results))
 }
 
