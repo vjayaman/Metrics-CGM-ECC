@@ -31,9 +31,6 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 
 params <- parse_args(OptionParser(option_list=option_list))
 
-combos <- params$trio %>% strsplit(., ",") %>% unlist()
-z <- vector("list", length = length(combos)) %>% set_names(combos)
-
 hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
 m <- read_tsv(params$strains) %>% processedStrains()
 
@@ -66,7 +63,8 @@ df <- parts$drs
 cx <- setdiff(colnames(df), c("Strain", "dr"))
 results <- parts$results
 
-dfx <- expand.grid(x = combos, k = interval_list) %>% as.data.frame()
+dfx <- params$trio %>% strsplit(., ",") %>% unlist() %>% 
+  expand.grid(x = ., k = interval_list) %>% as.data.frame()
 
 for (i in 1:nrow(dfx)) {
   # collectECCs(k, m, parts, extremes, c1, read_from, save_to)
@@ -92,20 +90,8 @@ for (i in 1:nrow(dfx)) {
   final_steps <- lapply(fnames, function(f) {
     cluster_x <- df[df[[cx]] %in% pull(results[[f]], cx),-"Strain"]
     dms <- readRDS(paste0("intermediate_data/TP", k, "/dists/group", f, ".Rds"))
-    
-    transformed_temp <- dms$temp %>% 
-      transformData2(., "temp", extremes$mint, extremes$maxt) %>% 
-      formatData(., c("dr1","dr2","Temp.Dist"))
-    
-    transformed_geo <- dms$geo %>%
-      transformData2(., "geo", extremes$ming, extremes$maxg) %>%
-      formatData(., c("dr1","dr2","Geog.Dist"))
-    
-    rm(dms); gc()
-    
-    transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
-    
-    rm(transformed_temp); rm(transformed_geo); gc()
+
+    transformed_dists <- collectTransforms(dms, extremes)
     
     selected_tp <- m$strain_data %>% filter(Strain %in% tpkstrains)
     

@@ -43,8 +43,6 @@ outputMessages <- function(msgs = NULL) {
 checkEncoding <- function(fp) {
   readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
 }
-
-# -----------------------------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------------------------
 
 ### Incorporating the allele data with the epidemiological data 
@@ -109,6 +107,23 @@ transformData2 <- function(dm, dtype, min_dist, max_dist) {
     }
   }
   return(logdata)
+}
+
+collectTransforms <- function(dms, extremes) {
+  transformed_temp <- dms$temp %>% 
+    transformData2(., "temp", extremes$mint, extremes$maxt) %>% 
+    formatData(., c("dr1","dr2","Temp.Dist"))
+  
+  transformed_geo <- dms$geo %>%
+    transformData2(., "geo", extremes$ming, extremes$maxg) %>%
+    formatData(., c("dr1","dr2","Geog.Dist"))
+  
+  rm(dms); gc()
+  
+  transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
+  
+  rm(transformed_temp); rm(transformed_geo); gc()
+  return(transformed_dists)
 }
 
 formatData <- function(dm, newnames) {
@@ -187,41 +202,3 @@ processedStrains <- function(base_strains) {
        "assignments" = assignments, 
        "dr_matches" = dr_matches) %>% return()
 }
-
-
-# collectECCs <- function(k, m, parts, extremes, c1, read_from, save_to) {
-#   df <- parts$drs
-#   cx <- setdiff(colnames(df), c("Strain", "dr"))
-#   results <- parts$results
-#   
-#   tau <- c1[2]
-#   gamma <- c1[3]
-#   # m2 <- nchar(length(results))
-#   m2 <- 2
-#   fname <- formatC(1:length(results), width=m2, format="d", flag="0")
-#   # list.files(read_from, full.names = TRUE)
-#   final_steps <- lapply(1:length(results), function(j) {
-#     outputMessages(paste0("   Collecting ECCs for group of clusters ", j, " / ", length(results)))
-#     
-#     cluster_x <- df[df[[cx]] %in% pull(results[[j]], cx),-"Strain"]
-#     dms <- readRDS(paste0(read_from, "group", fname[j], ".Rds"))
-#     
-#     transformed_temp <- dms$temp %>% 
-#       transformData2(., "temp", extremes$mint, extremes$maxt) %>% 
-#       formatData(., c("dr1","dr2","Temp.Dist"))
-#     
-#     transformed_geo <- dms$geo %>%
-#       transformData2(., "geo", extremes$ming, extremes$maxg) %>%
-#       formatData(., c("dr1","dr2","Geog.Dist"))
-#     
-#     rm(dms); gc()
-#     
-#     transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
-#     
-#     # outputMessages("   Clearing up some memory")
-#     rm(transformed_temp); rm(transformed_geo); gc()
-#     
-#     epiCollectionByCluster(m$strain_data, tau, gamma, transformed_dists, k, cluster_x) %>% 
-#       saveRDS(., paste0(save_to, "group", fname[j], ".Rds"))
-#   })
-# }
