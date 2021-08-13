@@ -136,12 +136,7 @@ formatData <- function(dm, newnames) {
 }
 
 epiCohesion <- function(g_cuts, epi_melt) {
-  dr_names <- g_cuts %>% select(dr) %>% pull() %>% unique()
   dr_assignments <- g_cuts %>% set_colnames(c("cluster", "dr", "n"))
-
-  epi_melt_joined <-
-    expand_grid(dr_names, dr_names, .name_repair = function(x) {c("dr_1", "dr_2")}) %>%
-    inner_join(., epi_melt, by = c("dr_1", "dr_2")) %>% as.data.table()
 
   sizes <- lapply(unique(dr_assignments$cluster), function(h) {
     dr_assignments %>% filter(cluster == h) %>%
@@ -159,7 +154,7 @@ epiCohesion <- function(g_cuts, epi_melt) {
     k <- cut_cluster_members[cluster == i, members] %>% unlist()
     matches <- dr_assignments %>% filter(cluster == i)
 
-    epi_melt_joined[dr_1 %in% k][dr_2 %in% k] %>%
+    epi_melt[dr_1 %in% k][dr_2 %in% k] %>%
       left_join(., matches, by = c("dr_1" = "dr")) %>% rename(n1 = n) %>% select(-cluster) %>%
       left_join(., matches, by = c("dr_2" = "dr")) %>% rename(n2 = n) %>% select(-cluster) %>%
       mutate(value2 = value * n1 * n2) %>%
@@ -176,46 +171,6 @@ epiCohesion <- function(g_cuts, epi_melt) {
     select(-cut, -members, -s1) %>%
     set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC")))
 }
-
-# # with epi_melt_joined step removed, seems the epi_melt_joined object is identical
-# epiCohesion <- function(g_cuts, epi_melt) {
-#   dr_assignments <- g_cuts %>% set_colnames(c("cluster", "dr", "n"))
-#   
-#   sizes <- lapply(unique(dr_assignments$cluster), function(h) {
-#     dr_assignments %>% filter(cluster == h) %>% 
-#       pull(n) %>% sum() %>% tibble(cluster = h, cluster_size = .)
-#   }) %>% bind_rows()
-#   
-#   cut_cluster_members <-
-#     g_cuts %>% select(-n) %>% 
-#     pivot_longer(-dr, names_to = "cut", values_to = "cluster") %>%
-#     group_by(cut, cluster) %>%
-#     summarise(members = list(cur_data()$dr), .groups = "drop") %>%
-#     left_join(., sizes, by = "cluster") %>% as.data.table()
-#   
-#   calculate_s1 <- function(i) {
-#     k <- cut_cluster_members[cluster == i, members] %>% unlist()
-#     matches <- dr_assignments %>% filter(cluster == i)
-#     
-#     epi_melt[dr_1 %in% k][dr_2 %in% k] %>% 
-#       left_join(., matches, by = c("dr_1" = "dr")) %>% rename(n1 = n) %>% select(-cluster) %>% 
-#       left_join(., matches, by = c("dr_2" = "dr")) %>% rename(n2 = n) %>% select(-cluster) %>% 
-#       mutate(value2 = value * n1 * n2) %>%
-#       select(value2) %>% pull() %>% sum()
-#   }
-#   
-#   th <- names(g_cuts)[1]
-#   
-#   cut_cluster_members %>%
-#     mutate(
-#       s1 = map_dbl(cluster, calculate_s1),
-#       ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))
-#     ) %>%
-#     ungroup() %>% 
-#     select(-cut, -members, -s1) %>%
-#     set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC")))
-# }
-
 
 processedStrains <- function(base_strains) {
   loc_cols <- intersect(c("Country", "Province", "City"), colnames(base_strains)) %>% sort()
