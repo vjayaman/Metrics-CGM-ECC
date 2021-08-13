@@ -15,7 +15,7 @@ files <- c("scripts/ECC/classes_ecc.R", "scripts/ECC/ecc_functions.R", "scripts/
 invisible(sapply(files, source))
 
 option_list <- list(
-  make_option(c("-m", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
+  make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = "Comma-delimited string of heights to collect ECCs for"),
@@ -36,7 +36,7 @@ outputMessages(paste0("\nCollecting and saving distances for groups at TP", p))
 
 hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
 tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
-m <- read_tsv(params$strains) %>% processedStrains()
+m <- read_tsv(params$metadata) %>% processedStrains()
 
 basedir <- paste0("intermediate_data/TP", p, "/")
 dir.create(basedir, showWarnings = FALSE)

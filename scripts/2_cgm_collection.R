@@ -14,7 +14,7 @@ invisible(sapply(files, source))
 # READING IN THE INPUTS ----------------------------------------------------------------------------------------
 # Change the default values to read in your own files, or feed through terminal arguments
 option_list <- list(
-  make_option(c("-m", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain metadata file"), 
+  make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain metadata file"), 
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "Time point 2 file name (TP2)"),
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = paste0("A character-type number, heights for metric generation (default is '0')")), 
@@ -35,7 +35,7 @@ outputDetails("\nStep 1 OF 3: Data processing ", newcat = TRUE)
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
 # TP DATA PREPARATION ------------------------------------------------------------------------------------------
-metadata <- suppressMessages(read_tsv(params$strains)) %>% 
+metadata <- suppressMessages(read_tsv(params$metadata)) %>% 
   mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
   mutate(YearMonth = format(Date, "%Y-%m")) %>% 
   mutate(Week = strftime(Date, format = "%V")) %>% 
@@ -66,7 +66,7 @@ for (i in 1:(length(interval_list)-1)) {
     unchanged_data <- tmp %>% filter(Strain %in% strains)
   }
   
-  outputDetails(paste0("  ", interval, " ", n1, " has ", nrow(tpx1), " strains", 
+  outputDetails(paste0("\n  ", interval, " ", n1, " has ", nrow(tpx1), " strains", 
                        " (", i, " / ", length(interval_list), ")"), newcat = TRUE)
   outputDetails(paste0("  ", interval, " ", n2, " has ", nrow(tpx2), " strains", 
                        " (", i+1, " / ", length(interval_list), ")"), newcat = TRUE)
@@ -81,7 +81,8 @@ for (i in 1:(length(interval_list)-1)) {
   
   # BASE CASE (FIRST HEIGHT) -------------------------------------------------------------------------------------
   # outputDetails("\nStep 2 OF 3: Tracking and flagging clusters for base case ", newcat = TRUE)
-  outputDetails(paste0("  Collecting height data for base case, height ", heights[1], "..."), newcat = TRUE)
+  # outputDetails(paste0("  Collecting height data for base case, height ", heights[1], "..."), newcat = TRUE)
+  outputDetails(paste0("  Tracking clusters from ", n1, " to ", n2, ", at height ", heights[1], " ..."), newcat = TRUE)
   
   hx <- Heightdata$new(starter = heights[1], t1_comps = tp1$comps, hvals = heights)$
     clust_tracking(tp2$comps, tp2$cnames, tp1$coded, tp2$coded, TRUE)$

@@ -18,7 +18,7 @@ cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation 
            paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
 
 option_list <- list(
-  make_option(c("-m", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
+  make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = "Comma-delimited string of heights to collect ECCs for"),
@@ -32,7 +32,7 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 params <- parse_args(OptionParser(option_list=option_list))
 
 hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
-m <- read_tsv(params$strains) %>% processedStrains()
+m <- read_tsv(params$metadata) %>% processedStrains()
 
 metadata <- m$strain_data %>% 
   mutate(YearMonth = format(Date, "%Y-%m")) %>% 

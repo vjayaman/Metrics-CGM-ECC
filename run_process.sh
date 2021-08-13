@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# use sed -i 's/\r//g' run_process.sh to remove Windows carriage returns
+
 # Strain metadata file, with "Strain" identifier column
 RAWSTRAINS=inputs/strain_info.txt
 
