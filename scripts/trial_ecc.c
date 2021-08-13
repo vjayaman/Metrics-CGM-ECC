@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 
+/*
 void transformData2(void *dm_unknown, int size, char* dtype, double mind, double maxd) {
 	double (*dm)[size] = dm_unknown;
 	for (int i = 0; i < size; ++i) {
@@ -17,6 +18,7 @@ void transformData2(void *dm_unknown, int size, char* dtype, double mind, double
 		printf("Geographical");
 	}
 }
+*/
 
 int main() {
 	printf("Testing conversion: \n");
@@ -26,6 +28,10 @@ int main() {
 		       {3, 3, 3, 3}, 
 	               {4, 4, 4, 4}};
 
-	transformData2(dm, 4, "temp", 2.0, 10.0);
+	/*epi_melt_joined <-
+	  expand_grid(dr_names, dr_names, .name_repair = function(x) {c("dr_1", "dr_2")}) %>%
+	  inner_join(., epi_melt, by = c("dr_1", "dr_2")) %>% as.data.table()*/
+	  
+	/*transformData2(dm, 4, "temp", 2.0, 10.0);*/
 	return 0;
 }
