@@ -18,61 +18,96 @@ option_list <- list(
   make_option(c("-m", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
-              help = "Comma-delimited string of heights to collect ECCs for"))
-
-stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
-
+              help = "Comma-delimited string of heights to collect ECCs for"),
+  make_option(c("-t", "--trio"), metavar = "character", default = "0-1-0",
+              help = "source, temporal, geographic coefficients"), 
+  make_option(c("-i", "--intervaltype"), metavar = "char", default = "monthly", 
+              help = "Type of intervals, choices are: weekly, monthly, multiset. If multiset, provide a time to split the dataset at."))
 params <- parse_args(OptionParser(option_list=option_list))
-
-hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
-
-tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
-# typing_data <- tp1$height_list %>% append(tp2$height_list) %>% set_names(c("1", "2"))
-typing_data <- tp2$height_list %>% set_names("2")
-
-m <- read_tsv(params$strains) %>% processedStrains()
 
 cat(paste0("\n||", paste0(rep("-", 23), collapse = ""), 
            " Generating non-redundant pairwise distances ", 
            paste0(rep("-", 23), collapse = ""), "||\nStarted process at: ", Sys.time()))
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
-# Note: dr stands for data representative
-# in example: strain_data has 35,627 rows (strains), assignments has 5,504 rows (> 6-fold smaller)
-# cat(paste0("\n\nStep 1:"))
-# cat(paste0("\n   Note that the source coefficent is always 0 in this version"))
-# outputMessages("   Removing redundancy (comparing date, lat-long, etc. - not every pair of strains)")
-# outputMessages("   Identifying which strains match which non-redundant 'data representatives'")
+# COLLECT dist matrices using TPN clusters ---------------------------------------------------------
+p <- "N"
+outputMessages(paste0("\nCollecting and saving distances for groups at TP", p))
 
-# COLLECT dist matrices using TP2 clusters ---------------------------------------------------------
-k <- 2
+hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
+tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
+m <- read_tsv(params$strains) %>% processedStrains()
 
-dir.create(paste0("intermediate_data/TP", k), showWarnings = FALSE)
-dir.create(paste0("intermediate_data/TP", k, "/dists"), showWarnings = FALSE)
+basedir <- paste0("intermediate_data/TP", p, "/")
+dir.create(basedir, showWarnings = FALSE)
 
-outputMessages(paste0("\nCollecting and saving distances for groups at TP", k))
-dists <- paste0("intermediate_data/TP", k, "/dists/")
-parts <- sectionClusters(k, typing_data, m)
-  
-if (k == 2) {
-  geo_dists <- m$assignments %>% select(Longitude, Latitude) %>% unique() %>% 
-    rownames_to_column("id") %>% distMatrix(., "geo", c("Longitude", "Latitude"))
-  temp_dists <- m$assignments %>% select(Date) %>% unique() %>% 
-    rownames_to_column("id") %>% distMatrix(., "temp", "Date")
-  
-  extremes <- list(maxt = max(temp_dists), mint = min(temp_dists), 
-                   maxg = max(geo_dists), ming = min(geo_dists))
-  saveRDS(extremes, "intermediate_data/dist_extremes.Rds")
+# Extremes, for scaling ----------------------------------------------------------------------
+tpn <- tp2$height_list %>% set_names("N")
+parts <- tpn$N %>% rownames_to_column("Strain") %>% as.data.table() %>% 
+  left_join(., m$dr_matches, by = "Strain") %>% sectionClusters(.)
+
+ext_geo_dists <- m$assignments %>% select(Longitude, Latitude) %>% unique() %>% 
+  rownames_to_column("id") %>% distMatrix(., "geo", c("Longitude", "Latitude"))
+ext_temp_dists <- m$assignments %>% select(Date) %>% unique() %>% 
+  rownames_to_column("id") %>% distMatrix(., "temp", "Date")
+
+extremes <- list(maxt = max(ext_temp_dists), mint = min(ext_temp_dists), 
+                 maxg = max(ext_geo_dists), ming = min(ext_geo_dists))
+saveRDS(extremes, paste0(basedir, "extreme_dists.Rds"))
+
+# Pairwise distances within clusters ---------------------------------------------------------
+# outputMessages("\nGenerating intra-cluster distances:")
+# collectDistances(m$assignments, parts, fpaths = dists)
+# outputMessages("\nFinished saving non-redundant pairwise distances, in groups.")
+
+metadata <- m$strain_data %>% 
+  mutate(YearMonth = format(Date, "%Y-%m")) %>% 
+  mutate(Week = strftime(Date, format = "%V")) %>% 
+  select(-TP1, -TP2) %>% arrange(Week) %>% as.data.table()
+
+f2 <- tp2$filedata %>% rownames_to_column("isolate") %>% as.data.table() %>% 
+  select(isolate, all_of(params$heights)) %>% arrange(isolate)
+
+source("scripts/interval_prep.R")
+
+for (k in interval_list) {
+  paste0("intermediate_data/TP", k, "/dists/") %>% dir.create(., showWarnings = FALSE, recursive = TRUE)
+  paste0("intermediate_data/TP", k, "/eccs/") %>% dir.create(., showWarnings = FALSE)
 }
-  
-outputMessages("\nGenerating intra-cluster distances:")
-collectDistances(m$assignments, parts, fpaths = dists)
-  
 
-outputMessages("\nFinished saving non-redundant pairwise distances, in groups.")
+typing_data <- lapply(1:length(interval_list), function(i) {
+  n1 <- as.character(interval_list[i])
+  tpkstrains <- metadata[get(interval) <= n1]$Strain
+  dfz <- tp2$filedata %>% rownames_to_column("isolate") %>%
+    select(isolate, all_of(params$heights)) %>%
+    filter(isolate %in% tpkstrains) %>% column_to_rownames("isolate")
+  dfz[,hx$h[1],drop=FALSE] %>% set_colnames(hx$th[1])
+}) %>% set_names(as.character(interval_list))
+
+td <- typing_data[[length(typing_data)]] %>% rownames_to_column("Strain") %>% as.data.table()
+
+parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>% 
+  left_join(td, ., by = "Strain") %>% sectionClusters(.)
+
+# dfx <- expand.grid(x = combos, k = interval_list) %>% as.data.frame()
+
+for (j in 1:length(interval_list)) {
+  cat(paste0("\nStep ", j, " / ", length(interval_list), ":"))
+  
+  k <- interval_list[j]
+  outputMessages(paste0("Collecting and saving distances for cluster groups at TP", k, ":\n"))
+  tpkstrains <- metadata[get(interval) <= k]$Strain
+  
+  collectDistances(k, parts$drs, parts$results, m$dr_matches, m$assignments, tpkstrains)
+}
+
+# parts_drs <- parts$drs
+# results <- parts$results
+# drmatches <- m$dr_matches
+# assignments <- m$assignments
 
 # Average distances --------------------------------------------------------------------------
-assert("Distances were collected and saved", file.exists("intermediate_data/dist_extremes.Rds"))
+assert("Distances were collected and saved", file.exists(paste0(basedir, "extreme_dists.Rds")))
 
 outputMessages("\nAverage distance collection put on hold until granular ECC collection is done")
 # outputMessages("\nCollecting average distances ...")

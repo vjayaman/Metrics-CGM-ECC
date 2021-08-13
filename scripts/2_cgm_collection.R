@@ -1,7 +1,6 @@
 #! /usr/bin/env Rscript
 
 # Current working directory should be Metrics-CGM-ECC/
-
 msg <- file("logs/logfile_datacollection.txt", open="wt")
 sink(msg, type="message")
 
@@ -20,11 +19,11 @@ option_list <- list(
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = paste0("A character-type number, heights for metric generation (default is '0')")), 
   make_option(c("-i", "--intervaltype"), metavar = "char", default = "monthly", 
-              help = "Type of intervals, choices are: weekly, monthly, multiset. If multiset, provide a time to split the dataset at."))
+              help = paste0("Type of intervals, choices are: weekly, monthly, multiset. ", 
+                            "If multiset, provide a time to split the dataset at.")))
+params <- parse_args(OptionParser(option_list=option_list))
 
-arg <- parse_args(OptionParser(option_list=option_list))
-
-save_to <- file.path(paste0("intermediate_data/cgms/", tolower(arg$intervaltype)))
+save_to <- file.path(paste0("intermediate_data/cgms/", tolower(params$intervaltype)))
 dir.create(save_to, showWarnings = FALSE)
 
 # BASIC STARTUP MESSAGES ---------------------------------------------------------------------------------------
@@ -36,88 +35,20 @@ outputDetails("\nStep 1 OF 3: Data processing ", newcat = TRUE)
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
 # TP DATA PREPARATION ------------------------------------------------------------------------------------------
-metadata <- suppressMessages(read_tsv(arg$strains)) %>% 
+metadata <- suppressMessages(read_tsv(params$strains)) %>% 
   mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
   mutate(YearMonth = format(Date, "%Y-%m")) %>% 
-  mutate(wk = strftime(Date, format = "%V")) %>% 
+  mutate(Week = strftime(Date, format = "%V")) %>% 
   select(-TP1, -TP2) %>% 
-  arrange(wk) %>% as.data.table()
+  arrange(Week) %>% as.data.table()
 
-heights <- strsplit(as.character(arg$heights), split = ",") %>% unlist()
+heights <- strsplit(as.character(params$heights), split = ",") %>% unlist()
 
-f2 <- readBaseData(arg$tp2, 2, reader::get.delim(arg$tp2)) %>% as.data.table() %>% 
+f2 <- readBaseData(params$tp2, 2, reader::get.delim(params$tp2)) %>% as.data.table() %>% 
   select(Strain, all_of(heights)) %>% rename(isolate = Strain) %>% 
   arrange(isolate)
 
-if (arg$intervaltype == "weekly") {
-  print("weekly")
-  interval <- "Week"
-  interval_list <- metadata$wk %>% unique() %>% sort()
-  
-  interval_clusters <- metadata %>% select(c(Strain, wk)) %>% 
-    inner_join(., f2, by = c("Strain" = "isolate")) %>% 
-    set_colnames(c("isolate", "ivl", "heightx"))
-  
-}else if (arg$intervaltype == "monthly") {
-  print("monthly")
-  interval <- "Month"
-  interval_list <- metadata$YearMonth %>% unique() %>% sort()
-  
-  interval_clusters <- metadata %>% select(c(Strain, YearMonth)) %>% 
-    inner_join(., f2, by = c("Strain" = "isolate")) %>% 
-    set_colnames(c("isolate", "ivl", "heightx"))
-  
-
-}else if (arg$intervaltype == "multiset") {
-  if (interactive()) {
-    divider <- paste0("Enter date(s) between ", min(metadata$Date), " and ", 
-                      max(metadata$Date), " to split set into two timepoints ", 
-                      "\n(YYYY-MM-DD format, separated by commas): ") %>% 
-      readline() %>% as.character()
-  }else {
-    cat(paste0("Enter date(s) between ", min(metadata$Date), " and ", 
-               max(metadata$Date), " to split set into two timepoints ", 
-               "\n(YYYY-MM-DD format, separated by commas): "))
-    divider <- readLines("stdin", n = 1) %>% as.character()
-  }
-  
-  setdivider <- strsplit(divider, split = ",") %>% unlist() %>% as.Date(., format = "%Y-%m-%d")
-  
-  assertion1 <- lapply(setdivider, function(x) nchar(as.character(x)) == 10) %>% unlist()
-  assert("Provided input(s) has/have 10 characters", all(assertion1))
-  
-  assert("Provided input(s) is/are date type, correct format", !any(is.na(setdivider)))
-  
-  assertion3 <- lapply(setdivider, function(x) x >= min(metadata$Date) & x <= max(metadata$Date)) %>% unlist()
-  assert("Provided input(s) is/are between min date and max date", all(assertion3))
-  
-  sdiv <- c(min(metadata$Date), setdivider, max(metadata$Date))
-  fdivs <- tibble(start = sdiv[1:(length(sdiv)-1)], end = sdiv[2:length(sdiv)]) %>% 
-    mutate(ivl = paste0("set", 1:nrow(.)))
-
-  metadata <- metadata %>% add_column(Tpt = "")
-  for (i in 1:nrow(fdivs)) {
-    metadata[metadata$Date >= fdivs$start[i] & metadata$Date < fdivs$end[i]]$Tpt <- fdivs$ivl[i]
-  }
-  metadata[metadata$Date == fdivs$end[i]]$Tpt <- fdivs$ivl[i]
-  
-  interval <- "Multiset"
-  interval_list <- metadata$Tpt %>% unique() %>% sort()
-
-  interval_clusters <- metadata %>% select(c(Strain, Tpt)) %>%
-    inner_join(., f2, by = c("Strain" = "isolate")) %>%
-    set_colnames(c("isolate", "ivl", "heightx"))
-}
-
-clusters <- vector(mode = "list", length = length(interval_list)) %>% 
-  set_names(interval_list)
-
-for (xj in interval_list) {
-  # cluster assignments for clusters that changed when interval i strains were added
-  int_j <- interval_clusters[heightx %in% interval_clusters[ivl == xj]$heightx]
-  sofar <- interval_clusters[heightx %in% interval_clusters[ivl <= xj]$heightx]
-  clusters[[xj]] <- list(int_j, sofar) %>% set_names(c("ivl", "sofar"))
-}
+source("scripts/interval_prep.R")
 
 for (i in 1:(length(interval_list)-1)) {
   
@@ -209,7 +140,7 @@ for (i in 1:(length(interval_list)-1)) {
     mutate(across(colnames(isolates_file), as.character)) %>% 
     melt.data.table(id.vars = "tp1_id") %>% 
     add_column(Interval = paste0(n1, "-", n2), .after = 1) %>% 
-    set_colnames(c("Cluster", paste0(arg$intervaltype, "Interval"), "Field", "Value"))
+    set_colnames(c("Cluster", paste0(params$intervaltype, "Interval"), "Field", "Value"))
   
   saveRDS(cgm_results, paste0(save_to, "/interval", n1, "-", n2, ".Rds"))
 }
@@ -217,10 +148,10 @@ for (i in 1:(length(interval_list)-1)) {
 cgmfiles <- list.files(save_to, full.names = TRUE) %>%
   lapply(., function(fi) {readRDS(fi)}) %>% bind_rows()
 
-if (arg$intervaltype == "multiset") {
+if (params$intervaltype == "multiset") {
   res_file <- paste0("results/CGM_", divider, "_midpoint.Rds")  
 }else {
-  res_file <- paste0("results/CGM_", tolower(arg$intervaltype), "_intervals.Rds")
+  res_file <- paste0("results/CGM_", tolower(params$intervaltype), "_intervals.Rds")
 }
 saveRDS(cgmfiles, res_file)
 

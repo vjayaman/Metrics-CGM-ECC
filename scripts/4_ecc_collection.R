@@ -12,7 +12,7 @@ assert("All packages loaded correctly", all(unlist(y)))
 files <- c("scripts/ECC/classes_ecc.R", "scripts/ECC/ecc_functions.R", "scripts/ECC/dist_functions.R")
 invisible(sapply(files, source))
 
-assert("Distances were collected and saved", file.exists("intermediate_data/dist_extremes.Rds"))
+assert("Distances were collected and saved", file.exists("intermediate_data/TPN/extreme_dists.Rds"))
 
 cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ",
            paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
@@ -35,62 +35,112 @@ combos <- params$trio %>% strsplit(., ",") %>% unlist()
 z <- vector("list", length = length(combos)) %>% set_names(combos)
 
 hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
-
 m <- read_tsv(params$strains) %>% processedStrains()
 
-m$strain_data <- m$strain_data %>% 
+metadata <- m$strain_data %>% 
   mutate(YearMonth = format(Date, "%Y-%m")) %>% 
-  mutate(wk = strftime(Date, format = "%V")) %>% 
-  select(-TP1, -TP2) %>% 
-  arrange(wk) %>% as.data.table()
+  mutate(Week = strftime(Date, format = "%V")) %>% 
+  select(-TP1, -TP2) %>% arrange(Week) %>% as.data.table()
 
 tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
-typing_data <- tp2$height_list %>% set_names("2")
+f2 <- tp2$filedata %>% rownames_to_column("isolate") %>% as.data.table() %>% 
+  select(isolate, all_of(params$heights)) %>% arrange(isolate)
 
-extremes <- readRDS("intermediate_data/dist_extremes.Rds")
+extremes <- readRDS("intermediate_data/TPN/extreme_dists.Rds")
 
-dfx <- expand.grid(x = combos, k = 2) %>% as.data.frame()
+source("scripts/interval_prep.R")
 
-for (k in unique(dfx$k)) {
-  dir.create(paste0("intermediate_data/TP", k, "/ecc_groups/"), showWarnings = FALSE)
-}
+typing_data <- lapply(1:length(interval_list), function(i) {
+  n1 <- as.character(interval_list[i])
+  tpkstrains <- metadata[get(interval) <= n1]$Strain
+  dfz <- tp2$filedata %>% rownames_to_column("isolate") %>%
+    select(isolate, all_of(params$heights)) %>%
+    filter(isolate %in% tpkstrains) %>% column_to_rownames("isolate")
+  dfz[,hx$h[1],drop=FALSE] %>% set_colnames(hx$th[1])
+}) %>% set_names(as.character(interval_list))
 
-stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
+td <- typing_data[[length(typing_data)]] %>% rownames_to_column("Strain") %>% as.data.table()
+parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>% 
+  left_join(td, ., by = "Strain") %>% sectionClusters(.)
+df <- parts$drs
+cx <- setdiff(colnames(df), c("Strain", "dr"))
+results <- parts$results
+
+dfx <- expand.grid(x = combos, k = interval_list) %>% as.data.frame()
+
 for (i in 1:nrow(dfx)) {
-  cat(paste0("\n\nStep ", i, " / ", nrow(dfx) + 2, ":"))
-  c1 <- as.character(dfx$x[i]) %>% strsplit(., split = "-") %>% 
-    unlist() %>% as.numeric()
+  # collectECCs(k, m, parts, extremes, c1, read_from, save_to)
+  cat(paste0("\nStep ", i, " / ", nrow(dfx), ":\n"))
   
-  paste0("intermediate_data/TP", dfx$k[i], "/ecc_groups/", as.character(dfx$x[i])) %>% 
-    dir.create(., showWarnings = FALSE)
+  k <- as.character(dfx$k[i])
+  tpkstrains <- metadata[get(interval) <= k]$Strain
+  key_cls <- parts$drs[Strain %in% tpkstrains] %>% select(-Strain, -dr) %>% pull() %>% unique()
+  y <- lapply(parts$results, function(x) any(key_cls %in% pull(x, 1))) %>% unlist()
   
-  outputMessages(paste0("\nCollecting and saving ECCs for groups of clusters at TP", 
-                        dfx$k[i], ", for ECC coefficient triple ", as.character(dfx$x[i])))
+  k_drs <- m$dr_matches %>% filter(Strain %in% tpkstrains) %>% pull(dr)
+  
+  c1 <- as.character(dfx$x[i]) %>% strsplit(., split = "-") %>% unlist() %>% as.numeric()
+  tau <- c1[2]
+  gamma <- c1[3]
+  
+  fnames <- names(y[y])
+  
+  outputMessages(paste0("Collecting ECCs for cluster groups at TP", 
+                        dfx$k[i], ", ECC coefficients ", as.character(dfx$x[i]), "\n"))
+  
+  qb <- txtProgressBar(min = 0, max = length(fnames), initial = 0, style = 3)
+  final_steps <- lapply(fnames, function(f) {
+    cluster_x <- df[df[[cx]] %in% pull(results[[f]], cx),-"Strain"]
+    dms <- readRDS(paste0("intermediate_data/TP", k, "/dists/group", f, ".Rds"))
     
-  k <- dfx$k[i]
-  parts <- sectionClusters(k, typing_data, m)
-  read_from <- paste0("intermediate_data/TP", k, "/dists/")
-  save_to <- paste0("intermediate_data/TP", k, "/ecc_groups/", as.character(dfx$x[i]), "/")
-  
-  collectECCs(k, m, parts, extremes, c1, read_from, save_to)
-  
-  c1 %>% paste0(., collapse = ", ") %>% 
-    paste0("\nMerging ECC files at TP", dfx$k[i], ", for ECC parameters ", .) %>% 
-    outputMessages()
+    transformed_temp <- dms$temp %>% 
+      transformData2(., "temp", extremes$mint, extremes$maxt) %>% 
+      formatData(., c("dr1","dr2","Temp.Dist"))
+    
+    transformed_geo <- dms$geo %>%
+      transformData2(., "geo", extremes$ming, extremes$maxg) %>%
+      formatData(., c("dr1","dr2","Geog.Dist"))
+    
+    rm(dms); gc()
+    
+    transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
+    
+    rm(transformed_temp); rm(transformed_geo); gc()
+    
+    selected_tp <- m$strain_data %>% filter(Strain %in% tpkstrains)
+    
+    epiCollectionByCluster(selected_tp, tau, gamma, transformed_dists, k, cluster_x[dr %in% k_drs]) %>% 
+      saveRDS(., paste0("intermediate_data/TP", k, "/eccs/group", f, ".Rds"))
+    setTxtProgressBar(qb, which(fnames == f))
+  })
+  close(qb)
 }
 
-cat(paste0("\n\nStep ", nrow(dfx) + 1, " / ", nrow(dfx) + 2, ":"))
-for (i in 1:nrow(dfx)) {
-  fnames <- list.files(paste0("intermediate_data/TP", dfx$k[i], 
-                              "/ecc_groups/", dfx$x[i], "/"), full.names = TRUE)
+ecc_results <- lapply(1:nrow(dfx), function(j) {
+  fnames <- list.files(paste0("intermediate_data/TP", dfx$k[j], "/eccs"), full.names = TRUE)
+  tpk <- lapply(fnames, function(f) {readRDS(f)}) %>% bind_rows() %>% 
+    mutate(across(.cols = everything(), as.double))
   
-  tpk <- lapply(fnames, function(f) {readRDS(f)}) %>% bind_rows()
+  cname <- strsplit(colnames(tpk), split = "_") %>% sapply(., "[[", 1) %>% unique()
+  colnames(tpk) <- gsub(paste0(cname, "_"), "", colnames(tpk))
   
-  saveRDS(tpk, paste0("intermediate_data/TP", dfx$k[i], "/", dfx$x[i], "-eccs.Rds"))
-}
+  tpk %>% add_column(TP = gsub("TP", "", cname), .before = 1)
+}) %>% bind_rows()
+
+saveRDS(ecc_results, "results/ecc_results.Rds")
 
 # Generating ECC results file ----------------------------------------------------
-# source("scripts/5_merging_eccs.R")
+assert("No -Inf ECC results", length(which(pull(ecc_results, 4) == -Inf)) == 0)
+
+# assert("Average distances were collected and saved", 
+#        file.exists("intermediate_data/average_dists.Rds"))
+# all_avg_dists <- readRDS("intermediate_data/average_dists.Rds")
+# 
+# cat(paste0("\n\nStep ", nrow(dfx) + 2, " / ", nrow(dfx) + 2, ":"))
+# outputMessages("   Merging collected ECCs ...\n")
+# inner_join(all_avg_dists, all_eccs) %>% 
+#   write.table(., file = "results/ECCs.tsv", col.names = TRUE, 
+#               row.names = FALSE, quote = FALSE, sep = "\t")
 
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 cat(timeTaken(pt = "ECC data collection", stopwatch))

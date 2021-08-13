@@ -35,7 +35,7 @@ option_list <- list(
               help = "Number of clusters to get heatmaps for", default = 5),
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = "Comma-delimited string of heights to collect ECCs for")
-  )
+)
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
@@ -81,7 +81,7 @@ epi.tables <- lapply(1:length(clusters), function(j) {
     ctdm <- tdm[rownames(tdm) %in% drs, colnames(tdm) %in% drs] %>% 
       transformData2(., "temp", extremes$mint, extremes$maxt) %>% 
       formatData(., c("dr1","dr2","Temp.Dist"))
-
+    
     gdm <- distfiles[[i]]$geo
     cgdm <- gdm[rownames(gdm) %in% drs, colnames(gdm) %in% drs] %>% 
       transformData2(., "geo", extremes$ming, extremes$maxg) %>%
@@ -89,7 +89,7 @@ epi.tables <- lapply(1:length(clusters), function(j) {
     
     merge.data.table(ctdm, cgdm)
   }) %>% bind_rows()
-
+  
   x1 <- assignments[tp_cl %in% clx] %>% pull(Strain)
   x2 <- m$dr_matches %>% filter(Strain %in% x1) %>% as.data.table()
   x3 <- inner_join(x2, rawdists, by = c("dr" = "dr1")) %>% select(-dr) %>% rename(Strain.1 = Strain)

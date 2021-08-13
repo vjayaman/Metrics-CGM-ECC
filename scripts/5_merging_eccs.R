@@ -58,21 +58,22 @@ all_eccs <- right_join(tp1_eccs, tp2_eccs, by = "Strain")
 # The -Infs are because of TP1 singletons
 tp1size <- colnames(all_eccs) %>% 
   grep("Size", ., value = TRUE) %>% grep("TP1", ., value = TRUE)
+
 inf_inds <- which(all_eccs == -Inf, arr.ind = TRUE) %>% as.data.frame() %>% pull("row")
 num_others <- all_eccs[inf_inds,] %>% filter(!is.na(!!as.symbol(tp1size))) %>% 
   pull(tp1size) %>% unique() %>% setdiff(., 1) %>% length()
 assert("The -Infs are because of TP1 singletons", num_others == 0)
 all_eccs[all_eccs == -Inf] <- NA
 
-assert("Average distances were collected and saved", 
-       file.exists("intermediate_data/average_dists.Rds"))
-all_avg_dists <- readRDS("intermediate_data/average_dists.Rds")
-
-cat(paste0("\n\nStep ", nrow(dfx) + 2, " / ", nrow(dfx) + 2, ":"))
-outputMessages("   Merging collected ECCs ...\n")
-inner_join(all_avg_dists, all_eccs) %>% 
-  write.table(., file = "results/ECCs.tsv", col.names = TRUE, 
-              row.names = FALSE, quote = FALSE, sep = "\t")
+# assert("Average distances were collected and saved", 
+#        file.exists("intermediate_data/average_dists.Rds"))
+# all_avg_dists <- readRDS("intermediate_data/average_dists.Rds")
+# 
+# cat(paste0("\n\nStep ", nrow(dfx) + 2, " / ", nrow(dfx) + 2, ":"))
+# outputMessages("   Merging collected ECCs ...\n")
+# inner_join(all_avg_dists, all_eccs) %>% 
+#   write.table(., file = "results/ECCs.tsv", col.names = TRUE, 
+#               row.names = FALSE, quote = FALSE, sep = "\t")
 
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 cat(timeTaken(pt = "ECC data collection", stopwatch))
