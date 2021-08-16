@@ -211,7 +211,7 @@ sectionClusters <- function(df) {
   # df <- td %>% rownames_to_column("Strain") %>%
   #   as.data.table() %>% left_join(., dr_matches, by = "Strain")
   # gc()
-  results <- formatForSectioning(df, 1000) %>% sectionTypingData(.) %>% 
+  results <- formatForSectioning(df, 2000) %>% sectionTypingData(.) %>% 
     set_names(formatC(1:length(.), width=4, format="d", flag="0"))
   assert("No clusters overlooked", length(setdiff(pull(df,2), pull(rbindlist(results),1))) == 0)
   return(list("drs" = df, "results" = results))

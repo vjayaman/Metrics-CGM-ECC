@@ -21,7 +21,7 @@ option_list <- list(
               help = "Comma-delimited string of heights to collect ECCs for"),
   make_option(c("-t", "--trio"), metavar = "character", default = "0-1-0",
               help = "source, temporal, geographic coefficients"), 
-  make_option(c("-i", "--intervaltype"), metavar = "char", default = "monthly", 
+  make_option(c("-i", "--intervaltype"), metavar = "char", default = readLines("scripts/date.txt")[1], 
               help = "Type of intervals, choices are: weekly, monthly, multiset. If multiset, provide a time to split the dataset at."))
 params <- parse_args(OptionParser(option_list=option_list))
 

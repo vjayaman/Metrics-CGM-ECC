@@ -18,7 +18,7 @@ option_list <- list(
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "Time point 2 file name (TP2)"),
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = paste0("A character-type number, heights for metric generation (default is '0')")), 
-  make_option(c("-i", "--intervaltype"), metavar = "char", default = "monthly", 
+  make_option(c("-i", "--intervaltype"), metavar = "char", default = readLines("scripts/date.txt")[1], 
               help = paste0("Type of intervals, choices are: weekly, monthly, multiset. ", 
                             "If multiset, provide a time to split the dataset at.")))
 params <- parse_args(OptionParser(option_list=option_list))
@@ -49,6 +49,15 @@ f2 <- readBaseData(params$tp2, 2, reader::get.delim(params$tp2)) %>% as.data.tab
   arrange(isolate)
 
 source("scripts/interval_prep.R")
+
+clusters <- vector(mode = "list", length = length(interval_list)) %>% set_names(interval_list)
+
+for (xj in interval_list) {
+  # cluster assignments for clusters that changed when interval i strains were added
+  int_j <- interval_clusters[heightx %in% interval_clusters[ivl == xj]$heightx]
+  sofar <- interval_clusters[heightx %in% interval_clusters[ivl <= xj]$heightx]
+  clusters[[xj]] <- list(int_j, sofar) %>% set_names(c("ivl", "sofar"))
+}
 
 for (i in 1:(length(interval_list)-1)) {
   

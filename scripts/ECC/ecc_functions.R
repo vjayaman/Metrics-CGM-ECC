@@ -46,7 +46,7 @@ checkEncoding <- function(fp) {
 # -----------------------------------------------------------------------------------------------------
 
 ### Incorporating the allele data with the epidemiological data 
-epiCollectionByCluster <- function(strain_data, tau, gamma, transformed_dists, tpx, cluster_x) {
+epiCollectionByCluster <- function(strain_data, tau, gamma, transformed_dists, tpx, cluster_y) {
   # cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
   
   # outputMessages(paste0("      Preparing table of distances: sqrt(", tau, "*(temp^2) + ", gamma, "*(geo^2))"))
@@ -73,10 +73,10 @@ epiCollectionByCluster <- function(strain_data, tau, gamma, transformed_dists, t
   
   # outputMessages("      Incorporating the metadata with the clusters (typing data) ...")
   # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
-  cx <- colnames(cluster_x)[1]
-  tallied_reps <- cluster_x %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
-  cnames <- intersect(colnames(tallied_reps), colnames(cluster_x))
-  g_cuts <- left_join(cluster_x, tallied_reps, by = cnames) %>%
+  cx <- colnames(cluster_y)[1]
+  tallied_reps <- cluster_y %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
+  cnames <- intersect(colnames(tallied_reps), colnames(cluster_y))
+  g_cuts <- left_join(cluster_y, tallied_reps, by = cnames) %>%
       unique() %>% mutate(across(dr, as.character))
   
   td_i <- epiCohesion(g_cuts, epi_melt) %>% 

@@ -17,18 +17,18 @@ if (params$intervaltype == "weekly") {
   
   
 }else if (params$intervaltype == "multiset") {
-  if (interactive()) {
-    divider <- paste0("Enter date(s) between ", min(metadata$Date), " and ", 
-                      max(metadata$Date), " to split set into two timepoints ", 
-                      "\n(YYYY-MM-DD format, separated by commas): ") %>% 
-      readline() %>% as.character()
-  }else {
-    cat(paste0("Enter date(s) between ", min(metadata$Date), " and ", 
-               max(metadata$Date), " to split set into two timepoints ", 
-               "\n(YYYY-MM-DD format, separated by commas): "))
-    divider <- readLines("stdin", n = 1) %>% as.character()
-  }
-  
+  # if (interactive()) {
+  #   divider <- paste0("Enter date(s) between ", min(metadata$Date), " and ", 
+  #                     max(metadata$Date), " to split set into two timepoints ", 
+  #                     "\n(YYYY-MM-DD format, separated by commas): ") %>% 
+  #     readline() %>% as.character()
+  # }else {
+  #   cat(paste0("Enter date(s) between ", min(metadata$Date), " and ", 
+  #              max(metadata$Date), " to split set into two timepoints ", 
+  #              "\n(YYYY-MM-DD format, separated by commas): "))
+  #   divider <- readLines("stdin", n = 1) %>% as.character()
+  # }
+  divider <- readLines("scripts/date.txt")[2]
   setdivider <- strsplit(divider, split = ",") %>% unlist() %>% as.Date(., format = "%Y-%m-%d")
   
   assertion1 <- lapply(setdivider, function(x) nchar(as.character(x)) == 10) %>% unlist()
@@ -57,11 +57,3 @@ if (params$intervaltype == "weekly") {
     set_colnames(c("isolate", "ivl", "heightx"))
 }
 
-clusters <- vector(mode = "list", length = length(interval_list)) %>% set_names(interval_list)
-
-for (xj in interval_list) {
-  # cluster assignments for clusters that changed when interval i strains were added
-  int_j <- interval_clusters[heightx %in% interval_clusters[ivl == xj]$heightx]
-  sofar <- interval_clusters[heightx %in% interval_clusters[ivl <= xj]$heightx]
-  clusters[[xj]] <- list(int_j, sofar) %>% set_names(c("ivl", "sofar"))
-}

@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <math.h>
+#include <iostream>
+#include <fstream>
 
 /*
 void transformData2(void *dm_unknown, int size, char* dtype, double mind, double maxd) {
@@ -19,6 +21,13 @@ void transformData2(void *dm_unknown, int size, char* dtype, double mind, double
 	}
 }
 */
+
+void epiCohesion() {
+  int* mat;
+  mat = malloc(3 * 22 * sizeof(int));
+  
+}
+
 
 int main() {
 	printf("Testing conversion: \n");
