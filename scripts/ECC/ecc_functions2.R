@@ -87,3 +87,17 @@ epiCohesion <- function(g_cuts, epi_melt) {
     set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC")))
   return(tmp2)
 }
+# New
+# 0, 3
+# 0, 23
+# 4, 0
+# 8, 33
+# 4, 32
+# Original
+# 0, 3
+# 0, 25
+# 3, 57
+# 8, 33
+# 3, 59
+# So, will need to work on cutting down the distances one - takes too long
+# As well as epiCohesion() and a couple of the CGM ones
