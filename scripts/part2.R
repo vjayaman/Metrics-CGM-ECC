@@ -79,6 +79,44 @@ cppFunction('int clusterSizes(DataFrame x, int h) {
 }')
 
 
+ccm <- cut_cluster_members[,c(2,4)]
+y <- cut_cluster_members$members
+
+# NumericVector k = y[i]; //list of cluster members of cluster at row i
+cppFunction('LogicalVector drsInCluster(DataFrame ccm, List y, int i, DataFrame dr_as) {
+  NumericVector x = ccm[0]; //cluster column of ccm
+  
+  NumericVector col1 = dr_as[0]; //cluster column of dr_assignments
+  NumericVector col2 = dr_as[1]; //dr column of dr_assignments
+  LogicalVector inds = (col1 == x[i]); //rows in dr_assignments with cluster x[i]
+  
+  return inds;
+}')
+
+cppFunction('double sumEpiVals(DataFrame x) {
+  NumericVector value = x[2];
+  NumericVector n1 = x[3];
+  NumericVector n2 = x[4];
+  
+  NumericVector value2 = value * n1 * n2;
+  return sum(value2);
+}')
+
+
+ivals <- cut_cluster_members$cluster
+
+j <- 2
+matches <- dr_assignments[drsInCluster(ccm, y, j, dr_assignments)] %>% select(-cluster)
+
+i <- ivals[j + 1]
+k <- cut_cluster_members[cluster == i, members] %>% unlist()
+
+epi_filtered <- epi_melt[dr_1 %in% k][dr_2 %in% k] %>% 
+    left_join(., matches, by = c("dr_1" = "dr")) %>% rename(n1 = n) %>% 
+    left_join(., matches, by = c("dr_2" = "dr")) %>% rename(n2 = n)
+
+sumEpiVals(epi_filtered)
+
 
     # epiCohesion <- function(g_cuts, epi_melt) {
       dr_assignments <- g_cuts %>% set_colnames(c("cluster", "dr", "n"))
@@ -96,7 +134,7 @@ cppFunction('int clusterSizes(DataFrame x, int h) {
       
       calculate_s1 <- function(i) {
         k <- cut_cluster_members[cluster == i, members] %>% unlist()
-        matches <- dr_assignments %>% filter(cluster == i)
+        matches <- dr_assignments[cluster == i]
         
         epi_melt[dr_1 %in% k][dr_2 %in% k] %>%
           left_join(., matches, by = c("dr_1" = "dr")) %>% rename(n1 = n) %>% select(-cluster) %>%
