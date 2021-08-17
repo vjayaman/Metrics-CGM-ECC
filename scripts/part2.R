@@ -1,7 +1,7 @@
 source("scripts/part1.R")
 library(Rcpp)
 sourceCpp("scripts/cppfunctions.cpp")
-i <- 2
+i <- 1
 
   k <- as.character(dfx$k[i])
   tpkstrains <- metadata[get(interval) <= k]$Strain
@@ -78,16 +78,17 @@ dr_assignments <- g_cuts %>% set_colnames(c("cluster", "dr", "n"))
 
 uniclusters <- unique(pull(g_cuts, 1))
 sizes <- lapply(uniclusters, function(h) clusterSizes(g_cuts, h)) %>% 
-  unlist() %>% tibble(cluster = uniclusters, cluster_size = .)
+  unlist() %>% data.table(cluster = uniclusters, cluster_size = .)
 
-ux <- unique(as.matrix(dr_assignments$cluster))
-df <- calculateEpi(ux, as.matrix(dr_assignments), as.matrix(epi_melt))
+ux <- unique(as.matrix(sizes[cluster_size > 1]$cluster))
+t1 <- Sys.time()
+df1 <- calculateEpiV1(ux, as.matrix(dr_assignments), as.matrix(epi_melt))
+t2 <- Sys.time()
+
+df <- df1
   
-uniclusters <- unique(pull(g_cuts, 1))
-sizes <- lapply(uniclusters, function(h) clusterSizes(g_cuts, h)) %>% 
-  unlist() %>% tibble(cluster = uniclusters, cluster_size = .)
-  
-epi_vals <- tibble(cluster = unique(dr_assignments$cluster), s1 = df) %>% 
+epi_vals <- data.table(cluster = ux, s1 = df) %>% 
+  bind_rows(., data.table(cluster = sizes[cluster_size == 1]$cluster, s1 = NA)) %>% 
   left_join(., sizes, by = "cluster") %>% 
   select(cluster, cluster_size, s1) %>%
   mutate(ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))) %>% select(-s1) %>% 
@@ -99,9 +100,6 @@ epi_vals <- tibble(cluster = unique(dr_assignments$cluster), s1 = df) %>%
       
 
       dr_assignments <- g_cuts %>% set_colnames(c("cluster", "dr", "n"))
-      uniclusters <- unique(pull(g_cuts, 1))
-      sizes <- lapply(uniclusters, function(h) clusterSizes(g_cuts, h)) %>%
-        unlist() %>% tibble(cluster = uniclusters, cluster_size = .)
       cut_cluster_members <-
         g_cuts %>% select(-n) %>%
         pivot_longer(-dr, names_to = "cut", values_to = "cluster") %>%
@@ -121,16 +119,25 @@ epi_vals <- tibble(cluster = unique(dr_assignments$cluster), s1 = df) %>%
       }
 
       th <- names(g_cuts)[1]
-      tmp3 <- cut_cluster_members %>%
+      
+      t3 <- Sys.time()
+      tmp3 <- cut_cluster_members[cluster_size > 1] %>%
         mutate(
           s1 = map_dbl(cluster, calculate_s1),
           ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))
         ) %>%
         ungroup() %>%
         select(-cut, -members, -s1) %>%
-        set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC"))) %>% 
-        arrange(!!as.symbol(th))
+        set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC")))
 
+      tmp4 <- cut_cluster_members[cluster_size == 1] %>% select(cluster, cluster_size) %>% 
+        add_column(ECC = NA) %>% set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC")))
+      tmp5 <- bind_rows(tmp3, tmp4) %>% arrange(!!as.symbol(th))
+      t4 <- Sys.time()
+      
+      
+      cppmethodV1 <- t2 - t1
+      rmethod <- t4 - t3
       # CHECKING RESULTS
-      x1 <- epi_vals$T0_ECC - tmp3$T0_ECC
+      x1 <- epi_vals$T0_ECC - tmp5$T0_ECC
       assert("ECC results of both methods are the same", all(x1[!is.na(x1)] < 1e-12))
