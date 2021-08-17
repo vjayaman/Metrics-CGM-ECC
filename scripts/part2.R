@@ -80,17 +80,6 @@ cppFunction('int clusterSizes(DataFrame x, int h) {
   return vals;
 }')
 
-# NumericVector k = y[i]; //list of cluster members of cluster at row i
-cppFunction('LogicalVector drsInCluster(DataFrame ccm, int i, DataFrame dr_as) {
-  NumericVector x = ccm[0]; //cluster column of ccm
-  
-  NumericVector col1 = dr_as[0]; //cluster column of dr_assignments
-  NumericVector col2 = dr_as[1]; //dr column of dr_assignments
-  LogicalVector inds = (col1 == x[i]); //rows in dr_assignments with cluster x[i]
-  
-  return inds;
-}')
-
 # cppFunction('List matchedDrs(DataFrame ccm, DataFrame dr_as) {
 #   int nrow = ccm.nrow();
 #   
@@ -107,6 +96,18 @@ cppFunction('LogicalVector drsInCluster(DataFrame ccm, int i, DataFrame dr_as) {
 # 
 # inds <- matchedDrs(ccm, dr_assignments)
 
+# NumericVector k = y[i]; //list of cluster members of cluster at row i
+# 
+cppFunction('LogicalVector drsInCluster(DataFrame ccm, int i, DataFrame dr_as) {
+  NumericVector x = ccm[0]; //cluster column of ccm
+  
+  NumericVector col1 = dr_as[0]; //cluster column of dr_assignments
+  NumericVector col2 = dr_as[1]; //dr column of dr_assignments
+  LogicalVector inds = (col1 == x[i]); //rows in dr_assignments with cluster x[i]
+  
+  return inds;
+}')
+
 cppFunction('double sumEpiVals(DataFrame epi_melt) {
   NumericVector value = epi_melt[2];
   NumericVector n1 = epi_melt[3];
@@ -116,7 +117,8 @@ cppFunction('double sumEpiVals(DataFrame epi_melt) {
   return sum(value2);
 }')
 
-
+# epi_melt[dr_1 %in% matches$dr & !is.na(value)]
+epi_melt <- epi_melt[!is.na(value)]
 
 
     # epiCohesion <- function(g_cuts, epi_melt) {
@@ -141,7 +143,7 @@ cppFunction('double sumEpiVals(DataFrame epi_melt) {
         matches <- dr_assignments[drsInCluster(ccm, j, dr_assignments)] %>% select(-cluster)  
         i <- ivals[j + 1]
         k <- cut_cluster_members[cluster == i, members] %>% unlist()
-        epi_filtered <- epi_melt %>% 
+        epi_filtered <- epi_melt[dr_1 %in% matches$dr & dr_2 %in% matches$dr] %>% 
           inner_join(., matches, by = c("dr_1" = "dr")) %>% rename(n1 = n) %>% 
           inner_join(., matches, by = c("dr_2" = "dr")) %>% rename(n2 = n)
         sumEpiVals(epi_filtered)
@@ -202,4 +204,5 @@ cppFunction('double sumEpiVals(DataFrame epi_melt) {
 
       # CHECKING RESULTS
       x1 <- tmp2$T0_ECC - tmp3$T0_ECC
-      any(x1[!is.na(x1)] > 1e-12)
+      assert("ECC results of both methods are the same", all(x1[!is.na(x1)] < 1e-12))
+      
