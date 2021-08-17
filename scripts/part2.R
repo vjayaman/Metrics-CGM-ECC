@@ -1,4 +1,4 @@
-source("scripts/part1.R")
+# source("scripts/part1.R")
 
 # i <- 1
 #   k <- as.character(dfx$k[i])
@@ -55,6 +55,8 @@ source("scripts/part1.R")
 #     # td_i <- epiCohesion(g_cuts, epi_melt) %>% 
 #     #   set_colnames(c(paste0("TP", tpx, "_", colnames(.))))
 #     # colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
+
+source("scripts/part1.R")
 
 epi_melt <- read.table("epicoh/epi_melt.txt", sep = "\t", header = TRUE) %>% as.data.table() 
 #%>% mutate(across(c(dr_1, dr_2), as.character))
@@ -135,7 +137,7 @@ cppFunction('double sumEpiVals(DataFrame epi_melt) {
       y <- cut_cluster_members$members
       ivals <- cut_cluster_members$cluster
       
-      tmp1 <- lapply(1:nrow(cut_cluster_members), function(j) {
+      tmp1 <- lapply(0:(nrow(cut_cluster_members)-1), function(j) {
         matches <- dr_assignments[drsInCluster(ccm, j, dr_assignments)] %>% select(-cluster)  
         i <- ivals[j + 1]
         k <- cut_cluster_members[cluster == i, members] %>% unlist()
@@ -188,7 +190,7 @@ cppFunction('double sumEpiVals(DataFrame epi_melt) {
       }
 
       th <- names(g_cuts)[1]
-      tmp2 <- cut_cluster_members %>%
+      tmp3 <- cut_cluster_members %>%
         mutate(
           s1 = map_dbl(cluster, calculate_s1),
           ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))
@@ -197,3 +199,7 @@ cppFunction('double sumEpiVals(DataFrame epi_melt) {
         select(-cut, -members, -s1) %>%
         set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC")))
       # }
+
+      # CHECKING RESULTS
+      x1 <- tmp2$T0_ECC - tmp3$T0_ECC
+      any(x1[!is.na(x1)] > 1e-12)
