@@ -110,7 +110,6 @@ for (i in 1:nrow(dfx)) {
     
     cluster_x <- df[df[[cx]] %in% pull(results[[f]], cx),-"Strain"]
     dms <- readRDS(paste0("intermediate_data/TP", k, "/dists/group", f, ".Rds"))
-
     transformed_dists <- collectTransforms(dms, extremes)
     
     selected_tp <- m$strain_data %>% filter(Strain %in% tpkstrains)

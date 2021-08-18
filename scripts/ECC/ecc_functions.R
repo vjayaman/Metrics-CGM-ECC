@@ -67,7 +67,7 @@ epiCollectionByCluster <- function(strain_data, tau, gamma, transformed_dists, t
   g_cuts <- left_join(cluster_y, tallied_reps, by = cnames) %>%
       unique() %>% mutate(across(dr, as.character))
   
-  td_i <- epiCohesionV2(g_cuts, epi_melt) %>% 
+  td_i <- epiCohesionV3(g_cuts, epi_melt) %>% 
     set_colnames(c(paste0("TP", tpx, "_", colnames(.))))
   colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
 
