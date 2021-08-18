@@ -57,35 +57,34 @@ i <- 1
     # td_i <- epiCohesion(g_cuts, epi_melt) %>%
     #   set_colnames(c(paste0("TP", tpx, "_", colnames(.))))
     # colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
+    epi_melt <- epi_melt[!is.na(value)]
+
+rm(k_drs)
+rm(m); rm(parts)
+rm(typing_data)
+rm(tpkstrains)
+gc()
+
+tempem <- epi_melt
 
 
 
 
-
-# source("scripts/part1.R")
-# epi_melt <- read.table("epicoh/epi_melt.txt", sep = "\t", header = TRUE) %>% as.data.table() 
-epi_melt <- epi_melt %>% as.data.table() %>% add_column(flag1 = 0, flag2 = 0) %>% 
-  mutate(across(c(dr_1, dr_2), as.integer))
-epi_melt <- epi_melt[!is.na(value)]
-#%>% mutate(across(c(dr_1, dr_2), as.character))
-# g_cuts <- read.table("epicoh/g_cuts.txt", sep = "\t", header = TRUE) %>% as.data.table() 
+# ge1_ux <- unique(as.matrix(sizes[cluster_size > 1]$cluster))
+# ge1_drs <- dr_assignments[cluster %in% sizes[cluster_size > 1]$cluster]
+# ge1_em <- epi_melt[dr_1 %in% ge1_drs$dr & dr_2 %in% ge1_drs$dr]
+# t1 <- Sys.time()
 g_cuts <- g_cuts %>% as.data.table() %>% mutate(across(dr, as.integer))
-
-
-
 th <- names(g_cuts)[1]
 dr_assignments <- g_cuts %>% set_colnames(c("cluster", "dr", "n"))
-
 uniclusters <- unique(pull(g_cuts, 1))
 sizes <- lapply(uniclusters, function(h) clusterSizes(g_cuts, h)) %>% 
   unlist() %>% data.table(cluster = uniclusters, cluster_size = .)
-
 ux <- unique(as.matrix(sizes[cluster_size > 1]$cluster))
-t1 <- Sys.time()
-df1 <- calculateEpiV1(ux, as.matrix(dr_assignments), as.matrix(epi_melt))
-t2 <- Sys.time()
-
-df <- df1
+epi_melt <- epi_melt %>% add_column(flag1 = 0, flag2 = 0) %>% 
+  mutate(across(c(dr_1, dr_2), as.integer))
+df <- calculateEpiV1(ux, as.matrix(dr_assignments), as.matrix(epi_melt))
+# t2 <- Sys.time()
   
 epi_vals <- data.table(cluster = ux, s1 = df) %>% 
   bind_rows(., data.table(cluster = sizes[cluster_size == 1]$cluster, s1 = NA)) %>% 
@@ -141,3 +140,7 @@ epi_vals <- data.table(cluster = ux, s1 = df) %>%
       # CHECKING RESULTS
       x1 <- epi_vals$T0_ECC - tmp5$T0_ECC
       assert("ECC results of both methods are the same", all(x1[!is.na(x1)] < 1e-12))
+      
+      paste0("cpp method (version 1) took ", cppmethodV1)
+      paste0("r method took ", rmethod)
+      

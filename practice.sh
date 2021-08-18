@@ -63,7 +63,7 @@ step3=$(($SECONDS - $step2))
 
 printf "\n\n\nPart 4/6:"
 if [ $pdata == 1 ]; then
-	Rscript scripts/4_ecc_collection.R -m $strains -a $tp1_data -b $tp2_data -d $form
+	Rscript scripts/4_ecc_collection.R
 else
 	echo "Not all required files found for part 4."
 fi
@@ -86,10 +86,10 @@ step4=$(($SECONDS - $step3))
 # 
 
 echo ""
-echo "Part 0 took $(($step0 / 60)) minutes and $(($step0 % 60)) seconds."
-echo "Part 1 took $(($step1 / 60)) minutes and $(($step1 % 60)) seconds."
-echo "Part 2 took $(($step2 / 60)) minutes and $(($step2 % 60)) seconds."
-echo "Part 3 took $(($step3 / 60)) minutes and $(($step3 % 60)) seconds."
-echo "Part 4 took $(($step4 / 60)) minutes and $(($step4 % 60)) seconds."
+echo "environment_setup took $(($step0 / 60)) minutes and $(($step0 % 60)) seconds."
+echo "1_prepare_inputs took $(($step1 / 60)) minutes and $(($step1 % 60)) seconds."
+echo "2_cgm_collection took $(($step2 / 60)) minutes and $(($step2 % 60)) seconds."
+echo "3_dist_matrices took $(($step3 / 60)) minutes and $(($step3 % 60)) seconds."
+echo "4_ecc_collection took $(($step4 / 60)) minutes and $(($step4 % 60)) seconds."
 
 printf "\nFinished process.\n"

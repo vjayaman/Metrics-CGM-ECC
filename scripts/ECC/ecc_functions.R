@@ -1,3 +1,5 @@
+source("scripts/ECC/epicohesionversions.R")
+
 # Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
 # ("pt") and a two-element named vector with Sys.time() values named "start_time" and "end_time"
 timeTaken <- function(pt, sw) {
@@ -46,31 +48,17 @@ checkEncoding <- function(fp) {
 # -----------------------------------------------------------------------------------------------------
 
 ### Incorporating the allele data with the epidemiological data 
+# strain_data <- selected_tp; tpx <- k; cluster_y <- cluster_x[dr %in% k_drs]
 epiCollectionByCluster <- function(strain_data, tau, gamma, transformed_dists, tpx, cluster_y) {
   # cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
   
   # outputMessages(paste0("      Preparing table of distances: sqrt(", tau, "*(temp^2) + ", gamma, "*(geo^2))"))
-  epi_table <- transformed_dists %>% 
-    mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>% 
-    select(dr1, dr2, Total.Dist) %>% as.data.table()
+  epi_melt <- transformed_dists %>% 
+    mutate(Total.Distinv = 1 - sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>% 
+    select(dr1, dr2, Total.Distinv) %>% set_colnames(c("dr_1", "dr_2", "value")) %>% as.data.table() %>% 
+    arrange(dr_1, dr_2)
   invisible(gc())
-  
-  # outputMessages("      Generating epi distance matrix ...")
-  epi_matrix <- dcast(epi_table, formula = dr1 ~ dr2, value.var = "Total.Dist")
-  epi_matrix <- as.matrix(epi_matrix[,2:ncol(epi_matrix)]) 
-  rownames(epi_matrix) <- colnames(epi_matrix)
-  rm(epi_table)
-  invisible(gc())
-  
-  # outputMessages("      Formatting into table of similarity values from epi distance matrix ...")
-  epi_melt <- as.matrix(1-epi_matrix) %>% 
-    as.data.table(., keep.rownames = TRUE) %>% 
-    melt(., id.vars = "rn", variable.factor = FALSE, value.factor = FALSE) %>% 
-    set_colnames(c("dr_1", "dr_2", "value")) %>% as.data.table()
-  
-  rm(epi_matrix)
-  invisible(gc())
-  
+
   # outputMessages("      Incorporating the metadata with the clusters (typing data) ...")
   # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
   cx <- colnames(cluster_y)[1]
@@ -79,7 +67,7 @@ epiCollectionByCluster <- function(strain_data, tau, gamma, transformed_dists, t
   g_cuts <- left_join(cluster_y, tallied_reps, by = cnames) %>%
       unique() %>% mutate(across(dr, as.character))
   
-  td_i <- epiCohesion(g_cuts, epi_melt) %>% 
+  td_i <- epiCohesionV2(g_cuts, epi_melt) %>% 
     set_colnames(c(paste0("TP", tpx, "_", colnames(.))))
   colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
 
@@ -134,43 +122,6 @@ formatData <- function(dm, newnames) {
     mutate(dr2 = as.character(dr2)) %>% 
     as.data.table() %>% set_colnames(newnames) %>% return()
 }
-
-# epiCohesion <- function(g_cuts, epi_melt) {
-#   dr_assignments <- g_cuts %>% set_colnames(c("cluster", "dr", "n"))
-# 
-#   sizes <- lapply(unique(dr_assignments$cluster), function(h) {
-#     dr_assignments %>% filter(cluster == h) %>%
-#       pull(n) %>% sum() %>% tibble(cluster = h, cluster_size = .)
-#   }) %>% bind_rows()
-# 
-#   cut_cluster_members <-
-#     g_cuts %>% select(-n) %>%
-#     pivot_longer(-dr, names_to = "cut", values_to = "cluster") %>%
-#     group_by(cut, cluster) %>%
-#     summarise(members = list(cur_data()$dr), .groups = "drop") %>%
-#     left_join(., sizes, by = "cluster") %>% as.data.table()
-# 
-#   calculate_s1 <- function(i) {
-#     k <- cut_cluster_members[cluster == i, members] %>% unlist()
-#     matches <- dr_assignments %>% filter(cluster == i)
-# 
-#     epi_melt[dr_1 %in% k][dr_2 %in% k] %>%
-#       left_join(., matches, by = c("dr_1" = "dr")) %>% rename(n1 = n) %>% select(-cluster) %>%
-#       left_join(., matches, by = c("dr_2" = "dr")) %>% rename(n2 = n) %>% select(-cluster) %>%
-#       mutate(value2 = value * n1 * n2) %>%
-#       select(value2) %>% pull() %>% sum()
-#   }
-# 
-#   th <- names(g_cuts)[1]
-#   cut_cluster_members %>%
-#     mutate(
-#       s1 = map_dbl(cluster, calculate_s1),
-#       ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))
-#     ) %>%
-#     ungroup() %>%
-#     select(-cut, -members, -s1) %>%
-#     set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC")))
-# }
 
 processedStrains <- function(base_strains) {
   loc_cols <- intersect(c("Country", "Province", "City"), colnames(base_strains)) %>% sort()

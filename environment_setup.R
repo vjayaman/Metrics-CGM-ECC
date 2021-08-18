@@ -12,7 +12,8 @@ dir.create(file.path("intermediate_data", "cgms"))
 # This should be run first, to make sure the required packages are installed
 
 required_packages <- c("R6", "testit", "optparse", "magrittr", "dplyr", "tibble", "readr", "reshape2", 
-                       "fossil", "tidyr", "purrr", "progress", "reader", "data.table", "testthat")
+                       "fossil", "tidyr", "purrr", "progress", "reader", "data.table", "testthat", 
+                       "Rcpp", "RcppArmadillo")
 
 not_installed <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
 install.packages(not_installed, quiet = TRUE)

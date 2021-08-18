@@ -4,9 +4,11 @@ msg <- file("logs/logfile_epiquant1.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
-          "reshape2","fossil","tidyr","purrr", "data.table")
+          "reshape2","fossil","tidyr","purrr", "data.table", "Rcpp", "RcppArmadillo")
 y <- lapply(libs, require, character.only = TRUE)
 assert("All packages loaded correctly", all(unlist(y)))
+
+sourceCpp("scripts/epicohversions.cpp")
 
 # Current working directory should be Metrics-CGM-ECC/
 files <- c("scripts/ECC/classes_ecc.R", "scripts/ECC/ecc_functions.R", "scripts/ECC/dist_functions.R")
@@ -98,6 +100,14 @@ for (i in 1:nrow(dfx)) {
   
   qb <- txtProgressBar(min = 0, max = length(fnames), initial = 0, style = 3)
   final_steps <- lapply(fnames, function(f) {
+
+    # cluster_x <- lapply(fnames, function(f) {df[df[[cx]] %in% pull(results[[f]], cx),-"Strain"]}) %>% bind_rows()
+    # transformed_dists <- lapply(fnames, function(f) {
+    #   cluster_x <- df[df[[cx]] %in% pull(results[[f]], cx),-"Strain"]
+    #   dms <- readRDS(paste0("intermediate_data/TP", k, "/dists/group", f, ".Rds"))
+    #   collectTransforms(dms, extremes)
+    # }) %>% bind_rows()
+    
     cluster_x <- df[df[[cx]] %in% pull(results[[f]], cx),-"Strain"]
     dms <- readRDS(paste0("intermediate_data/TP", k, "/dists/group", f, ".Rds"))
 
