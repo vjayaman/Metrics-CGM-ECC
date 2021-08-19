@@ -102,3 +102,59 @@ double allClusters(arma::colvec clusters) {
   }
   return 0;
 }
+
+// [[Rcpp::export]]
+NumericMatrix transformTempDists(NumericMatrix dm, double min_dist, double max_dist) {
+  double lmin, lmax;
+  int nrows = dm.nrow();
+  lmin = log10(min_dist + 10);
+  lmax = log10(max_dist + 10);
+
+  dm = dm + 10;
+
+  for (int j = 0; j < nrows; j++) {dm.row(j) = log10(dm.row(j));}
+
+  if (lmax == 0) {
+    dm = 0;
+  }else {
+    for (int j = 0; j < nrows; j++) {
+      dm.row(j) = (dm.row(j) - lmin) / (lmax - lmin);
+    }
+  }
+  return dm;
+}
+
+
+// [[Rcpp::export]]
+NumericMatrix transformGeoDists(NumericMatrix dm, double min_dist, double max_dist) {
+  double lmin, lmax;
+  int nrows = dm.nrow();
+  lmin = log10(min_dist + 10);
+  lmax = log10(max_dist + 10);
+
+  dm = dm + 10;
+
+  for (int j = 0; j < nrows; j++) {dm.row(j) = log10(dm.row(j));}
+
+  if (lmax == 1) {
+    dm = 0;
+  }else {
+    for (int j = 0; j < nrows; j++) {
+      dm.row(j) = (dm.row(j) - lmin) / (lmax - lmin);
+    }
+  }
+  return dm;
+}
+
+// [[Rcpp::export]]
+DataFrame epiMat(NumericMatrix temp, NumericMatrix geo, double tau, double gamma) {
+  int dim = temp.nrow(); // should be same for all dims, by how they were made
+  NumericMatrix em(dim, dim);
+  
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      em(i,j) = 1 - sqrt(pow(temp(i,j), 2)*tau + pow(geo(i,j), 2)*gamma);
+    }
+  }
+  return em;
+}

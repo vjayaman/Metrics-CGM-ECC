@@ -70,10 +70,11 @@ f2 <- tp2$filedata %>% rownames_to_column("isolate") %>% as.data.table() %>%
 
 source("scripts/interval_prep.R")
 
-for (k in interval_list) {
-  paste0("intermediate_data/TP", k, "/dists/") %>% dir.create(., showWarnings = FALSE, recursive = TRUE)
-  paste0("intermediate_data/TP", k, "/eccs/") %>% dir.create(., showWarnings = FALSE)
-}
+# for (k in interval_list) {
+#   # paste0("intermediate_data/TP", k, "/dists/") %>% dir.create(., showWarnings = FALSE, recursive = TRUE)
+#   paste0("intermediate_data/TP", k, "/eccs/") %>% dir.create(., showWarnings = FALSE)
+# }
+k <- last(interval_list)
 
 typing_data <- lapply(1:length(interval_list), function(i) {
   n1 <- as.character(interval_list[i])
@@ -89,22 +90,23 @@ td <- typing_data[[length(typing_data)]] %>% rownames_to_column("Strain") %>% as
 parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>% 
   left_join(td, ., by = "Strain") %>% sectionClusters(.)
 
-# dfx <- expand.grid(x = combos, k = interval_list) %>% as.data.frame()
+# for (j in length(interval_list):1) {
+  # cat(paste0("\nStep ", j, " / ", length(interval_list), ":"))
 
-for (j in 1:length(interval_list)) {
-  cat(paste0("\nStep ", j, " / ", length(interval_list), ":"))
-  
-  k <- interval_list[j]
+  # k <- last(interval_list)  
+  # k <- interval_list[j]
   outputMessages(paste0("Collecting and saving distances for cluster groups at TP", k, ":\n"))
   tpkstrains <- metadata[get(interval) <= k]$Strain
   
-  collectDistances(k, parts$drs, parts$results, m$dr_matches, m$assignments, tpkstrains)
-}
-
-# parts_drs <- parts$drs
-# results <- parts$results
-# drmatches <- m$dr_matches
-# assignments <- m$assignments
+  # if (k == last(interval_list)) {
+    # print(1)
+    collectDistances(k, parts$drs, parts$results, m$dr_matches, m$assignments, tpkstrains, NULL)
+    # read_from <- paste0("intermediate_data/TP", k, "/dists/")
+  # }else {
+    # print(2)
+    # collectDistances(k, parts$drs, parts$results, m$dr_matches, m$assignments, tpkstrains, read_from)
+  # }
+# }
 
 # Average distances --------------------------------------------------------------------------
 assert("Distances were collected and saved", file.exists(paste0(basedir, "extreme_dists.Rds")))
