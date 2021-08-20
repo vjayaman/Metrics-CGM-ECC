@@ -14,13 +14,19 @@ invisible(sapply(files, source))
 # READING IN THE INPUTS ----------------------------------------------------------------------------------------
 # Change the default values to read in your own files, or feed through terminal arguments
 option_list <- list(
-  make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain metadata file"), 
-  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "Time point 2 file name (TP2)"),
+  make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", 
+              help = "Strain metadata file"), 
+  
+  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
+              help = "Time point 2 file name (TP2)"),
+  
   make_option(c("-x", "--heights"), metavar = "character", default = "0",
               help = paste0("A character-type number, heights for metric generation (default is '0')")), 
+  
   make_option(c("-i", "--intervaltype"), metavar = "char", default = readLines("scripts/date.txt")[1], 
               help = paste0("Type of intervals, choices are: weekly, monthly, multiset. ", 
                             "If multiset, provide a time to split the dataset at.")))
+
 params <- parse_args(OptionParser(option_list=option_list))
 
 save_to <- file.path(paste0("intermediate_data/cgms/", tolower(params$intervaltype)))

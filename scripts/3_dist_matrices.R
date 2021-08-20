@@ -70,11 +70,11 @@ f2 <- tp2$filedata %>% rownames_to_column("isolate") %>% as.data.table() %>%
 
 source("scripts/interval_prep.R")
 
+k <- last(interval_list)
 # for (k in interval_list) {
 #   # paste0("intermediate_data/TP", k, "/dists/") %>% dir.create(., showWarnings = FALSE, recursive = TRUE)
-#   paste0("intermediate_data/TP", k, "/eccs/") %>% dir.create(., showWarnings = FALSE)
+  paste0("intermediate_data/TP", k, "/dists/") %>% dir.create(., showWarnings = FALSE, recursive = TRUE)
 # }
-k <- last(interval_list)
 
 typing_data <- lapply(1:length(interval_list), function(i) {
   n1 <- as.character(interval_list[i])

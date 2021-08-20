@@ -76,6 +76,8 @@ distMatrix <- function(input_data, dtype, cnames) {
   }
 }
 
+# parts_drs <- parts$drs; results <- parts$results; drmatches <- m$dr_matches
+# assignments <- m$assignments; read_from <- NULL
 collectDistances <- function(k, parts_drs, results, drmatches, assignments, tpkstrains, read_from = NULL) {
   
   key_cls <- parts_drs[Strain %in% tpkstrains] %>% select(-Strain, -dr) %>% pull() %>% unique()
