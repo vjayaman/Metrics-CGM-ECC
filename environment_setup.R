@@ -10,8 +10,9 @@ cat(paste0(
 ))
 
 dir.create("results", showWarnings = FALSE)
-dir.create(file.path("inputs", "processed"), recursive = TRUE, showWarnings = FALSE)
-dir.create(file.path("intermediate_data", "cgms"), recursive = TRUE, showWarnings = FALSE)
+dir.create("inputs/processed",  recursive = TRUE, showWarnings = FALSE)
+dir.create("intermediate_data/cgms", recursive = TRUE, showWarnings = FALSE)
+dir.create("intermediate_data/TPN/", recursive = TRUE, showWarnings = FALSE)
 # This should be run first, to make sure the required packages are installed
 
 required_packages <- c("R6", "testit", "optparse", "magrittr", "dplyr", "tibble", "readr", "reshape2", 
@@ -26,7 +27,7 @@ x <- lapply(required_packages, require, character.only = TRUE)
 names(x) <- required_packages
 
 y <- c(dir.exists("inputs/processed/"), dir.exists("intermediate_data/cgms/"), 
-       dir.exists("results/"), dir.exists("logs/"))
+       dir.exists("results/"), dir.exists("logs/"), dir.exists("intermediate_data/TPN/"))
 
 
 cat(paste0(msg, "\n"))
