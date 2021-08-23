@@ -4,11 +4,14 @@ dir.create("logs", showWarnings = FALSE)
 msg <- file("logs/logfile_env.txt", open="wt")
 sink(msg, type="message")
 
-dir.create("results", showWarnings = FALSE)
-dir.create("intermediate_data", showWarnings = FALSE)
+cat(paste0(
+  "\n||", paste0(rep("-", 36), collapse = ""), " Environment setup ", 
+  paste0(rep("-", 36), collapse = ""), "||"
+))
 
-dir.create(file.path("inputs", "processed"))
-dir.create(file.path("intermediate_data", "cgms"))
+dir.create("results", showWarnings = FALSE)
+dir.create(file.path("inputs", "processed"), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path("intermediate_data", "cgms"), recursive = TRUE, showWarnings = FALSE)
 # This should be run first, to make sure the required packages are installed
 
 required_packages <- c("R6", "testit", "optparse", "magrittr", "dplyr", "tibble", "readr", "reshape2", 
@@ -22,9 +25,15 @@ install.packages(not_installed, quiet = TRUE)
 x <- lapply(required_packages, require, character.only = TRUE)
 names(x) <- required_packages
 
+y <- c(dir.exists("inputs/processed/"), dir.exists("intermediate_data/cgms/"), 
+       dir.exists("results/"), dir.exists("logs/"))
 
-if (all(unlist(x))) {
-  cat("\nEnvironment set up successful.\n")
+
+cat(paste0(msg, "\n"))
+message(msg)
+if (all(unlist(x)) & all(y)) {
+  cat(paste0("R packages installed/loaded successfully; required directories created.", 
+             "\nSee logfile_env.txt for details\n"))
 }else {
   # if ("plotly" %in% names(which(x == FALSE))) {
   #   message("Linux libraries missing. Try: \n")
@@ -36,3 +45,7 @@ if (all(unlist(x))) {
   cat("\nNot all packages were installed successfully. Please see logfile_env.txt for details.")
 }
 
+cat(paste0(
+  "||", paste0(rep("-", 32), collapse = ""), " End of environment setup ", 
+  paste0(rep("-", 33), collapse = ""), "||"
+))
