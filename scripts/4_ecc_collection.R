@@ -6,16 +6,14 @@ sink(msg, type="message")
 libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
           "reshape2","fossil","tidyr","purrr", "data.table", "Rcpp", "RcppArmadillo")
 y <- lapply(libs, require, character.only = TRUE)
-assert("All packages loaded correctly", all(unlist(y)))
+assert("All packages loaded correctly", all(unlist(y))); rm(libs); rm(y)
 
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
-
 sourceCpp("scripts/epicohversions.cpp")
 
 # Current working directory should be Metrics-CGM-ECC/
 files <- c("scripts/ECC/classes_ecc.R", "scripts/ECC/ecc_functions.R", "scripts/ECC/dist_functions.R")
-           # "scripts/ECC/ecc_functions2.R")
-invisible(sapply(files, source))
+invisible(sapply(files, source)); rm(files)
 
 assert("Distances were collected and saved", file.exists("intermediate_data/TPN/extreme_dists.Rds"))
 
@@ -24,60 +22,69 @@ cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation 
 
 option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
-  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
-  make_option(c("-x", "--heights"), metavar = "character", default = "0",
-              help = "Comma-delimited string of heights to collect ECCs for"),
-  make_option(c("-t", "--trio"), metavar = "character", default = "0-1-0",
-              help = "source, temporal, geographic coefficients"), 
-  make_option(c("-i", "--intervaltype"), metavar = "char", default = readLines("scripts/date.txt")[1], 
-              help = "Type of intervals, choices are: weekly, monthly, multiset. If multiset, provide a time to split the dataset at."))
+  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
+              help = "Time point 2 file name (TP2)"), 
+  make_option(c("f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
+  make_option(c("-d", "--details"), metavar = "file", 
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
+# option_list <- list(
+#   make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
+#   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
+#   make_option(c("-x", "--heights"), metavar = "character", default = "0",
+#               help = "Comma-delimited string of heights to collect ECCs for"),
+#   make_option(c("-t", "--trio"), metavar = "character", default = "0-1-0",
+#               help = "source, temporal, geographic coefficients"), 
+#   make_option(c("-i", "--intervaltype"), metavar = "char", default = readLines("scripts/date.txt")[1], 
+#               help = "Type of intervals, choices are: weekly, monthly, multiset. If multiset, provide a time to split the dataset at."))
 
-params <- parse_args(OptionParser(option_list=option_list))
+arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
-hx <- params$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
-m <- read_tsv(params$metadata) %>% processedStrains()
+params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
+  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
+              "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl"))
 
-metadata <- m$strain_data %>% 
-  mutate(YearMonth = format(Date, "%Y-%m")) %>% 
-  mutate(Week = strftime(Date, format = "%V")) %>% 
-  select(-TP1, -TP2) %>% arrange(Week) %>% as.data.table()
-
-tp2 <- Timepoint$new(params$tp2, "tp2")$Process(hx)$listHeights(hx)
-f2 <- tp2$filedata %>% rownames_to_column("isolate") %>% as.data.table() %>% 
-  select(isolate, all_of(params$heights)) %>% arrange(isolate)
-
+hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
+tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
+m <- read_tsv(arg$metadata) %>% processedStrains()
+metadata <- m$strain_data %>% as.data.table()
 extremes <- readRDS("intermediate_data/TPN/extreme_dists.Rds")
 
-source("scripts/interval_prep.R")
+if (params$int_type[2] == "multiset") {
+  interval <- "Multiset"
+}else if (params$int_type[2] == "monthly") {
+  interval <- "YearMonth"
+}else if (params$int_type[2] == "weekly") {
+  interval <- "Week"
+}
 
-clusters <- vector(mode = "list", length = length(interval_list)) %>% set_names(interval_list)
+# source("scripts/interval_prep.R")
+clustersets <- readRDS(arg$intervalfile)
+interval_list <- names(clustersets)
+rm(clustersets)
 
 for (xj in interval_list) {
-  # cluster assignments for clusters that changed when interval i strains were added
-  int_j <- interval_clusters[heightx %in% interval_clusters[ivl == xj]$heightx]
-  sofar <- interval_clusters[heightx %in% interval_clusters[ivl <= xj]$heightx]
-  clusters[[xj]] <- list(int_j, sofar) %>% set_names(c("ivl", "sofar"))
-  paste0("intermediate_data/TP", xj, "/eccs/") %>% 
-    dir.create(., showWarnings = FALSE, recursive = TRUE)
+  paste0("intermediate_data/TP", xj, "/eccs/") %>% dir.create(., showWarnings = FALSE, recursive = TRUE)
 }
 
 typing_data <- lapply(1:length(interval_list), function(i) {
   n1 <- as.character(interval_list[i])
   tpkstrains <- metadata[get(interval) <= n1]$Strain
   dfz <- tp2$filedata %>% rownames_to_column("isolate") %>%
-    select(isolate, all_of(params$heights)) %>%
+    select(isolate, all_of(hx$h)) %>%
     filter(isolate %in% tpkstrains) %>% column_to_rownames("isolate")
   dfz[,hx$h[1],drop=FALSE] %>% set_colnames(hx$th[1])
 }) %>% set_names(as.character(interval_list))
 
 td <- typing_data[[length(typing_data)]] %>% rownames_to_column("Strain") %>% as.data.table()
+rm(typing_data)
+
 parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>% 
   left_join(td, ., by = "Strain") %>% sectionClusters(.)
 df <- parts$drs
 cx <- setdiff(colnames(df), c("Strain", "dr"))
 results <- parts$results
 
-dfx <- params$trio %>% strsplit(., ",") %>% unlist() %>% 
+dfx <- params$coeffs[2] %>% strsplit(., ",") %>% unlist() %>% 
   expand.grid(x = ., k = interval_list) %>% as.data.frame()
 
 k <- last(interval_list)
@@ -129,7 +136,7 @@ ecc_results <- lapply(1:nrow(dfx), function(j) {
 saveRDS(ecc_results, "results/ecc_results.Rds")
 
 # Generating ECC results file ----------------------------------------------------
-assert("No -Inf ECC results", length(which(pull(ecc_results, 4) == -Inf)) == 0)
+assert("No -Inf ECC results", !any(is.infinite(abs(pull(ecc_results[,4])))))
 
 # assert("Average distances were collected and saved", 
 #        file.exists("intermediate_data/average_dists.Rds"))
