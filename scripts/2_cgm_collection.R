@@ -29,9 +29,6 @@ option_list <- list(
 
 params <- parse_args(OptionParser(option_list=option_list))
 
-save_to <- file.path(paste0("intermediate_data/cgms/", tolower(params$intervaltype)))
-dir.create(save_to, showWarnings = FALSE)
-
 # BASIC STARTUP MESSAGES ---------------------------------------------------------------------------------------
 outputDetails(paste0("\n||", paste0(rep("-", 32), collapse = ""), " Cluster metric generation ", 
                      paste0(rep("-", 32), collapse = ""), "||\nStarted process at: ", Sys.time()))
@@ -41,29 +38,29 @@ outputDetails("\nStep 1 OF 3: Data processing ", newcat = TRUE)
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
 # TP DATA PREPARATION ------------------------------------------------------------------------------------------
-metadata <- suppressMessages(read_tsv(params$metadata)) %>% 
-  mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
-  mutate(YearMonth = format(Date, "%Y-%m")) %>% 
-  mutate(Week = strftime(Date, format = "%V")) %>% 
-  select(-TP1, -TP2) %>% 
-  arrange(Week) %>% as.data.table()
-
-heights <- strsplit(as.character(params$heights), split = ",") %>% unlist()
-
-f2 <- readBaseData(params$tp2, 2, reader::get.delim(params$tp2)) %>% as.data.table() %>% 
-  select(Strain, all_of(heights)) %>% rename(isolate = Strain) %>% 
-  arrange(isolate)
-
-source("scripts/interval_prep.R")
-
-clusters <- vector(mode = "list", length = length(interval_list)) %>% set_names(interval_list)
-
-for (xj in interval_list) {
-  # cluster assignments for clusters that changed when interval i strains were added
-  int_j <- interval_clusters[heightx %in% interval_clusters[ivl == xj]$heightx]
-  sofar <- interval_clusters[heightx %in% interval_clusters[ivl <= xj]$heightx]
-  clusters[[xj]] <- list(int_j, sofar) %>% set_names(c("ivl", "sofar"))
-}
+# metadata <- suppressMessages(read_tsv(params$metadata)) %>% 
+#   mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
+#   mutate(YearMonth = format(Date, "%Y-%m")) %>% 
+#   mutate(Week = strftime(Date, format = "%V")) %>% 
+#   select(-TP1, -TP2) %>% 
+#   arrange(Week) %>% as.data.table()
+# 
+# heights <- strsplit(as.character(params$heights), split = ",") %>% unlist()
+# 
+# f2 <- readBaseData(params$tp2, 2, reader::get.delim(params$tp2)) %>% as.data.table() %>% 
+#   select(Strain, all_of(heights)) %>% rename(isolate = Strain) %>% 
+#   arrange(isolate)
+# 
+# source("scripts/interval_prep.R")
+# 
+# clusters <- vector(mode = "list", length = length(interval_list)) %>% set_names(interval_list)
+# 
+# for (xj in interval_list) {
+#   # cluster assignments for clusters that changed when interval i strains were added
+#   int_j <- interval_clusters[heightx %in% interval_clusters[ivl == xj]$heightx]
+#   sofar <- interval_clusters[heightx %in% interval_clusters[ivl <= xj]$heightx]
+#   clusters[[xj]] <- list(int_j, sofar) %>% set_names(c("ivl", "sofar"))
+# }
 
 for (i in 1:(length(interval_list)-1)) {
   

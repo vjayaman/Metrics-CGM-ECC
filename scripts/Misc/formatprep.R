@@ -55,20 +55,20 @@ intClusters <- function(df) {
   }
 }
 
-updateStrains <- function(type, strain_data, time1, time2, sizes) {
+updateStrains <- function(type, strain_data, time2) {
   # Strains with metadata and defined lineage info at TP1
-  x1 <- intersect(strain_data$Strain, time1$Strain)
-  time1 <- time1 %>% filter(Strain %in% x1)
+  # x1 <- intersect(strain_data$Strain, time1$Strain)
+  # time1 <- time1 %>% filter(Strain %in% x1)
   
   # Strains with metadata and defined lineage info at TP1
   x2 <- intersect(strain_data$Strain, time2$Strain)
   time2 <- time2 %>% filter(Strain %in% x2)
   
   # Strains that have defined lineage info
-  strain_data <- strain_data %>% filter(Strain %in% c(x1, x2))
+  strain_data <- strain_data %>% filter(Strain %in% x2)
   
-  sizes %<>% bind_rows(tibble(type=type, a=nrow(strain_data), b=nrow(time1), d=nrow(time2)))
-  list(sd = strain_data, t1 = time1, t2 = time2, sizes = sizes) %>% return()
+  # sizes %<>% bind_rows(tibble(type=type, a=nrow(strain_data), d=nrow(time2)))
+  list(sd = strain_data, t2 = time2) %>% return()
 }
 
 strainsInSingletons <- function(df, cname) {
