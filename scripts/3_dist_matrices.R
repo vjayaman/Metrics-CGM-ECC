@@ -59,7 +59,7 @@ interval_list <- names(clustersets)
 rm(clustersets)
 
 k <- last(interval_list)
-paste0("intermediate_data/TP", k, "/dists/") %>% dir.create(., showWarnings = FALSE, recursive = TRUE)
+dir.create("intermediate_data/TPN/dists/",  recursive = TRUE, showWarnings = FALSE)
 
 if (params$int_type[2] == "multiset") {
   interval <- "Multiset"
@@ -86,12 +86,14 @@ parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>%
 
 outputMessages(paste0("Collecting and saving distances for cluster groups at TP", k, ":\n"))
 
+save_to <- paste0("intermediate_data/TPN/dists/")
 tpkstrains <- metadata[get(interval) <= k]$Strain
-collectDistances(k, parts$drs, parts$results, m$dr_matches, m$assignments, tpkstrains, NULL)
+collectDistances(parts$drs, parts$results, m$dr_matches, m$assignments, tpkstrains, save_to)
 rm(m); rm(parts)
+
 # Average distances --------------------------------------------------------------------------
 assert("Distances were collected and saved", file.exists(paste0(basedir, "extreme_dists.Rds")))
-rm(basedir)
+
 outputMessages("\nAverage distance collection put on hold until granular ECC collection is done")
 # outputMessages("\nCollecting average distances ...")
 # 

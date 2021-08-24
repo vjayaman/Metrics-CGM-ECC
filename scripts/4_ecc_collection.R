@@ -27,15 +27,6 @@ option_list <- list(
   make_option(c("f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
-# option_list <- list(
-#   make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
-#   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
-#   make_option(c("-x", "--heights"), metavar = "character", default = "0",
-#               help = "Comma-delimited string of heights to collect ECCs for"),
-#   make_option(c("-t", "--trio"), metavar = "character", default = "0-1-0",
-#               help = "source, temporal, geographic coefficients"), 
-#   make_option(c("-i", "--intervaltype"), metavar = "char", default = readLines("scripts/date.txt")[1], 
-#               help = "Type of intervals, choices are: weekly, monthly, multiset. If multiset, provide a time to split the dataset at."))
 
 arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
@@ -57,13 +48,13 @@ if (params$int_type[2] == "multiset") {
   interval <- "Week"
 }
 
-# source("scripts/interval_prep.R")
 clustersets <- readRDS(arg$intervalfile)
 interval_list <- names(clustersets)
 rm(clustersets)
 
 for (xj in interval_list) {
-  paste0("intermediate_data/TP", xj, "/eccs/") %>% dir.create(., showWarnings = FALSE, recursive = TRUE)
+  paste0("intermediate_data/", params$int_type[2], "/eccs/TP", xj) %>% 
+    dir.create(., showWarnings = FALSE, recursive = TRUE)
 }
 
 typing_data <- lapply(1:length(interval_list), function(i) {
@@ -85,45 +76,49 @@ cx <- setdiff(colnames(df), c("Strain", "dr"))
 results <- parts$results
 
 dfx <- params$coeffs[2] %>% strsplit(., ",") %>% unlist() %>% 
-  expand.grid(x = ., k = interval_list) %>% as.data.frame()
+  expand.grid(x = ., k = interval_list) %>% as.data.frame() %>% as.data.table()
 
 k <- last(interval_list)
 tpkstrains <- metadata[get(interval) <= k]$Strain
 key_cls <- parts$drs[Strain %in% tpkstrains] %>% select(-Strain, -dr) %>% pull() %>% unique()
 y <- lapply(parts$results, function(x) any(key_cls %in% pull(x, 1))) %>% unlist()
-fnames <- names(y[y])
+fnames <- names(y[y]) # groups of clusters, the pairwise distances for each group
+
+m$dr_matches <- m$dr_matches %>% as.data.table()
+
+dates <- as.character(unique(dfx$k))
 
 for (j in 1:length(fnames)) {
-  cat(paste0("\nStep ", j, " / ", length(fnames), ":\n"))
   f <- fnames[j]
-  dms <- readRDS(paste0("intermediate_data/TP", as.character(last(dfx$k)), "/dists/group", f, ".Rds"))
+  cat(paste0("\n\nGroup of clusters ", f, ", ", j, " / ", length(fnames), " ... "))
+  cat(paste0("\n     TP             tau             gamma"))
+  dms <- readRDS(paste0("intermediate_data/TPN/dists/group", f, ".Rds"))
   tr_dists <- collectTransforms2(dms, extremes)
   
-  qb <- txtProgressBar(min = 0, max = nrow(dfx), initial = 0, style = 3)
-  for (i in 1:nrow(dfx)) {
-    
-    k <- as.character(dfx$k[i])
-    tpkstrains <- metadata[get(interval) <= k]$Strain
+  for (index_k in 1:length(dates)) {
+    k_i <- dates[index_k]
+    tpkstrains <- metadata[get(interval) <= k_i]$Strain
     key_cls <- parts$drs[Strain %in% tpkstrains] %>% select(-Strain, -dr) %>% pull() %>% unique()
-    k_drs <- m$dr_matches %>% filter(Strain %in% tpkstrains) %>% pull(dr)
-    
-    c1 <- as.character(dfx$x[i]) %>% strsplit(., split = "-") %>% unlist() %>% as.numeric()
-    tau <- c1[2]
-    gamma <- c1[3]
-    
+    k_drs <- m$dr_matches[Strain %in% tpkstrains] %>% pull(dr)
     cluster_x <- df[df[[cx]] %in% pull(results[[f]], cx),-"Strain"]
     selected_tp <- m$strain_data %>% filter(Strain %in% tpkstrains)
     
-    epiCollectionByClusterV2(selected_tp, tau, gamma, tr_dists, k, cluster_x[dr %in% k_drs]) %>% 
-      saveRDS(., paste0("intermediate_data/TP", k, "/eccs/group", f, ".Rds"))
     
-    setTxtProgressBar(qb, i)
+    eccs <- lapply(as.character(unique(dfx$x)), function(x_i) {
+      coeffs <- unlist(strsplit(x_i, split = "-"))
+      tau <- coeffs[2]
+      gamma <- coeffs[3]
+      cat(paste0("\n   ", k_i, "           ", tau, "                ", gamma))
+      epiCollectionByClusterV2(selected_tp, tau, gamma, tr_dists, k, cluster_x[dr %in% k_drs])
+    })
+    
+    save_to <- paste0("intermediate_data/monthly/eccs/TP", k_i, "/group", f, ".Rds")
+    Reduce(inner_join, eccs) %>% saveRDS(., save_to)
   }
-  close(qb)
 }
 
 ecc_results <- lapply(1:nrow(dfx), function(j) {
-  fnames <- list.files(paste0("intermediate_data/TP", dfx$k[j], "/eccs"), full.names = TRUE)
+  fnames <- list.files(paste0("intermediate_data/monthly/eccs/TP", dfx$k[j], "/"), full.names = TRUE)
   tpk <- lapply(fnames, function(f) {readRDS(f)}) %>% bind_rows() %>% 
     mutate(across(.cols = everything(), as.double))
   

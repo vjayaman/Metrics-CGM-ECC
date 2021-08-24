@@ -76,14 +76,13 @@ distMatrix <- function(input_data, dtype, cnames) {
   }
 }
 
-# parts_drs <- parts$drs; results <- parts$results; drmatches <- m$dr_matches
-# assignments <- m$assignments; read_from <- NULL
-collectDistances <- function(k, parts_drs, results, drmatches, assignments, tpkstrains, read_from = NULL) {
+# parts_drs <- parts$drs; results <- parts$results
+# drmatches <- m$dr_matches; assignments <- m$assignments
+collectDistances <- function(parts_drs, results, drmatches, assignments, tpkstrains, save_to) {
   
   key_cls <- parts_drs[Strain %in% tpkstrains] %>% select(-Strain, -dr) %>% pull() %>% unique()
   y <- lapply(results, function(x) any(key_cls %in% pull(x, 1))) %>% unlist()
   
-  save_to <- paste0("intermediate_data/TP", k, "/dists/")
   cx <- setdiff(colnames(parts_drs), c("Strain", "dr"))
   pb <- txtProgressBar(min = 0, max = length(names(y[y])), initial = 0, style = 3)
   
@@ -94,18 +93,19 @@ collectDistances <- function(k, parts_drs, results, drmatches, assignments, tpks
     k_drs <- drmatches %>% filter(Strain %in% tpkstrains) %>% pull(dr)
     cluster_asmts <- assignments[dr %in% intersect(pull(cluster_x, dr), k_drs)]
 
-    if (is.null(read_from)) {
+    # if (is.null(read_from)) {
       # outputMessages("   Generating all possible date pair distances ...")
       dm_temp <- cluster_asmts %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
     
       # outputMessages("   Generating all possible lat-long pair distances ...")
       dm_geo <- cluster_asmts %>% select(dr, Longitude, Latitude) %>% 
         distMatrix(., "geo", c("Longitude", "Latitude"))  
-    }else {
-      dm0 <- readRDS(paste0(read_from, "group", l, ".Rds"))
-      dm_temp <- dm0$temp[rownames(dm0$temp) %in% cluster_asmts$dr, colnames(dm0$temp) %in% cluster_asmts$dr]
-      dm_geo <- dm0$geo[rownames(dm0$geo) %in% cluster_asmts$dr, colnames(dm0$geo) %in% cluster_asmts$dr]
-    }
+    # }
+    # else {
+    #   dm0 <- readRDS(paste0(read_from, "group", l, ".Rds"))
+    #   dm_temp <- dm0$temp[rownames(dm0$temp) %in% cluster_asmts$dr, colnames(dm0$temp) %in% cluster_asmts$dr]
+    #   dm_geo <- dm0$geo[rownames(dm0$geo) %in% cluster_asmts$dr, colnames(dm0$geo) %in% cluster_asmts$dr]
+    # }
     
     dm <- list(temp = dm_temp, geo = dm_geo)
     saveRDS(dm, paste0(save_to, "group", l, ".Rds"))
