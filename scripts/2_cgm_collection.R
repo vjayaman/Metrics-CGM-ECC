@@ -1,7 +1,7 @@
 #! /usr/bin/env Rscript
 
 # Current working directory should be Metrics-CGM-ECC/
-msg <- file("logs/logfile_datacollection.txt", open="wt")
+msg <- file("logs/cgm_collection.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("R6", "tibble", "optparse", "magrittr", "dplyr", "reshape2", "progress", 
@@ -25,9 +25,7 @@ arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 # BASIC STARTUP MESSAGES ---------------------------------------------------------------------------------------
 outputDetails(paste0("\n||", paste0(rep("-", 32), collapse = ""), " Cluster metric generation ", 
                      paste0(rep("-", 32), collapse = ""), "||\nStarted process at: ", Sys.time()))
-cat(paste0("\nIf at any point the process cuts off with no success message, please see the log file.\n"))
-outputDetails("\nStep 1 OF 3: Data processing ", newcat = TRUE)
-
+cat(paste0("\nIf at any point the process cuts off with no success message, please see the log file.\n\n"))
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
 # TP DATA PREPARATION ------------------------------------------------------------------------------------------
@@ -36,10 +34,6 @@ params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
               "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl"))
 
 heights <- strsplit(as.character(params$th[2]), split = ",") %>% unlist()
-
-f2 <- readBaseData(arg$tp2, 2, reader::get.delim(arg$tp2)) %>% as.data.table() %>%
-  select(Strain, all_of(heights)) %>% rename(isolate = Strain) %>% arrange(isolate)
-
 clustersets <- readRDS(arg$intervalfile)
 interval_list <- names(clustersets)
 
@@ -51,15 +45,15 @@ if (params$int_type[2] == "multiset") {
   interval <- "Week"
 }
 
-save_to <- file.path(paste0("intermediate_data/cgms/", tolower(params$int_type[2])))
+save_to <- file.path("intermediate_data", tolower(params$int_type[2]), "cgms")
 
 for (i in 1:(length(interval_list)-1)) {
   
   n1 <- as.character(interval_list[i])
-  tpx1 <- clustersets[[n1]]$sofar %>% select(-ivl) %>% set_colnames(colnames(f2))
+  tpx1 <- clustersets[[n1]]$sofar %>% select(-ivl) %>% set_colnames(c("isolate", heights))
   
   n2 <- as.character(interval_list[i+1])
-  tpx2 <- clustersets[[n2]]$sofar %>% select(-ivl) %>% set_colnames(colnames(f2))
+  tpx2 <- clustersets[[n2]]$sofar %>% select(-ivl) %>% set_colnames(c("isolate", heights))
   
   if (i > 1) {
     fullset <- clustersets[[n1]]$sofar
@@ -70,22 +64,22 @@ for (i in 1:(length(interval_list)-1)) {
     unchanged_data <- tmp %>% filter(Strain %in% strains)
   }
   
-  outputDetails(paste0("\n  ", interval, " ", n1, " has ", nrow(tpx1), " strains", 
-                       " (", i, " / ", length(interval_list), ")"), newcat = TRUE)
-  outputDetails(paste0("  ", interval, " ", n2, " has ", nrow(tpx2), " strains", 
-                       " (", i+1, " / ", length(interval_list), ")"), newcat = TRUE)
-  
   ph <- max(nchar(colnames(tpx1)[-1]), nchar(colnames(tpx2)[-1]))
   pc <- tpx2 %>% select(-isolate) %>% max(., tpx2 %>% select(-isolate)) %>% nchar()
   
-  tplist <- tpDataSetup(tpx1, tpx2, ph, pc, FALSE); rm(tpx1); rm(tpx2)
+  msgtexts <- c(
+    paste0("  Constructing ", n1, " data object, ", nrow(tpx1), " (", i, " / ", length(interval_list), "):\n"), 
+    paste0("  Constructing ", n2, " data object, ", nrow(tpx2), " (", i+1, " / ", length(interval_list), "):\n")
+  )
+  
+  tplist <- tpDataSetup(tpx1, tpx2, ph, pc, FALSE, msgtexts); rm(tpx1); rm(tpx2)
   tp1 <- tplist[["tp1"]]
   tp2 <- tplist[["tp2"]]
   novels <- tplist[["novs"]]
   rm(tplist)
   
   # BASE CASE (FIRST HEIGHT) -------------------------------------------------------------------------------------
-  outputDetails(paste0("  Tracking clusters from ", n1, " to ", n2, ", at height ", heights[1], " ..."), newcat = TRUE)
+  outputDetails(paste0("  Tracking clusters from ", n1, " to ", n2, ", from height ", heights[1], " ...\n"), newcat = TRUE)
   
   hx <- Heightdata$new(starter = heights[1], t1_comps = tp1$comps, hvals = heights)$
     clust_tracking(tp2$comps, tp2$cnames, tp1$coded, tp2$coded, TRUE)$
@@ -141,7 +135,7 @@ for (i in 1:(length(interval_list)-1)) {
     add_column(Interval = paste0(n1, "-", n2), .after = 1) %>% 
     set_colnames(c("Cluster", paste0(arg$intervaltype, "Interval"), "Field", "Value"))
   
-  saveRDS(cgm_results, paste0(save_to, "/interval", n1, "-", n2, ".Rds"))
+  saveRDS(cgm_results, file.path(save_to, paste0("interval", n1, "to", n2, ".Rds")))
 }
 
 if (params$int_type[2] == "multiset") {

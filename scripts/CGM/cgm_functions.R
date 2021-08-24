@@ -7,12 +7,13 @@ Timedata <- R6Class(
   "Timedata", lock_objects = FALSE, 
   public = list(
     name = NULL, raw = NULL, flagged = NULL, cnames = NULL, coded = NULL, 
-    melted = NULL, comps = NULL, status = NULL, msg = TRUE, ind_prog = TRUE, 
+    melted = NULL, comps = NULL, status = NULL, msg = TRUE, ind_prog = TRUE, msg_text = NULL, 
     
-    initialize = function(name, raw, isos, pad_height, pad_cluster, msg, ind_prog) {
+    initialize = function(name, raw, isos, pad_height, pad_cluster, msg, ind_prog, msg_text) {
       self$name <- name
       self$msg <- msg
       self$ind_prog <- ind_prog
+      self$msg_text <- msg_text
       if (msg) {self$start()}
       self$raw <- raw
       self$coded <- codeIsolates(raw, name, isos, pad_height, pad_cluster)
@@ -20,7 +21,7 @@ Timedata <- R6Class(
       invisible(self)
     }, 
     start = function() {
-      cat(paste0("  Constructing ", toupper(self$name), " data object:\n"))
+      cat(self$msg_text)
     }, 
     coded_status = function(nov_code) {
       self$status <- self$coded %>% mutate(status = ifelse(isolate %in% nov_code, "novs", NA))
@@ -426,7 +427,7 @@ findingSneakers <- function(novels, q1, q2, matched) {
 
 # August 9, 2021
 # --------------------------------------------------------------------------------------------
-tpDataSetup <- function(tpx1, tpx2, ph, pc, show_msg) {
+tpDataSetup <- function(tpx1, tpx2, ph, pc, show_msg, msgtexts) {
   all_isolates <- unique(c(tpx1$isolate, tpx2$isolate)) %>% as_tibble() %>% 
     set_colnames("char_isolate") %>% rowid_to_column("num_isolate")
   
@@ -435,11 +436,11 @@ tpDataSetup <- function(tpx1, tpx2, ph, pc, show_msg) {
   }
   
   tp1 <- Timedata$new("tp1", raw = tpx1, all_isolates, pad_height = ph, 
-                      pad_cluster = pc, msg = TRUE, ind_prog = TRUE)$
+                      pad_cluster = pc, msg = TRUE, ind_prog = TRUE, msgtexts[1])$
     set_comps()$flag_clusters()
   
   tp2 <- Timedata$new("tp2", raw = tpx2, all_isolates, pad_height = ph, 
-                      pad_cluster = pc, msg = TRUE, ind_prog = TRUE)$
+                      pad_cluster = pc, msg = TRUE, ind_prog = TRUE, msgtexts[2])$
     set_comps()$set_cnames()
   
   if (show_msg) {

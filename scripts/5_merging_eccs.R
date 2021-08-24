@@ -1,6 +1,6 @@
 #! /usr/bin/env Rscript
 
-msg <- file("logs/logfile_epiquant2.txt", open="wt")
+msg <- file("logs/merging_ecc.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",

@@ -2,7 +2,7 @@
 
 # Current working directory should be Metrics-CGM-ECC/
 
-msg <- file("logs/logfile_inputs.txt", open="wt")
+msg <- file("logs/prepare_inputs.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("optparse", "magrittr", "readr", "dplyr", "testit", "data.table", "tibble")
@@ -143,8 +143,10 @@ if (as.logical(params$nsTP2[2])) {
 }
 
 # INTERVAL TYPE ------------------------------------------------------------------------------------------------
-save_to <- file.path(paste0("intermediate_data/cgms/", tolower(params$int_type[2])))
+save_to <- file.path(paste0("intermediate_data/", tolower(params$int_type[2])))
 dir.create(save_to, showWarnings = FALSE)
+dir.create(file.path(save_to, "cgms"), showWarnings = FALSE, recursive = TRUE)
+dir.create(file.path(save_to, "eccs"), showWarnings = FALSE, recursive = TRUE)
 
 metadata <- strain_data %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
   mutate(YearMonth = format(Date, "%Y-%m")) %>% mutate(Week = strftime(Date, format = "%V")) %>% 

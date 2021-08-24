@@ -1,6 +1,6 @@
 #! /usr/bin/env Rscript
 
-msg <- file("logs/logfile_epiquant1.txt", open="wt")
+msg <- file("logs/ecc_collection.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
@@ -109,23 +109,23 @@ for (j in 1:length(fnames)) {
       tau <- coeffs[2]
       gamma <- coeffs[3]
       cat(paste0("\n   ", k_i, "           ", tau, "                ", gamma))
-      epiCollectionByClusterV2(selected_tp, tau, gamma, tr_dists, k, cluster_x[dr %in% k_drs])
+      epiCollectionByClusterV2(selected_tp, tau, gamma, tr_dists, k_i, cluster_x[dr %in% k_drs])
     })
     
-    save_to <- paste0("intermediate_data/monthly/eccs/TP", k_i, "/group", f, ".Rds")
-    Reduce(inner_join, eccs) %>% saveRDS(., save_to)
+    save_to <- paste0(file.path("intermediate_data/monthly/eccs", 
+                                paste0("TP", k_i), paste0("group", f, ".Rds")))
+    suppressMessages(Reduce(inner_join, eccs)) %>% saveRDS(., save_to)
   }
 }
 
-ecc_results <- lapply(1:nrow(dfx), function(j) {
-  fnames <- list.files(paste0("intermediate_data/monthly/eccs/TP", dfx$k[j], "/"), full.names = TRUE)
-  tpk <- lapply(fnames, function(f) {readRDS(f)}) %>% bind_rows() %>% 
-    mutate(across(.cols = everything(), as.double))
-  
-  cname <- strsplit(colnames(tpk), split = "_") %>% sapply(., "[[", 1) %>% unique()
-  colnames(tpk) <- gsub(paste0(cname, "_"), "", colnames(tpk))
-  
-  tpk %>% add_column(TP = gsub("TP", "", cname), .before = 1)
+datafiles <- lapply(interval_list, function(tp) {
+  data.table(tp, fname = list.files(file.path("intermediate_data/monthly/eccs", paste0("TP", tp)), full.names = TRUE))
+}) %>% bind_rows() %>% arrange(tp)
+
+ecc_results <- lapply(1:nrow(datafiles), function(i) {
+  dfy <- readRDS(datafiles$fname[i]) %>% mutate(across(.cols = everything(), as.double))
+  colnames(dfy) <- gsub(paste0("TP", datafiles$tp[i], "_"), "", colnames(dfy))
+  dfy %>% add_column(TP = datafiles$tp[i], .before = 1)
 }) %>% bind_rows()
 
 saveRDS(ecc_results, "results/ecc_results.Rds")

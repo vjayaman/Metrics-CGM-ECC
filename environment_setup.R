@@ -1,7 +1,7 @@
 #! /usr/bin/env Rscript
 
 dir.create("logs", showWarnings = FALSE)
-msg <- file("logs/logfile_env.txt", open="wt")
+msg <- file("logs/environment_setup.txt", open="wt")
 sink(msg, type="message")
 
 cat(paste0(
@@ -11,7 +11,6 @@ cat(paste0(
 
 dir.create("results", showWarnings = FALSE)
 dir.create("inputs/processed",  recursive = TRUE, showWarnings = FALSE)
-dir.create("intermediate_data/cgms", recursive = TRUE, showWarnings = FALSE)
 dir.create("intermediate_data/TPN/", recursive = TRUE, showWarnings = FALSE)
 # This should be run first, to make sure the required packages are installed
 
@@ -26,8 +25,8 @@ install.packages(not_installed, quiet = TRUE)
 x <- lapply(required_packages, require, character.only = TRUE)
 names(x) <- required_packages
 
-y <- c(dir.exists("inputs/processed/"), dir.exists("intermediate_data/cgms/"), 
-       dir.exists("results/"), dir.exists("logs/"), dir.exists("intermediate_data/TPN/"))
+y <- c(dir.exists("inputs/processed/"), dir.exists("results/"), 
+       dir.exists("logs/"), dir.exists("intermediate_data/TPN/"))
 
 
 cat(paste0(msg, "\n"))

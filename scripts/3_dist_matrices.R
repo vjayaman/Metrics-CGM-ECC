@@ -2,7 +2,7 @@
 
 # Current working directory should be Metrics-CGM-ECC/
 
-msg <- file("logs/logfile_generatedists.txt", open="wt")
+msg <- file("logs/dist_matrices.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
@@ -59,7 +59,8 @@ interval_list <- names(clustersets)
 rm(clustersets)
 
 k <- last(interval_list)
-dir.create("intermediate_data/TPN/dists/",  recursive = TRUE, showWarnings = FALSE)
+save_to <- paste0("intermediate_data/TPN/dists/")
+dir.create(save_to,  recursive = TRUE, showWarnings = FALSE)
 
 if (params$int_type[2] == "multiset") {
   interval <- "Multiset"
@@ -86,7 +87,6 @@ parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>%
 
 outputMessages(paste0("Collecting and saving distances for cluster groups at TP", k, ":\n"))
 
-save_to <- paste0("intermediate_data/TPN/dists/")
 tpkstrains <- metadata[get(interval) <= k]$Strain
 collectDistances(parts$drs, parts$results, m$dr_matches, m$assignments, tpkstrains, save_to)
 rm(m); rm(parts)
