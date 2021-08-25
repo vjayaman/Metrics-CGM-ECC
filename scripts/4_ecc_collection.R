@@ -52,8 +52,9 @@ clustersets <- readRDS(arg$intervalfile)
 interval_list <- names(clustersets)
 rm(clustersets)
 
+basedir <- file.path("intermediate_data", params$int_type[2], "eccs")
 for (xj in interval_list) {
-  paste0("intermediate_data/", params$int_type[2], "/eccs/TP", xj) %>% 
+  file.path(basedir, paste0("TP", xj)) %>% 
     dir.create(., showWarnings = FALSE, recursive = TRUE)
 }
 
@@ -112,14 +113,13 @@ for (j in 1:length(fnames)) {
       epiCollectionByClusterV2(selected_tp, tau, gamma, tr_dists, k_i, cluster_x[dr %in% k_drs])
     })
     
-    save_to <- paste0(file.path("intermediate_data/monthly/eccs", 
-                                paste0("TP", k_i), paste0("group", f, ".Rds")))
+    save_to <- file.path(basedir, paste0("TP", k_i), paste0("group", f, ".Rds"))
     suppressMessages(Reduce(inner_join, eccs)) %>% saveRDS(., save_to)
   }
 }
 
 datafiles <- lapply(interval_list, function(tp) {
-  data.table(tp, fname = list.files(file.path("intermediate_data/monthly/eccs", paste0("TP", tp)), full.names = TRUE))
+  data.table(tp, fname = list.files(file.path(basedir, paste0("TP", tp)), full.names = TRUE))
 }) %>% bind_rows() %>% arrange(tp)
 
 ecc_results <- lapply(1:nrow(datafiles), function(i) {
@@ -132,16 +132,6 @@ saveRDS(ecc_results, "results/ecc_results.Rds")
 
 # Generating ECC results file ----------------------------------------------------
 assert("No -Inf ECC results", !any(is.infinite(abs(pull(ecc_results[,4])))))
-
-# assert("Average distances were collected and saved", 
-#        file.exists("intermediate_data/average_dists.Rds"))
-# all_avg_dists <- readRDS("intermediate_data/average_dists.Rds")
-# 
-# cat(paste0("\n\nStep ", nrow(dfx) + 2, " / ", nrow(dfx) + 2, ":"))
-# outputMessages("   Merging collected ECCs ...\n")
-# inner_join(all_avg_dists, all_eccs) %>% 
-#   write.table(., file = "results/ECCs.tsv", col.names = TRUE, 
-#               row.names = FALSE, quote = FALSE, sep = "\t")
 
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 cat(timeTaken(pt = "ECC data collection", stopwatch))

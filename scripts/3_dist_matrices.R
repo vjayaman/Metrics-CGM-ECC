@@ -84,6 +84,7 @@ rm(typing_data)
 
 parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>% 
   left_join(td, ., by = "Strain") %>% sectionClusters(.)
+saveRDS(parts, "intermediate_data/TPN/parts.Rds")
 
 outputMessages(paste0("Collecting and saving distances for cluster groups at TP", k, ":\n"))
 
