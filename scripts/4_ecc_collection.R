@@ -128,7 +128,14 @@ ecc_results <- lapply(1:nrow(datafiles), function(i) {
   dfy %>% add_column(TP = datafiles$tp[i], .before = 1)
 }) %>% bind_rows()
 
-saveRDS(ecc_results, "results/ecc_results.Rds")
+if (params$int_type[2] == "multiset") {
+  res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
+    paste0("results/ECC-", ., "-midpoints.Rds")  
+}else {
+  res_file <- paste0("results/ECC-", params$int_type[2], "-intervals.Rds")
+}
+
+saveRDS(ecc_results, res_file)
 
 # Generating ECC results file ----------------------------------------------------
 assert("No -Inf ECC results", !any(is.infinite(abs(pull(ecc_results[,4])))))

@@ -4,18 +4,14 @@ libs <- c("optparse","magrittr","tibble", "dplyr", "readr", "testit", "data.tabl
 y <- suppressMessages(lapply(libs, require, character.only = TRUE))
 
 option_list <- list(
-  make_option(c("-m", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain metadata file"), 
-  make_option(c("-a", "--tp1"), metavar = "file", 
-              default = "inputs/processed/allTP1.Rds", help = "TP1 cluster assignments"), 
+  make_option(c("-m", "--metadata"), metavar = "file", 
+              default = "inputs/strain_info.txt", help = "Metadata file"),
   make_option(c("-b", "--tp2"), metavar = "file", 
-              default = "inputs/processed/allTP2.Rds", help = "TP2 cluster assignments"), 
-  make_option(c("-c", "--CGMs"), metavar = "file", default = "results/CGM_strain_results.tsv", help = "CGM result file"),
+              default = "inputs/tp2_clusters_init.txt", help = "TP2 cluster assignments"), 
   make_option(c("-d", "--details"), metavar = "file", 
-              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"), 
-  make_option(c("-e", "--ECCs"), metavar = "file", default = "results/ECCs.tsv", help = "ECC result file")
-  )
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
-arg <- parse_args(OptionParser(option_list=option_list))
+arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
 source("scripts/Misc/type_handling.R")
 
@@ -25,21 +21,29 @@ cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Merging CGM and ECC re
 # ------------------------------------------------------------------------------------------------------------
 # NOW SAVING OUTPUTS AND MERGING ECCS WITH CGM DATA ----------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------
-eccs <- readData(arg$ECCs)
-cgms <- readData(arg$CGMs)
+eccs <- readRDS("results/ECC-monthly-intervals.Rds")
+cgms <- readRDS("results/CGM-monthly-intervals.Rds")
+avgs <- readRDS("results/AVGS-monthly-intervals.Rds")
 
-filtering_params <- readLines(arg$details, warn = FALSE) %>% 
-  strsplit(., split = ": ") %>%
+params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>% 
   set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-              "th","nsTP1","nsTP2","temp_win","cnames"))
-cnames <- filtering_params$cnames[2] %>% strsplit(split = ",") %>% unlist()
+              "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl"))
 
-# actually assigned a cluster at TP2, not NA (just in case we don't have typing data for some strains)
-strain_data <- suppressMessages(read_tsv(arg$strains)) %>% 
-  mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
-  select(Strain, Latitude, Longitude, Day, Month, Year, Date, all_of(cnames), TP1, TP2) %>% 
-  as.data.table() %>% 
-  filter(TP2 == 1)
+# filtering_ags <- readLines(arg$details, warn = FALSE) %>% 
+#   strsplit(., split = ": ") %>%
+#   set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
+#               "th","nsTP1","nsTP2","temp_win","cnames"))
+# cnames <- filtering_ags$cnames[2] %>% strsplit(split = ",") %>% unlist()
+
+cnames <- params$cnames[2] %>% strsplit(split = ",") %>% unlist()
+strain_data <- read_tsv("inputs/processed/strain_info.txt") %>% as.data.table() %>% 
+  select(Strain, Latitude, Longitude, Day, Month, Year, all_of(cnames), 
+         Date, YearMonth, Week)
+# # actually assigned a cluster at TP2, not NA (just in case we don't have typing data for some strains)
+# strain_data <- suppressMessages(read_tsv(arg$strains)) %>%
+#   mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>%
+#   select(Strain, Latitude, Longitude, Day, Month, Year, Date, all_of(cnames), TP1, TP2) %>%
+#   as.data.table() %>% filter(TP2 == 1)
 
 step1 <- merge.data.table(cgms, eccs, by = "Strain") %>% 
   merge.data.table(., strain_data, by = "Strain") %>% 
@@ -138,11 +142,11 @@ step4 <- step3 %>%
 dist_avgs <- grep("avg", colnames(step4), value = TRUE) %>% grep("dist", ., value = TRUE) %>% sort()
 
 time1 <- readRDS(arg$tp1)$lookup_table %>% 
-  select(1, as.double(filtering_params$th[2])+2) %>% 
+  select(1, as.double(filtering_ags$th[2])+2) %>% 
   set_colnames(c("Strain", "Actual TP1 cluster"))
 
 time2 <- readRDS(arg$tp2)$lookup_table %>% 
-  select(1, as.double(filtering_params$th[2])+2) %>% 
+  select(1, as.double(filtering_ags$th[2])+2) %>% 
   set_colnames(c("Strain", "Actual TP2 cluster"))
 
 step5 <- step4 %>% 

@@ -136,4 +136,11 @@ avg_dists <- lapply(names(typing_data), function(tdx) {
   readRDS(file.path(basedir, paste0("TP", tdx, ".Rds")))
 }) %>% set_names(names(typing_data)) %>% bind_rows()
 
-saveRDS(avg_dists, "results/avg_dists.Rds")
+if (params$int_type[2] == "multiset") {
+  res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
+    paste0("results/AVGS-", ., "-midpoints.Rds")  
+}else {
+  res_file <- paste0("results/AVGS-", params$int_type[2], "-intervals.Rds")
+}
+
+saveRDS(avg_dists, res_file)
