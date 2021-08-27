@@ -116,7 +116,7 @@ epiCohesionV3 <- function(g_cuts, epi_melt) {
 }
 
 # R version 3
-epiCohesionV4 <- function(g_cuts, epi_melt) {
+epiCohesionV4 <- function(g_cuts, epi_melt, tr_dists) {
   dr_assignments <- g_cuts %>% set_colnames(c("cluster", "dr", "n"))
   
   sizes <- lapply(unique(dr_assignments$cluster), function(h) {
@@ -132,30 +132,37 @@ epiCohesionV4 <- function(g_cuts, epi_melt) {
   # clusters with only one unique pair of drs (either singletons or non unique clusters)
   uniclusters <- g_cuts %>% group_by(hx) %>% summarise(n = n()) %>% filter(n == 1) %>% pull(hx)
   
-  eccres <- lapply(multiclusters, function(cluster_x) {
-    cx <- g_cuts[hx == cluster_x]
-
-    epitbl <- epi_melt[rownames(epi_melt) %in% cx$dr, colnames(epi_melt) %in% cx$dr] %>% as.matrix()
-    
-    cx <- cx[match(colnames(epitbl), cx$dr)]
-    rownames(epitbl) <- cx$n
-    tmp2 <- sapply(1:ncol(epitbl),function(x) epitbl[,x]*as.integer(rownames(epitbl)[x]) )
-    colnames(tmp2) <- cx$n
-    tmp3 <- sapply(1:nrow(tmp2),function(x) tmp2[x,]*as.integer(colnames(tmp2)[x]) )
-    
-    cluster_size <- sizes %>% filter(cluster == cluster_x) %>% pull(cluster_size)
-    
-    (sum(tmp3) - cluster_size) / (cluster_size * (cluster_size - 1))
-  }) %>% unlist() %>% data.table(cluster = multiclusters, ECC = .)
-  
   singletons <- data.table(sizes[cluster %in% uniclusters & cluster_size == 1]) %>% 
-    add_column(ECC = NA, .after = 2)
+    add_column(ECC = NA, .after = 1)
   
   nonunique <- data.table(sizes[cluster %in% uniclusters & cluster_size != 1]) %>% 
     add_column(ECC = 1, .after = 2)
   
-  eccres %>% inner_join(., sizes, by = "cluster") %>% 
-    bind_rows(., singletons) %>% bind_rows(., nonunique) %>% select(cluster, cluster_size, ECC) %>% 
+  if (length(multiclusters) > 0) {
+    multieccs <- lapply(multiclusters, function(cluster_x) {
+      cx <- g_cuts[hx == cluster_x]
+      epitbl <- epi_melt[rownames(epi_melt) %in% cx$dr, colnames(epi_melt) %in% cx$dr] %>% as.matrix()
+      cluster_size <- sizes %>% filter(cluster == cluster_x) %>% pull(cluster_size)
+      tmp3 <- multiplyForRedundancy(cx, epitbl)
+      data.table(cluster = cluster_x, 
+                 ECC = (sum(tmp3) - cluster_size) / (cluster_size * (cluster_size - 1))) %>% return()
+    }) %>% bind_rows() %>% inner_join(., sizes, by = "cluster")
+    
+    eccres <- multieccs %>% bind_rows(., singletons) %>% bind_rows(., nonunique)
+  }else {
+    eccres <- bind_rows(singletons, nonunique)
+  }
+  
+  eccres %>% select(cluster, cluster_size, ECC) %>% 
     set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC"))) %>%
     arrange(!!as.symbol(th)) %>% return()
+}
+
+multiplyForRedundancy <- function(cx, infomat) {
+  cx <- cx[match(colnames(infomat), cx$dr)]
+  rownames(infomat) <- cx$n
+  tmp2 <- sapply(1:ncol(infomat),function(x) infomat[,x]*as.integer(rownames(infomat)[x]) )
+  colnames(tmp2) <- cx$n
+  tmp3 <- sapply(1:nrow(tmp2),function(x) tmp2[x,]*as.integer(colnames(tmp2)[x]))
+  return(tmp3)
 }

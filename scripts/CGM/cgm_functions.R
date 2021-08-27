@@ -491,9 +491,10 @@ novelHandling <- function(tp1, tp2, clusters_just_tp1, heights) {
     left_join(., novel_asmts, by = c("tp2_id", "tp2_h", "tp2_cl"))
   
   # Mixed novels clusters should inherit data from the tracked TP1 strains
-  all_mixed <- isolates_base %>% 
-    select(-isolate, -tp1_id, -tp1_h, -tp1_cl, -first_tp1_flag, -last_tp1_flag) %>% 
-    unique() %>% left_join(mixed_novels, .) %>% select(colnames(isolates_base))
+  a1 <- isolates_base %>% 
+    select(-isolate, -tp1_id, -tp1_h, -tp1_cl, -first_tp1_flag, -last_tp1_flag) %>% unique()
+  all_mixed <- left_join(mixed_novels, a1, by = intersect(colnames(a1), colnames(mixed_novels))) %>% 
+    select(colnames(isolates_base))
   
   # FULL STRAIN FILE ---------------------------------------------------------------------------------------------
   # note: two types of novel clusters, those that are fully novel, and those that are not

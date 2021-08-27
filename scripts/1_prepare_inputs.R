@@ -147,6 +147,7 @@ save_to <- file.path(paste0("intermediate_data/", tolower(params$int_type[2])))
 dir.create(save_to, showWarnings = FALSE)
 dir.create(file.path(save_to, "cgms"), showWarnings = FALSE, recursive = TRUE)
 dir.create(file.path(save_to, "eccs"), showWarnings = FALSE, recursive = TRUE)
+dir.create(file.path(save_to, "avgdists"), showWarnings = FALSE, recursive = TRUE)
 
 metadata <- strain_data %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
   mutate(YearMonth = format(Date, "%Y-%m")) %>% mutate(Week = strftime(Date, format = "%V")) %>% 

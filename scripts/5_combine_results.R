@@ -25,6 +25,8 @@ eccs <- readRDS("results/ECC-monthly-intervals.Rds")
 cgms <- readRDS("results/CGM-monthly-intervals.Rds")
 avgs <- readRDS("results/AVGS-monthly-intervals.Rds")
 
+inner_join(eccs, avgs, by = intersect(colnames(eccs), colnames(avgs)))
+
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>% 
   set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
               "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl"))

@@ -3,8 +3,7 @@ source("scripts/ECC/epicohesionversions.R")
 # -----------------------------------------------------------------------------------------------------
 
 ### Incorporating the allele data with the epidemiological data 
-# strain_data <- selected_tp; tau <- coeff[2]; gamma <- coeff[3]
-# tr_dists <- tr_dists; tpx <- k; cluster_y <- cluster_x[dr %in% k_drs]
+# strain_data <- selected_tp; tpx <- k_i; cluster_y <- cluster_x[dr %in% k_drs]
 epiCollectionByClusterV2 <- function(strain_data, tau, gamma, tr_dists, tpx, cluster_y) {
   # cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
   
@@ -21,7 +20,8 @@ epiCollectionByClusterV2 <- function(strain_data, tau, gamma, tr_dists, tpx, clu
   g_cuts <- left_join(cluster_y, tallied_reps, by = cnames) %>%
     unique() %>% mutate(across(dr, as.character))
   
-  td_i <- epiCohesionV4(g_cuts, epi_melt) %>% 
+  
+  td_i <- epiCohesionV4(g_cuts, epi_melt, tr_dists) %>% 
     set_colnames(c(paste0("TP", tpx, "_", colnames(.))))
   colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
   

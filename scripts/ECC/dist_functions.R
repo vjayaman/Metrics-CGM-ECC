@@ -99,7 +99,7 @@ collectDistances <- function(parts_drs, results, drmatches, assignments, tpkstra
     
       # outputMessages("   Generating all possible lat-long pair distances ...")
       dm_geo <- cluster_asmts %>% select(dr, Longitude, Latitude) %>% 
-        distMatrix(., "geo", c("Longitude", "Latitude"))  
+        distMatrix(., "geo", c("Longitude", "Latitude"))
     # }
     # else {
     #   dm0 <- readRDS(paste0(read_from, "group", l, ".Rds"))

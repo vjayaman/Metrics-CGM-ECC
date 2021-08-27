@@ -135,7 +135,10 @@ for (i in 1:(length(interval_list)-1)) {
     add_column(Interval = paste0(n1, "-", n2), .after = 1) %>% 
     set_colnames(c("Cluster", paste0(arg$intervaltype, "Interval"), "Field", "Value"))
   
-  saveRDS(cgm_results, file.path(save_to, paste0("interval", n1, "to", n2, ".Rds")))
+  cgm_results <- isolates_file %>% 
+    add_column(interval = paste0(n1, "-", n2), .before = 1) %>% add_column(TP = n2, .before = 1)
+  
+  saveRDS(cgm_results, file.path(save_to, paste0("TP", n2, ".Rds")))
 }
 
 if (params$int_type[2] == "multiset") {
@@ -147,11 +150,10 @@ if (params$int_type[2] == "multiset") {
 
 cgmfiles <- list.files(save_to, full.names = TRUE)
 lapply(cgmfiles, function(fi) {readRDS(fi)}) %>% bind_rows() %>% saveRDS(., res_file)
-
-if (file.exists(res_file)) {
-  for (fi in cgmfiles) {file.remove(fi)}
-  unlink(save_to, recursive = TRUE)
-}
+# if (file.exists(res_file)) {
+#   for (fi in cgmfiles) {file.remove(fi)}
+#   unlink(save_to, recursive = TRUE)
+# }
 
 # WRAPPING THINGS UP -------------------------------------------------------------------------------------------
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())

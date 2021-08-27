@@ -8,32 +8,45 @@ libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
 y <- lapply(libs, require, character.only = TRUE)
 assert("All packages loaded correctly", all(unlist(y))); rm(libs); rm(y)
 
+cat(paste0("\n||", paste0(rep("-", 30), collapse = ""), " Average distances collection ",
+           paste0(rep("-", 31), collapse = ""), "||\nStarted process at: ", Sys.time(), "\n"))
+
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
-sourceCpp("scripts/epicohversions.cpp")
 
 # Current working directory should be Metrics-CGM-ECC/
 files <- c("scripts/ECC/classes_ecc.R", "scripts/ECC/ecc_functions.R", "scripts/ECC/dist_functions.R")
 invisible(sapply(files, source)); rm(files)
 
-groupXAvgDists <- function(dm, groupX, assignments) {
+outputDetails("Sourcing required functions, reading in input data", newcat = TRUE)
+
+sourceCpp("scripts/epicohversions.cpp")
+
+groupXAvgDists <- function(dm, groupX, assignments, strain_data, cnames) {
   clustersX <- pull(groupX, 1)
   
-  lapply(clustersX, function(x) {
+  avgdists <- lapply(clustersX, function(x) {
     cx <- assignments[Hx == x]
-    if (length(unique(cx$dr)) == 1) {return(0)
+    
+    num_unique_cases <- strain_data[Strain %in% cx$Strain] %>% 
+      select(all_of(cnames)) %>% unique() %>% nrow()
+    if (num_unique_cases == 1) {
+      return(0)
     }else {
       dr_counts <- cx %>% group_by(dr) %>% summarise(n_drs = n()) %>% as.data.table()
-      dmx <- dm[rownames(dm) %in% dr_counts$dr, colnames(dm) %in% dr_counts$dr]
+      dmx <- dm[rownames(dm) %in% dr_counts$dr, colnames(dm) %in% dr_counts$dr,drop=FALSE]
       dr_counts <- dr_counts[match(rownames(dmx), dr_counts$dr)]
       dmxcols <- sweep(dmx, MARGIN = 2, dr_counts$n_drs, `*`)
       dmxrest <- sweep(dmxcols, MARGIN = 1, dr_counts$n_drs, `*`)
-      return(mean(dmxrest))
+      # return(mean(dmxrest))
+      # counting each pair in one direction only:
+      avg_dist <- sum(dmxrest[upper.tri(dmxrest)]) / length(dmxrest[upper.tri(dmxrest)])
+      return(avg_dist)
     }
-  }) %>% unlist() %>% data.table(Hx = clustersX, AvgDist = .) %>% return()
+    # if (is.na(avg_dist)) {print(x)}
+  }) %>% unlist() %>% data.table(Hx = clustersX, AvgDist = .)
+  assert("No NA avg dists", nrow(avgdists[is.na(AvgDist)]) == 0)
+  return(avgdists)
 }
-
-cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ",
-           paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
 
 option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
@@ -44,6 +57,8 @@ option_list <- list(
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
 arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
+
+outputDetails("Processing input data, formatting ...", newcat = TRUE)
 
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
   set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
@@ -63,14 +78,15 @@ if (params$int_type[2] == "multiset") {
 }
 
 clustersets <- readRDS(arg$intervalfile)
-interval_list <- names(clustersets)
-rm(clustersets)
-
+interval_list <- names(clustersets); rm(clustersets)
 basedir <- file.path("intermediate_data", params$int_type[2], "avgdists")
-dir.create(basedir, showWarnings = FALSE, recursive = TRUE)
-
 parts <- readRDS("intermediate_data/TPN/parts.Rds")
 groups <- names(parts$results)
+
+tpnfiles <- lapply(names(parts$results), function(x) parts$results[[x]] %>% add_column(f = x) %>% 
+                     select(-n)) %>% bind_rows() %>% as.data.table() %>% set_colnames(c("Hx", "f"))
+
+strain_data <- as.data.table(m$strain_data)
 
 typing_data <- lapply(1:length(interval_list), function(i) {
   n1 <- as.character(interval_list[i])
@@ -81,60 +97,73 @@ typing_data <- lapply(1:length(interval_list), function(i) {
   dfz[,hx$h[1],drop=FALSE] %>% set_colnames(hx$th[1])
 }) %>% set_names(as.character(interval_list))
 
+outputDetails(paste0("\nCollecting average distances (for each cluster) at ..."), newcat = TRUE)
 
 for (tdx in names(typing_data)) {
-  print(tdx)
+  outputDetails(paste0("TP", tdx, ":"), newcat = TRUE)
+  
   td <- typing_data[[tdx]] %>% rownames_to_column("Strain") %>% as.data.table()
+  pd1 <- parts$drs[Strain %in% td$Strain] %>% set_colnames(c("Strain", "Hx", "dr")) %>% 
+    inner_join(., tpnfiles, by = "Hx") %>% arrange(f)
+  pd2 <- pd1 %>% group_by(Hx) %>% summarise(n = n()) %>% left_join(pd1, ., by = "Hx") %>% 
+    select(-Strain) %>% unique()
   
   assignments <- inner_join(m$dr_matches, td, by = "Strain") %>% 
     set_colnames(c("Strain", "dr", "Hx")) %>% as.data.table()
   
   sizes <- td %>% set_colnames(c("Strain", "Hx")) %>% group_by(Hx) %>% summarise(Size = n())
   
-  temp_avg_dists <- lapply(groups, function(x_i) {
+  pb <- txtProgressBar(min = 0, max = length(groups), initial = 0, style = 3)
+  avg_dists <- lapply(1:length(groups), function(i) {
+    setTxtProgressBar(pb, i)
+    x_i <- groups[i]
     dms <- paste0("group", x_i, ".Rds") %>% file.path("intermediate_data/TPN/dists", .) %>% readRDS()
-    groupX <- parts$results[[x_i]] %>% as.data.table() %>% set_colnames(c("Hx", "n"))
-    groupX <- groupX[Hx %in% assignments[Strain %in% td$Strain]$Hx]
-    groupXAvgDists(dms[["temp"]], groupX, assignments)
-  }) %>% bind_rows() %>% inner_join(., sizes, by = "Hx") %>% rename(Temp.Avg.Dist = AvgDist)
-
-  geo_avg_dists <- lapply(groups, function(x_i) {
-    dms <- paste0("group", x_i, ".Rds") %>%
-      file.path("intermediate_data/TPN/dists", .) %>% readRDS()
-    groupX <- parts$results[[x_i]] %>% as.data.table() %>% set_colnames(c("Hx", "n"))
-    groupX <- groupX[Hx %in% assignments[Strain %in% td$Strain]$Hx]
-    groupXAvgDists(dms[["geo"]], groupX, assignments)
-  }) %>% bind_rows() %>% inner_join(., sizes, by = "Hx") %>% rename(Geo.Avg.Dist = AvgDist)
+    groupX <- pd2[f == x_i] %>% select(Hx, n) %>% unique()
+    
+    temp_dists <- dms[["temp"]] %>% 
+      groupXAvgDists(., groupX, assignments, strain_data, "Date") %>% 
+      rename(Temp.Avg.Dist = AvgDist)
+    
+    geo_dists <- dms[["geo"]] %>% 
+      groupXAvgDists(., groupX, assignments, strain_data, c("Longitude", "Latitude")) %>% 
+      rename(Geo.Avg.Dist = AvgDist)
+    
+    merge.data.table(temp_dists, geo_dists)
+  }) %>% bind_rows() %>% inner_join(., sizes, by = "Hx")
+  close(pb)
   
-  assert("No NA avg geo distances", nrow(geo_avg_dists[is.na(Geo.Avg.Dist)]) == 0)
-  assert("No NA avg temp distances", nrow(temp_avg_dists[is.na(Temp.Avg.Dist)]) == 0)
+  outputDetails(paste0("   Checking that only clusters with just one unique info pair have average distance 0"), newcat = TRUE)
+  assert("No NA avg geo distances", !any(is.na(avg_dists$Geo.Avg.Dist)))
+  assert("No NA avg temp distances", !any(is.na(avg_dists$Temp.Avg.Dist)))
   
-  # Check that clusters with size > 1 where the average pairwise distance is 0 have only one
+  # Check that clusters with the average pairwise distance being 0 have only one
   # unique date / coordinate pair, as is required to get a distance result of 0
   renamed_tping <- td %>% set_colnames(c("Strain", "Hx"))
   
-  temp_zero_clusters <- temp_avg_dists[Temp.Avg.Dist == 0 & Size > 1]$Hx
+  temp_zero_clusters <- avg_dists[Temp.Avg.Dist == 0]$Hx
   for (x in temp_zero_clusters) {
     y <- renamed_tping[Hx == x] %>% pull(Strain)
-    unidate <- m$strain_data %>% filter(Strain %in% y) %>% pull(Date) %>% unique() %>% length()
+    unidate <- strain_data[Strain %in% y, Date] %>% unique() %>% length()
     assert(paste0("Cluster ", x, " has only one unique date"), unidate == 1)
   }
   
-  geo_zero_clusters <- geo_avg_dists[Geo.Avg.Dist == 0 & Size > 1]$Hx
+  geo_zero_clusters <- avg_dists[Geo.Avg.Dist == 0]$Hx
   for (x in geo_zero_clusters) {
     y <- renamed_tping[Hx == x] %>% pull(Strain)
-    uniloc <- m$strain_data %>% filter(Strain %in% y) %>% select(Latitude, Longitude) %>% unique() %>% nrow()
+    uniloc <- strain_data[Strain %in% y] %>% select(Latitude, Longitude) %>% unique() %>% nrow()
     assert(paste0("Cluster ", x, " has only one unique coordinate pair"), uniloc == 1)
   }
-  
-  inner_join(temp_avg_dists, geo_avg_dists, by = c("Hx", "Size")) %>% 
+
+  colnames(avg_dists)[which(colnames(avg_dists) == "Hx")] <- hx$th
+  avg_dists %>% set_colnames(gsub("Size", paste0(hx$th, "_Size"), colnames(avg_dists))) %>% 
     add_column(TP = tdx, .before = 1) %>% 
     saveRDS(., file.path(basedir, paste0("TP", tdx, ".Rds")))
 }
 
-avg_dists <- lapply(names(typing_data), function(tdx) {
+all_avg_dists <- lapply(names(typing_data), function(tdx) {
   readRDS(file.path(basedir, paste0("TP", tdx, ".Rds")))
 }) %>% set_names(names(typing_data)) %>% bind_rows()
+
 
 if (params$int_type[2] == "multiset") {
   res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
@@ -143,4 +172,18 @@ if (params$int_type[2] == "multiset") {
   res_file <- paste0("results/AVGS-", params$int_type[2], "-intervals.Rds")
 }
 
-saveRDS(avg_dists, res_file)
+outputDetails(paste0("\nMerging average distance results and saving to '", res_file, "'"), newcat = TRUE)
+
+saveRDS(all_avg_dists, res_file)
+
+cat(paste0("\nEnded process at: ", Sys.time(), "\n||", paste0(rep("-", 27), collapse = ""), 
+           " End of average distances collection ",
+           paste0(rep("-", 27), collapse = ""), "||\n"))
+
+# geo_avg_dists <- lapply(groups, function(x_i) {
+#   dms <- paste0("group", x_i, ".Rds") %>%
+#     file.path("intermediate_data/TPN/dists", .) %>% readRDS()
+#   groupX <- parts$results[[x_i]] %>% as.data.table() %>% set_colnames(c("Hx", "n"))
+#   groupX <- groupX[Hx %in% assignments[Strain %in% td$Strain]$Hx]
+#   groupXAvgDists(dms[["geo"]], groupX, assignments, m$strain_data, c("Longitude", "Latitude"))
+# }) %>% bind_rows() %>% inner_join(., sizes, by = "Hx") %>% rename(Geo.Avg.Dist = AvgDist)

@@ -68,7 +68,7 @@ typing_data <- lapply(1:length(interval_list), function(i) {
 }) %>% set_names(as.character(interval_list))
 
 td <- typing_data[[length(typing_data)]] %>% rownames_to_column("Strain") %>% as.data.table()
-rm(typing_data)
+# rm(typing_data)
 
 parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>% 
   left_join(td, ., by = "Strain") %>% sectionClusters(.)
@@ -88,7 +88,7 @@ fnames <- names(y[y]) # groups of clusters, the pairwise distances for each grou
 m$dr_matches <- m$dr_matches %>% as.data.table()
 
 dates <- as.character(unique(dfx$k))
-
+# j <- 1
 for (j in 1:length(fnames)) {
   f <- fnames[j]
   cat(paste0("\n\nGroup of clusters ", f, ", ", j, " / ", length(fnames), " ... "))
@@ -96,15 +96,15 @@ for (j in 1:length(fnames)) {
   dms <- readRDS(paste0("intermediate_data/TPN/dists/group", f, ".Rds"))
   tr_dists <- collectTransforms2(dms, extremes)
   
-  for (index_k in 1:length(dates)) {
-    k_i <- dates[index_k]
+  # k_i <- dates[1]
+  for (k_i in dates) {
     tpkstrains <- metadata[get(interval) <= k_i]$Strain
     key_cls <- parts$drs[Strain %in% tpkstrains] %>% select(-Strain, -dr) %>% pull() %>% unique()
     k_drs <- m$dr_matches[Strain %in% tpkstrains] %>% pull(dr)
     cluster_x <- df[df[[cx]] %in% pull(results[[f]], cx),-"Strain"]
     selected_tp <- m$strain_data %>% filter(Strain %in% tpkstrains)
     
-    
+    # x_i <- as.character(unique(dfx$x))[1]
     eccs <- lapply(as.character(unique(dfx$x)), function(x_i) {
       coeffs <- unlist(strsplit(x_i, split = "-"))
       tau <- coeffs[2]
