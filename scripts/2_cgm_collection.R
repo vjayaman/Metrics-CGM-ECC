@@ -79,7 +79,7 @@ for (i in 1:(length(interval_list)-1)) {
   rm(tplist)
   
   # BASE CASE (FIRST HEIGHT) -------------------------------------------------------------------------------------
-  outputDetails(paste0("  Tracking clusters from ", n1, " to ", n2, ", from height ", heights[1], " ...\n"), newcat = TRUE)
+  outputDetails(paste0("  Tracking clusters from ", n1, " to ", n2, ", from height ", heights[1], " ..."), newcat = TRUE)
   
   hx <- Heightdata$new(starter = heights[1], t1_comps = tp1$comps, hvals = heights)$
     clust_tracking(tp2$comps, tp2$cnames, tp1$coded, tp2$coded, TRUE)$
@@ -136,7 +136,7 @@ for (i in 1:(length(interval_list)-1)) {
     set_colnames(c("Cluster", paste0(arg$intervaltype, "Interval"), "Field", "Value"))
   
   cgm_results <- isolates_file %>% 
-    add_column(interval = paste0(n1, "-", n2), .before = 1) %>% add_column(TP = n2, .before = 1)
+    add_column(interval = paste0(n1, "-", n2), .before = 1)# %>% add_column(TP = n2, .before = 1)
   
   saveRDS(cgm_results, file.path(save_to, paste0("TP", n2, ".Rds")))
 }

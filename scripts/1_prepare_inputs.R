@@ -173,7 +173,6 @@ if (params$int_type[2] == "weekly") {
     inner_join(., f2, by = c("Strain" = "isolate")) %>% 
     set_colnames(c("isolate", "ivl", "heightx"))
   
-  
 }else if (params$int_type[2] == "multiset") {
   setdivider <- strsplit(params$divs[2], split = ",") %>% unlist() %>% as.Date(., format = "%Y-%m-%d")
   
@@ -207,8 +206,8 @@ clustersets <- vector(mode = "list", length = length(interval_list)) %>% set_nam
 
 for (xj in interval_list) {
   # cluster assignments for clusters that changed when interval i strains were added
-  int_j <- interval_clusters[heightx %in% interval_clusters[ivl == xj]$heightx]
-  sofar <- interval_clusters[heightx %in% interval_clusters[ivl <= xj]$heightx]
+  int_j <- interval_clusters[ivl == xj]
+  sofar <- interval_clusters[ivl <= xj]
   clustersets[[xj]] <- list(int_j, sofar) %>% set_names(c("ivl", "sofar"))
 }
 rm(sofar); rm(int_j); rm(interval_clusters); rm(interval_list)

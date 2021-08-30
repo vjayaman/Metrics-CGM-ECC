@@ -92,45 +92,9 @@ tpkstrains <- metadata[get(interval) <= k]$Strain
 collectDistances(parts$drs, parts$results, m$dr_matches, m$assignments, tpkstrains, save_to)
 rm(m); rm(parts)
 
-# Average distances --------------------------------------------------------------------------
 assert("Distances were collected and saved", file.exists(paste0(basedir, "extreme_dists.Rds")))
 
-outputMessages("\nAverage distance collection put on hold until granular ECC collection is done")
-# outputMessages("\nCollecting average distances ...")
-# 
-# avg_dists <- lapply(names(typing_data), function(tpx) {
-#   tpx_dists <- paste0("intermediate_data/TP", tpx, "/dists/") %>% 
-#     list.files(., pattern = "group", full.names = TRUE)
-#   
-#   groups <- sectionClusters(tpx, typing_data, m)
-#   groups$drs %<>% set_colnames(c("Strain", "Th", "dr"))
-#   
-#   dr_td1 <- typing_data[[as.character(tpx)]] %>% 
-#     rownames_to_column("Strain") %>% as_tibble() %>%
-#     left_join(., m$dr_matches, by = "Strain") %>%
-#     mutate(across(dr, as.character)) %>% select(-Strain)  
-#   
-#   g_cuts <- countDataReps(dr_td1)
-#   
-#   temp_dists <- avgsFromDM(tpx_dists, groups, g_cuts, "temp", "Temp.Dist", tpx)
-#   geo_dists <- avgsFromDM(tpx_dists, groups, g_cuts, "geo", "Geog.Dist", tpx)
-#   
-#   inner_join(temp_dists, geo_dists, 
-#              by = intersect(colnames(temp_dists), colnames(geo_dists))) %>% return()
-# }) %>% set_names(paste0("TP", names(typing_data)))
-#   # set_names(c("TP1", "TP2"))
-# 
-# outputMessages("Average distances collected, now saving ...")
-# # tp1_avg_dists <- tp1$proc %>% select(-TP1) %>% 
-# #   left_join(., avg_dists[["TP1"]], by = intersect(colnames(.), colnames(avg_dists[["TP1"]])))
-# tp2_avg_dists <- tp2$proc %>% select(-TP2) %>% 
-#   left_join(., avg_dists[["TP2"]], by = intersect(colnames(.), colnames(avg_dists[["TP2"]])))
-# 
-# # all_avg_dists <- right_join(tp1_avg_dists, tp2_avg_dists, by = "Strain")
-# all_avg_dists <- tp2_avg_dists
-# saveRDS(all_avg_dists, "intermediate_data/average_dists.Rds")
-# 
-# assert("Averages were saved", file.exists("intermediate_data/average_dists.Rds"))
-
+stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
+timeTaken(pt = "distances collection", stopwatch) %>% outputDetails(., newcat = TRUE)
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), 
            " End of distances collection ", paste0(rep("-", 31), collapse = ""), "||\n"))

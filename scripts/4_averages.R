@@ -156,6 +156,7 @@ for (tdx in names(typing_data)) {
 
   colnames(avg_dists)[which(colnames(avg_dists) == "Hx")] <- hx$th
   
+  # Collects raw cluster averages as well
   curr_data <- left_join(td, strain_data, by = "Strain") %>% 
     set_colnames(gsub(hx$th, "heightx", colnames(.)))
   clusters <- curr_data %>% pull(heightx) %>% unique()
@@ -167,7 +168,7 @@ for (tdx in names(typing_data)) {
     set_colnames(c(hx$th, "Avg.Date", "Avg.Longitude", "Avg.Latitude"))
   
   merge.data.table(avg_dists, reg_avgs) %>% 
-    set_colnames(gsub("Size", paste0(hx$th, "_Size"), colnames(avg_dists))) %>% 
+    set_colnames(gsub("Size", paste0(hx$th, "_Size"), colnames(.))) %>% 
     add_column(TP = tdx, .before = 1) %>% 
     saveRDS(., file.path(basedir, paste0("TP", tdx, ".Rds")))
 }
@@ -188,8 +189,10 @@ outputDetails(paste0("\nMerging average distance results and saving to '", res_f
 
 saveRDS(all_avg_dists, res_file)
 
-cat(paste0("\nEnded process at: ", Sys.time(), "\n||", paste0(rep("-", 27), collapse = ""), 
-           " End of average distances collection ",
+stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
+
+timeTaken(pt = "average distances collection", stopwatch) %>% outputDetails(., newcat = TRUE)
+cat(paste0("||", paste0(rep("-", 27), collapse = ""), " End of average distances collection ",
            paste0(rep("-", 27), collapse = ""), "||\n"))
 
 # geo_avg_dists <- lapply(groups, function(x_i) {
