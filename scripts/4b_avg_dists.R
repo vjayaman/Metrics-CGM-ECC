@@ -155,7 +155,19 @@ for (tdx in names(typing_data)) {
   }
 
   colnames(avg_dists)[which(colnames(avg_dists) == "Hx")] <- hx$th
-  avg_dists %>% set_colnames(gsub("Size", paste0(hx$th, "_Size"), colnames(avg_dists))) %>% 
+  
+  curr_data <- left_join(td, strain_data, by = "Strain") %>% 
+    set_colnames(gsub(hx$th, "heightx", colnames(.)))
+  clusters <- curr_data %>% pull(heightx) %>% unique()
+  
+  reg_avgs <- lapply(clusters, function(c_i) {
+    dfx <- curr_data[heightx == c_i]
+    data.table(c_i, mean(dfx$Date), mean(dfx$Longitude), mean(dfx$Latitude))
+  }) %>% bind_rows() %>% 
+    set_colnames(c(hx$th, "Avg.Date", "Avg.Longitude", "Avg.Latitude"))
+  
+  merge.data.table(avg_dists, reg_avgs) %>% 
+    set_colnames(gsub("Size", paste0(hx$th, "_Size"), colnames(avg_dists))) %>% 
     add_column(TP = tdx, .before = 1) %>% 
     saveRDS(., file.path(basedir, paste0("TP", tdx, ".Rds")))
 }
