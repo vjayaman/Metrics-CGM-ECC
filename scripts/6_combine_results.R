@@ -49,7 +49,7 @@ padCol <- function(cvals, padval, padchr) {
 }
 
 # read in CGM results, and use "first_tp2_flag" get the padding values for height and cluster
-cgms <- readRDS("results/CGM-monthly-intervals.Rds") %>% select(-TP)
+cgms <- readRDS("results/CGM-monthly-intervals.Rds")
 
 a1 <- unlist(strsplit(cgms$first_tp2_flag[1], split = "_"))[2:3] %>% 
   nchar() %>% `-`(1) %>% set_names(c("ph", "pc"))
@@ -70,11 +70,6 @@ eccs <- readRDS("results/ECC-monthly-intervals.Rds") %>%
 
 assert("ECC results have data for all intervals", identical(unique(eccs$TP), interval_list))
 assert("AVG results have data for all intervals", identical(unique(avgs$TP), interval_list))
-
-# cgms[,hx$th] <-
-#   lapply(cgms$first_tp2_flag, function(idx) {
-#     strsplit(idx, split = "c") %>% unlist() %>% extract2(2) %>% as.double()
-#   }) %>% unlist()
 
 step0 <- merge.data.table(eccs, avgs, by = intersect(colnames(eccs), colnames(avgs)))
 stepcols <- ncol(step0)
@@ -98,32 +93,12 @@ step1 <- lapply(1:(length(interval_list)-1), function(i) {
   partC %>% select(
     interval, tp1_id, tp1_cl_size, TP1_Size, TP1_ECC.0.1.0, TP1_ECC.0.0.1, 
     first_tp2_flag, tp2_cl_size, TP2_Size, TP2_ECC.0.1.0, TP2_ECC.0.0.1, 
-    # delta_ECC_0.1.0, delta_ECC_0.0.1, 
     TP1_Avg.Date, TP1_Temp.Avg.Dist, TP1_Avg.Longitude, 
     TP1_Avg.Latitude, TP1_Geo.Avg.Dist, TP2_Avg.Date, TP2_Temp.Avg.Dist, 
     TP2_Avg.Longitude, TP2_Avg.Latitude, TP2_Geo.Avg.Dist, first_tp1_flag, 
     last_tp1_flag, first_tp2_flag, last_tp2_flag, tp1_cl_size, tp2_cl_size, 
-    actual_size_change, add_TP1, novel, num_novs, actual_growth_rate, new_growth, type    )
+    actual_size_change, add_TP1, novel, num_novs, actual_growth_rate, new_growth, type)
 }) %>% bind_rows()
-
-tpn <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
-
-cnames <- params$cnames[2] %>% strsplit(split = ",") %>% unlist()
-metadata <- read_tsv(arg$metadata) %>% as.data.table() %>%
-  select(Strain, Latitude, Longitude, Day, Month, Year, all_of(cnames),
-         Date, YearMonth, Week)
-
-typing_data <- lapply(1:length(interval_list), function(i) {
-  n1 <- as.character(interval_list[i])
-  tpkstrains <- metadata[get(interval) <= n1]$Strain
-  dfz <- tpn$filedata %>% rownames_to_column("isolate") %>%
-    select(isolate, all_of(hx$h)) %>%
-    filter(isolate %in% tpkstrains) %>% column_to_rownames("isolate")
-  dfz[,hx$h[1],drop=FALSE] %>% set_colnames(hx$th[1])
-}) %>% set_names(as.character(interval_list))
-
-# tp1eccs <- grep("TP1", ecccols, value = TRUE)
-# tp2eccs <- grep("TP2", ecccols, value = TRUE)
 
 assert("No clusters with unassigned type", checkTypes(step1))
 
@@ -131,7 +106,6 @@ assert("No clusters with unassigned type", checkTypes(step1))
 
 # Type I modifications: TP1 > 2, TP2 > 2, TP1 = TP2
 #   - None required, we can use the ECC stats for TP1 & TP2, we can use the cluster averages for TP1 & TP2
-
 
 # Type II modifications: TP1 > 2, TP2 > 2, TP2 > TP1
 #   -	Main problem is that the novel strains in TP2 do not have TP1 data
@@ -142,12 +116,6 @@ assert("No clusters with unassigned type", checkTypes(step1))
 #       - in TP1, needs to have the cluster size and ECC stats from the TP1 strains they cluster with in TP2, 
 #       - need to have the TP1 cluster number
 
-cases2a <- step1[type == "Type2"]
-if (nrow(cases2a) > 0) {
-  cases2 <- cases2a %>% type2Inheritance(.)
-  step1 <- step1[ type != "Type2" ] %>% bind_rows(cases2)
-}
-
 # Type III modifications: TP1 < 3, TP2 > 2
 # -	Main problem is that TP1 cluster doesn't have ECC stats, 
 #   - impacts the change vector calculation; 
@@ -157,13 +125,6 @@ if (nrow(cases2a) > 0) {
 #   - (+ 1 adjustment for every cluster) so that the denominator is not 0 for cluster growth
 #   - (initially wanted ECC bubbles of size at least 1, NOW not doing cluster size increment for the ECCs)
 
-cases3a <- step1 %>% filter(type == "Type3")
-if (nrow(cases3a) > 0) {
-  cases3b <- type3Inheritance(cases3a)
-  step1 <- step1[ type != "Type3" ] %>% bind_rows(cases3b)
-}
-
-
 # Type IV modifications: TP1 < 3, TP2 < 3
 # -	Main problem is that TP1 and TP2 are both small and do not have ECC stats 
 #   since they are singletons or non-existent
@@ -171,87 +132,113 @@ if (nrow(cases3a) > 0) {
 # -	Filter these strains prior to analysis & give ECC blanks
 # -	Eventually, include in analysis but maybe do not include them in EpiMatrix calculation
 
-index_eccs <- grep("ECC", colnames(step1))
+step3 <- data.table()
 
-# should already be NA
-assert("All TP1 and TP2 ECCs for these should be blank (NA, for now)", 
-       all(is.na(step1[ type == "Type4", ..index_eccs])))
-
-# step1 %<>% mutate(across(all_of(index_eccs), as.character))
-cases4 <- step1 %>% filter(type == "Type4")
-
-assert("All singletons or nonexistent (at both TP1 and TP2)", 
-       all(c(cases4$tp1_cl_size, cases4$tp2_cl_size) < 3))
-# for (index_j in index_eccs) {set(cases4, j = index_j, value = "")}
-# step1 <- step1[ type != "Type4"] %>% bind_rows(cases4)
-
-# check that the only NA ECCs are for Type4 cases now:
-ecccols <- grep("ECC", colnames(step1), value = TRUE) %>% sort(decreasing = TRUE)
-assert("Only blank ECCs are for Type4 cases", identical(unique(step1[is.na(get(ecccols)),type]), "Type4"))
+for (i in 1:(length(interval_list)-1)) {
+  cat(paste0("Interval ", interval_list[i], " - ", interval_list[i+1], "\n"))
+  int_i <- interval_list[i:(i+1)] %>% paste0(., collapse = "-")
+  step2 <- step1[interval == int_i]
+  
+  cases2a <- step2[type == "Type2"]
+  if (nrow(cases2a) > 0) {
+    cases2 <- cases2a %>% type2Inheritance(.)
+    step2 <- step2[type != "Type2"] %>% bind_rows(cases2)
+  }
+  
+  # the TP1 ECCs should be equal to 1
+  cases3a <- step2[type == "Type3"]
+  # typeX <- cases3a
+  if (nrow(cases3a) > 0) {
+    cases3b <- type3Inheritance(cases3a)
+    assert("Type 3 inheritances was dealt with during ECC collection", !is.null(cases3b))
+    step2 <- step2[type != "Type3"] %>% bind_rows(cases3b)
+  }
+  
+  index_eccs <- grep("ECC", colnames(step1))
+  
+  # should already be NA
+  assert("All TP1 and TP2 ECCs for these should be blank (NA, for now)", 
+         all(is.na(step2[ type == "Type4", ..index_eccs])))
+  cases4 <- step2 %>% filter(type == "Type4")
+  
+  assert("All singletons or nonexistent (at both TP1 and TP2)", 
+         all(c(cases4$tp1_cl_size, cases4$tp2_cl_size) < 3))
+  
+  # check that the only NA ECCs are for Type4 cases now:
+  ecccols <- grep("ECC", colnames(step2), value = TRUE) %>% sort(decreasing = TRUE)
+  
+  x1 <- which(is.na(step2[,..ecccols]), arr.ind = TRUE) %>% as.data.frame() %>% pull(row)
+  assert("Only blank ECCs are for Type4 cases", identical(unique(step2[x1]$type), "Type4"))
+  
+  step3 <- step3 %>% bind_rows(step2)
+}
 
 # END OF TYPE MODIFICATIONS FOR ECCs --------------------------------------------------------------
+tp1eccs <- grep("TP1", ecccols, value = TRUE)
+tp2eccs <- grep("TP2", ecccols, value = TRUE)
 
 # adding basic delta ECC columns
-step2 <- step1 %>% as_tibble()
+step4 <- step3 %>% as_tibble()
 for (i in 1:(length(ecccols)/2)) {
   a <- tp1eccs[i] %>% strsplit(., split = "ECC") %>% unlist() %>% extract2(2) %>% 
     substr(., 2, nchar(.)) %>% paste0("delta_ECC_", .)
-  z <- pull(step2, tp2eccs[i]) - pull(step2, tp1eccs[i])
-  step2[a] <- z
+  z <- pull(step4, tp2eccs[i]) - pull(step4, tp1eccs[i])
+  step4[a] <- z
 }
 
-# adding average lat and long columns
-step3 <- step2 %>% 
-  left_join(., getAverage(step2, tp1_cl, Latitude, "avg_lat_1"), by = "tp1_cl") %>% 
-  left_join(., getAverage(step2, tp1_cl, Longitude, "avg_long_1"), by = "tp1_cl") %>% 
-  left_join(., getAverage(step2, tp2_cl, Latitude, "avg_lat_2"), by = "tp2_cl") %>% 
-  left_join(., getAverage(step2, tp2_cl, Longitude, "avg_long_2"), by = "tp2_cl")
+step5 <- step4
+step6 <- step5
 
-# adding average date columns
-step4 <- step3 %>% 
-  left_join(., getAverage(step3, tp1_cl, Date, "avg_date1"), by = "tp1_cl") %>% 
-  left_join(., getAverage(step3, tp2_cl, Date, "avg_date2"), by = "tp2_cl")
+dist_avgs <- grep("Avg", colnames(step6), value = TRUE) %>% grep("Dist", ., value = TRUE) %>% sort()
 
-dist_avgs <- grep("avg", colnames(step4), value = TRUE) %>% grep("dist", ., value = TRUE) %>% sort()
+step7 <- step6 %>% add_column(tp1_cl = NA, tp2_cl = NA) %>% as.data.table(); rm(step6)
+cl_indices <- grep("Absent", step7$tp1_id, invert = TRUE)
 
-time1 <- readRDS(arg$tp1)$lookup_table %>% 
-  select(1, as.double(filtering_ags$th[2])+2) %>% 
-  set_colnames(c("Strain", "Actual TP1 cluster"))
+step7$tp1_cl[cl_indices] <- lapply(step7$tp1_id[cl_indices], function(p) {
+  strsplit(p, split = "_c") %>% unlist() %>% extract2(., 2) %>% as.double()
+}) %>% unlist()
 
-time2 <- readRDS(arg$tp2)$lookup_table %>% 
-  select(1, as.double(filtering_ags$th[2])+2) %>% 
-  set_colnames(c("Strain", "Actual TP2 cluster"))
+step7$tp2_cl <- lapply(step7$first_tp2_flag, function(p) {
+  strsplit(p, split = "_c") %>% unlist() %>% extract2(., 2) %>% as.double()
+}) %>% unlist()
 
-step5 <- step4 %>% 
-  left_join(., time1, by = intersect(colnames(.), colnames(time1))) %>% 
-  left_join(., time2, by = intersect(colnames(.), colnames(time2)))
-
-step6 <- step5 %>% 
-  select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, found_in_TP1, 
-         `Actual TP1 cluster`, tp1_cl, TP1_T0_Size, all_of(tp1eccs), found_in_TP2, 
-         `Actual TP2 cluster`, tp2_cl, TP2_T0_Size, all_of(tp2eccs), 
-         grep("delta_ECC", colnames(step5), value = TRUE), avg_date1, 
-         getDistCols(dist_avgs, "TP1", "temp", TRUE), avg_lat_1, avg_long_1, 
-         getDistCols(dist_avgs, "TP1", "geog", TRUE), avg_date2, 
-         getDistCols(dist_avgs, "TP2", "temp", TRUE), avg_lat_2, avg_long_2, 
-         getDistCols(dist_avgs, "TP2", "geog", TRUE), first_tp1_flag, last_tp1_flag, 
-         first_tp2_flag, last_tp2_flag, tp1_cl_size, tp2_cl_size, 
-         actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth, type)
-
-step7 <- step6 %>% 
-  rename_with(., replaceDistName, getDistCols(colnames(.), "TP1", "temp")) %>% 
-  rename_with(., replaceDistName, getDistCols(colnames(.), "TP2", "temp")) %>% 
-  rename_with(., replaceDistName, getDistCols(colnames(.), "TP1", "geo")) %>% 
-  rename_with(., replaceDistName, getDistCols(colnames(.), "TP2", "geo"))
+timeN <- readRDS("inputs/processed/allTP2.Rds")
+actual_col <- which(colnames(timeN$new_cols) == params$th[2])
+matched_clusters <- timeN$lookup_table %>% select(params$th[2], all_of(actual_col)) %>% unique() %>% 
+  set_colnames(c("IntCol", "ActCol")) %>% as.data.table()
 
 step8 <- step7 %>% 
-  rename("TP1 cluster" = tp1_cl, "TP1 cluster size (1)" = TP1_T0_Size, 
-         "TP2 cluster" = tp2_cl, "TP2 cluster size (1)" = TP2_T0_Size, 
-         "TP1" = found_in_TP1, "TP2" = found_in_TP2, 
-         "Average TP1 date" = avg_date1, "Average TP1 latitude"	= avg_lat_1, 
-         "Average TP1 longitude" = avg_long_1, 
-         "Average TP2 date" = avg_date2, "Average TP2 latitude" = avg_lat_2, 
-         "Average TP2 longitude" = avg_long_2, 
+  left_join(., matched_clusters, by = c("tp1_cl" = "IntCol")) %>% rename(actual_tp1_cl = ActCol) %>% 
+  left_join(., matched_clusters, by = c("tp2_cl" = "IntCol")) %>% rename(actual_tp2_cl = ActCol)
+
+step9 <- step8 %>% 
+  select(interval, actual_tp1_cl, tp1_cl, TP1_Size, all_of(tp1eccs), 
+         actual_tp2_cl, tp2_cl, TP2_Size, all_of(tp2eccs),
+         grep("delta_ECC", colnames(step8), value = TRUE),
+         TP1_Avg.Date, TP1_Temp.Avg.Dist, TP1_Avg.Latitude, TP1_Avg.Longitude, TP1_Geo.Avg.Dist, 
+         TP2_Avg.Date, TP2_Temp.Avg.Dist, TP2_Avg.Latitude, TP2_Avg.Longitude, TP2_Geo.Avg.Dist,
+         first_tp1_flag, last_tp1_flag, first_tp2_flag, last_tp2_flag, tp1_cl_size,
+         tp2_cl_size, actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth, type
+         )
+# step6 <- step5 %>% 
+#   select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, found_in_TP1, found_in_TP2)
+#          # + all cluster-specific columns
+# step7 <- step6 %>% 
+#   rename_with(., replaceDistName, getDistCols(colnames(.), "TP1", "temp")) %>% 
+#   rename_with(., replaceDistName, getDistCols(colnames(.), "TP2", "temp")) %>% 
+#   rename_with(., replaceDistName, getDistCols(colnames(.), "TP1", "geo")) %>% 
+#   rename_with(., replaceDistName, getDistCols(colnames(.), "TP2", "geo"))
+
+
+step10 <- step9 %>% 
+  rename("Actual TP1 cluster" = actual_tp1_cl, , 
+         "TP1 cluster" = tp1_cl, "TP1 cluster size (1)" = TP1_Size, 
+         "TP2 cluster" = tp2_cl, "TP2 cluster size (1)" = TP2_Size, 
+         # "TP1" = found_in_TP1, "TP2" = found_in_TP2, 
+         "Average TP1 date" = TP1_Avg.Date, "Average TP1 latitude"	= TP1_Avg.Latitude, 
+         "Average TP1 longitude" = TP1_Avg.Longitude, 
+         "Average TP2 date" = TP2_Avg.Date, "Average TP2 latitude" = TP2_Avg.Latitude, 
+         "Average TP2 longitude" = TP2_Avg.Longitude, 
          "First time this cluster was seen in TP1" = first_tp1_flag, 
          "Last time this cluster was seen in TP1" = last_tp1_flag, 
          "First time this cluster was seen in TP2" = first_tp2_flag, 
@@ -263,14 +250,14 @@ step8 <- step7 %>%
          "Actual growth rate = (TP2 size - TP1 size) / (TP1 size)" = actual_growth_rate, 
          "Novel growth = (TP2 size) / (TP2 size - number of novels)" = new_growth, 
          "Type" = type) %>% 
-  arrange(`TP2 cluster`, `TP1 cluster`, Strain)
+  arrange(`TP2 cluster`, `TP1 cluster`)#, Strain)
 
-writeData(fp = "results/Merged_strain_results.tsv", df = step8)
+# writeData(fp = "results/Merged_strain_results.tsv", df = step8)
 
-step8 %>% 
-  group_by(`TP2 cluster`) %>% slice(1) %>% 
-  select(-Strain) %>% ungroup() %>% 
-  writeData(fp = "results/Merged_cluster_results.tsv", df = .)
+# step8 %>% 
+#   group_by(`TP2 cluster`) %>% slice(1) %>% 
+#   select(-Strain) %>% ungroup() %>% 
+#   writeData(fp = "results/Merged_cluster_results.tsv", df = .)
 
 cat(paste0("See 'results' folder for cluster-specific and strain-specific files.\n"))
 cat(paste0("\n||", paste0(rep("-", 35), collapse = ""), " End of merging step ", 

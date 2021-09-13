@@ -17,8 +17,8 @@ invisible(sapply(files, source)); rm(files)
 
 assert("Distances were collected and saved", file.exists("intermediate_data/TPN/extreme_dists.Rds"))
 
-cat(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ",
-           paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
+outputDetails(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ",
+                     paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
 
 option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
@@ -68,7 +68,6 @@ typing_data <- lapply(1:length(interval_list), function(i) {
 }) %>% set_names(as.character(interval_list))
 
 td <- typing_data[[length(typing_data)]] %>% rownames_to_column("Strain") %>% as.data.table()
-# rm(typing_data)
 
 parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>% 
   left_join(td, ., by = "Strain") %>% sectionClusters(.)
@@ -88,15 +87,14 @@ fnames <- names(y[y]) # groups of clusters, the pairwise distances for each grou
 m$dr_matches <- m$dr_matches %>% as.data.table()
 
 dates <- as.character(unique(dfx$k))
-# j <- 1
+
 for (j in 1:length(fnames)) {
   f <- fnames[j]
-  cat(paste0("\n\nGroup of clusters ", f, ", ", j, " / ", length(fnames), " ... "))
-  cat(paste0("\n     TP             tau             gamma"))
+  outputDetails(paste0("\n\nGroup of clusters ", f, ", ", j, " / ", length(fnames), " ... "))
+  outputDetails(paste0("\n     TP             tau             gamma"))
   dms <- readRDS(paste0("intermediate_data/TPN/dists/group", f, ".Rds"))
   tr_dists <- collectTransforms2(dms, extremes)
   
-  # k_i <- dates[1]
   for (k_i in dates) {
     tpkstrains <- metadata[get(interval) <= k_i]$Strain
     key_cls <- parts$drs[Strain %in% tpkstrains] %>% select(-Strain, -dr) %>% pull() %>% unique()
@@ -104,12 +102,11 @@ for (j in 1:length(fnames)) {
     cluster_x <- df[df[[cx]] %in% pull(results[[f]], cx),-"Strain"]
     selected_tp <- m$strain_data %>% filter(Strain %in% tpkstrains)
     
-    # x_i <- as.character(unique(dfx$x))[1]
     eccs <- lapply(as.character(unique(dfx$x)), function(x_i) {
       coeffs <- unlist(strsplit(x_i, split = "-"))
       tau <- coeffs[2]
       gamma <- coeffs[3]
-      cat(paste0("\n   ", k_i, "           ", tau, "                ", gamma))
+      outputDetails(paste0("\n   ", k_i, "           ", tau, "                ", gamma))
       epiCollectionByClusterV2(selected_tp, tau, gamma, tr_dists, k_i, cluster_x[dr %in% k_drs])
     })
     
@@ -135,13 +132,10 @@ if (params$int_type[2] == "multiset") {
   res_file <- paste0("results/ECC-", params$int_type[2], "-intervals.Rds")
 }
 
+assert("No -Inf ECC results", !any(is.infinite(abs(pull(ecc_results[,4])))))
 saveRDS(ecc_results, res_file)
 
-# Generating ECC results file ----------------------------------------------------
-assert("No -Inf ECC results", !any(is.infinite(abs(pull(ecc_results[,4])))))
-
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
-cat(timeTaken(pt = "ECC data collection", stopwatch))
-
-cat(paste0("\n||", paste0(rep("-", 30), collapse = ""), " End of ECC metric generation ",
+timeTaken(pt = "ECC data collection", stopwatch) %>% outputDetails(., newcat = TRUE)
+cat(paste0("||", paste0(rep("-", 30), collapse = ""), " End of ECC metric generation ",
            paste0(rep("-", 31), collapse = ""), "||\n"))

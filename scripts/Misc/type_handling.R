@@ -27,14 +27,16 @@ inheritTP1Data <- function(typeX, clustersX) {
   
   for (k in 1:length(clustersX)) {
     to_inherit <- typeX[first_tp2_flag == clustersX[k] & !is.na(tp1_id), ..cnames] %>% unique()
+    absent_cases <- grep("Absent", to_inherit$tp1_id, value = TRUE)
+    to_inherit <- to_inherit[!(tp1_id %in% absent_cases)]
     
     if (nrow(to_inherit) == 1) {
       rowsY <- typeX[   first_tp2_flag == clustersX[k] & is.na(tp1_id), -(..cnames)] %>% cbind(to_inherit)
       typeX <- typeX[ !(first_tp2_flag == clustersX[k] & is.na(tp1_id)) ] %>% bind_rows(., rowsY)
       
-    }else {
-      stop("Number of TP1 clusters to inherit from is 0 or > 1")
-    }  
+    }#else {
+      #stop("Number of TP1 clusters to inherit from is 0 or > 1")
+    #}  
   }
   return(typeX)
 }
@@ -51,15 +53,19 @@ type3Inheritance <- function(typeX) {
   
   x1 <- getDistCols(colnames(typeX), "TP1", "ECC", FALSE)
   assert("All TP1 clusters have ECCs of NA", all(is.na(typeX[,..x1])))
-  
   set(typeX, j = x1, value = 1)
-  
-  # for those that have NA tp1_id, we know they do not exist at TP1 for Type 3, so we just set 
-  # the TP1 ECC to 1, there is no TP1 cluster info to inherit 
+
+  # for those that have NA tp1_id, we know they do not exist at TP1 for Type 3, so we just set
+  # the TP1 ECC to 1, there is no TP1 cluster info to inherit
   clustersX <- typeX[!is.na(tp1_id)] %>% pull(first_tp2_flag) %>% unique()
-  
+
   # if 0, cluster k is entirely novel, so no TP1 data to inherit, we just force ECCs to be 1
   inheritTP1Data(typeX, clustersX) %>% return()
+  
+  # assert("All TP1 clusters that are either singletons or non-existent have value 1",
+  #        all(typeX[,..x1] == 1))
+  # check_inherited <- all(!is.na(select(typeX, grep("ECC", colnames(typeX)))))
+  # if (check_inherited) {return(typeX)}else {return(NULL)}
 }
 
 # FORMATTING -------------------------------------------------------------------------------------

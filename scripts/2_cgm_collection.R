@@ -1,15 +1,13 @@
 #! /usr/bin/env Rscript
 
 # Current working directory should be Metrics-CGM-ECC/
+
 msg <- file("logs/cgm_collection.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("R6", "tibble", "optparse", "magrittr", "dplyr", "reshape2", "progress", 
           "testit", "data.table", "readr")
 y <- lapply(libs, require, character.only = TRUE); rm(libs); rm(y)
-
-files <- paste0("scripts/CGM") %>% list.files(., full.names = TRUE)
-invisible(sapply(files, source)); rm(files)
 
 # READING IN THE INPUTS ----------------------------------------------------------------------------------------
 # Change the default values to read in your own files, or feed through terminal arguments
@@ -21,6 +19,9 @@ option_list <- list(
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
 arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
+
+files <- paste0("scripts/CGM") %>% list.files(., full.names = TRUE)
+invisible(sapply(files, source)); rm(files)
 
 # BASIC STARTUP MESSAGES ---------------------------------------------------------------------------------------
 outputDetails(paste0("\n||", paste0(rep("-", 32), collapse = ""), " Cluster metric generation ", 
@@ -46,6 +47,7 @@ if (params$int_type[2] == "multiset") {
 }
 
 save_to <- file.path("intermediate_data", tolower(params$int_type[2]), "cgms")
+# i <- 1
 
 for (i in 1:(length(interval_list)-1)) {
   
@@ -55,14 +57,14 @@ for (i in 1:(length(interval_list)-1)) {
   n2 <- as.character(interval_list[i+1])
   tpx2 <- clustersets[[n2]]$sofar %>% select(-ivl) %>% set_colnames(c("isolate", heights))
   
-  if (i > 1) {
-    fullset <- clustersets[[n1]]$sofar
-    ivl_i <- clustersets[[n1]]$ivl
-    unchanged_clusters <- setdiff(fullset, ivl_i) %>% pull(heightx) %>% unique()
-    strains <- fullset[heightx %in% unchanged_clusters] %>% pull(isolate)
-    rm(fullset); rm(unchanged_clusters); rm(ivl_i)
-    unchanged_data <- tmp %>% filter(Strain %in% strains)
-  }
+  # if (i > 1) {
+  #   fullset <- clustersets[[n1]]$sofar
+  #   ivl_i <- clustersets[[n1]]$ivl
+  #   unchanged_clusters <- setdiff(fullset, ivl_i) %>% pull(heightx) %>% unique()
+  #   strains <- fullset[heightx %in% unchanged_clusters] %>% pull(isolate)
+  #   rm(fullset); rm(unchanged_clusters); rm(ivl_i)
+  #   unchanged_data <- tmp %>% filter(Strain %in% strains)
+  # }
   
   ph <- max(nchar(colnames(tpx1)[-1]), nchar(colnames(tpx2)[-1]))
   pc <- tpx2 %>% select(-isolate) %>% max(., tpx2 %>% select(-isolate)) %>% nchar()
@@ -72,7 +74,7 @@ for (i in 1:(length(interval_list)-1)) {
     paste0("  Constructing ", n2, " data object, ", nrow(tpx2), " (", i+1, " / ", length(interval_list), "):\n")
   )
   
-  tplist <- tpDataSetup(tpx1, tpx2, ph, pc, FALSE, msgtexts); rm(tpx1); rm(tpx2)
+  tplist <- tpDataSetup(tpx1, tpx2, ph, pc, FALSE, msgtexts)#; rm(tpx1); rm(tpx2)
   tp1 <- tplist[["tp1"]]
   tp2 <- tplist[["tp2"]]
   novels <- tplist[["novs"]]
@@ -111,9 +113,9 @@ for (i in 1:(length(interval_list)-1)) {
     mutate(tp1_cl_size = tp1_cl_size + 1, tp2_cl_size = tp2_cl_size + 1) %>% 
     oneHeight()
   
-  if (i > 1) {isolates_file <- unchanged_data %>% bind_rows(isolates_file, .)}
+  # if (i > 1) {isolates_file <- unchanged_data %>% bind_rows(isolates_file, .)}
   
-  tmp <- isolates_file
+  # tmp <- isolates_file
   isolates_file %<>% addingType(.)
   
   # outputDetails("  Saving the data in a file with cluster identifiers.\n", newcat = FALSE)
@@ -123,6 +125,8 @@ for (i in 1:(length(interval_list)-1)) {
            first_tp2_flag, tp2_cl_size, last_tp2_flag, add_TP1, novel, 
            num_novs, actual_size_change, actual_growth_rate, new_growth, type) %>% 
     unique() %>% as.data.table()
+  
+  correcthere <- isolates_file
   
   indices <- which(is.na(isolates_file$tp1_id) & isolates_file$tp1_cl_size == 1)
   isolates_file[indices]$tp1_id <- isolates_file$first_tp2_flag[indices] %>% 

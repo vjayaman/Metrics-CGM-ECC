@@ -28,11 +28,10 @@ names(x) <- required_packages
 y <- c(dir.exists("inputs/processed/"), dir.exists("results/"), 
        dir.exists("logs/"), dir.exists("intermediate_data/TPN/"))
 
-
-cat(paste0(msg, "\n"))
-message(msg)
+# cat(paste0(msg, "\n"))
+# message(msg)
 if (all(unlist(x)) & all(y)) {
-  cat(paste0("R packages installed/loaded successfully; required directories created.", 
+  cat(paste0("\nR packages installed/loaded successfully; required directories created.", 
              "\nSee logfile_env.txt for details\n"))
 }else {
   # if ("plotly" %in% names(which(x == FALSE))) {
