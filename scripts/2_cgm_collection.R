@@ -12,9 +12,7 @@ y <- lapply(libs, require, character.only = TRUE); rm(libs); rm(y)
 # READING IN THE INPUTS ----------------------------------------------------------------------------------------
 # Change the default values to read in your own files, or feed through terminal arguments
 option_list <- list(
-  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
-              help = "Time point 2 file name (TP2)"), 
-  make_option(c("f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
+  make_option(c("-f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 

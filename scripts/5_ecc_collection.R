@@ -24,7 +24,7 @@ option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
               help = "Time point 2 file name (TP2)"), 
-  make_option(c("f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
+  make_option(c("-f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
@@ -96,6 +96,7 @@ for (j in 1:length(fnames)) {
   tr_dists <- collectTransforms2(dms, extremes)
   
   for (k_i in dates) {
+    # print(k_i)
     tpkstrains <- metadata[get(interval) <= k_i]$Strain
     key_cls <- parts$drs[Strain %in% tpkstrains] %>% select(-Strain, -dr) %>% pull() %>% unique()
     k_drs <- m$dr_matches[Strain %in% tpkstrains] %>% pull(dr)
@@ -107,11 +108,16 @@ for (j in 1:length(fnames)) {
       tau <- coeffs[2]
       gamma <- coeffs[3]
       outputDetails(paste0("\n   ", k_i, "           ", tau, "                ", gamma))
-      epiCollectionByClusterV2(selected_tp, tau, gamma, tr_dists, k_i, cluster_x[dr %in% k_drs])
+      cluster_y <- cluster_x[dr %in% k_drs]
+      if (nrow(cluster_y) > 0) {
+        epiCollectionByClusterV2(selected_tp, tau, gamma, tr_dists, k_i, cluster_y)  
+      }
     })
     
-    save_to <- file.path(basedir, paste0("TP", k_i), paste0("group", f, ".Rds"))
-    suppressMessages(Reduce(inner_join, eccs)) %>% saveRDS(., save_to)
+    if (length(eccs[!sapply(eccs, is.null)]) > 0) {
+      save_to <- file.path(basedir, paste0("TP", k_i), paste0("group", f, ".Rds"))
+      suppressMessages(Reduce(inner_join, eccs)) %>% saveRDS(., save_to)  
+    }
   }
 }
 

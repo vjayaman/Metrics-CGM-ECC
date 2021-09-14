@@ -1,5 +1,7 @@
 #! /usr/bin/env Rscript
 
+# This should be run first, to make sure the required packages are installed
+
 dir.create("logs", showWarnings = FALSE)
 msg <- file("logs/environment_setup.txt", open="wt")
 sink(msg, type="message")
@@ -12,7 +14,6 @@ cat(paste0(
 dir.create("results", showWarnings = FALSE)
 dir.create("inputs/processed",  recursive = TRUE, showWarnings = FALSE)
 dir.create("intermediate_data/TPN/", recursive = TRUE, showWarnings = FALSE)
-# This should be run first, to make sure the required packages are installed
 
 required_packages <- c("R6", "testit", "optparse", "magrittr", "dplyr", "tibble", "readr", "reshape2", 
                        "fossil", "tidyr", "purrr", "progress", "reader", "data.table", "testthat", 

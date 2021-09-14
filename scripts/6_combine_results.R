@@ -6,12 +6,10 @@ y <- suppressMessages(lapply(libs, require, character.only = TRUE))
 option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", 
               default = "inputs/processed/strain_info.txt", help = "Metadata file"),
-  make_option(c("-b", "--tp2"), metavar = "file", 
-              default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"), 
+  make_option(c("-f", "--intervalfile"), metavar = "file", 
+              default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
-              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"), 
-  make_option(c("f", "--intervalfile"), metavar = "file", 
-              default = "inputs/processed/clustersets.Rds"))
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
 arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
@@ -19,6 +17,8 @@ source("scripts/Misc/type_handling.R"); source("scripts/ECC/classes_ecc.R")
 
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Merging CGM and ECC results ", 
            paste0(rep("-", 31), collapse = ""), "||\n"))
+
+dir.create("results/Merged_strain_results", showWarnings = FALSE)
 
 # INPUT PREP -------------------------------------------------------------------------------------------------
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
@@ -36,7 +36,7 @@ if (params$int_type[2] == "multiset") {
 }
 
 clustersets <- readRDS(arg$intervalfile)
-interval_list <- names(clustersets) %>% sort(); rm(clustersets)
+interval_list <- names(clustersets) %>% sort()
 
 # ------------------------------------------------------------------------------------------------------------
 # NOW SAVING OUTPUTS AND MERGING ECCS WITH CGM DATA ----------------------------------------------------------
@@ -203,9 +203,9 @@ step7$tp2_cl <- lapply(step7$first_tp2_flag, function(p) {
 }) %>% unlist()
 
 timeN <- readRDS("inputs/processed/allTP2.Rds")
-actual_col <- which(colnames(timeN$new_cols) == params$th[2])
-matched_clusters <- timeN$lookup_table %>% select(params$th[2], all_of(actual_col)) %>% unique() %>% 
-  set_colnames(c("IntCol", "ActCol")) %>% as.data.table()
+# actual_col <- which(colnames(timeN$new_cols) == params$th[2])
+matched_clusters <- timeN$lookup_table[new_h == params$th[2]] %>% select(old_cl, new_cl) %>%
+  unique() %>% set_colnames(c("ActCol", "IntCol"))
 
 step8 <- step7 %>% 
   left_join(., matched_clusters, by = c("tp1_cl" = "IntCol")) %>% rename(actual_tp1_cl = ActCol) %>% 
@@ -223,12 +223,6 @@ step9 <- step8 %>%
 # step6 <- step5 %>% 
 #   select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, found_in_TP1, found_in_TP2)
 #          # + all cluster-specific columns
-# step7 <- step6 %>% 
-#   rename_with(., replaceDistName, getDistCols(colnames(.), "TP1", "temp")) %>% 
-#   rename_with(., replaceDistName, getDistCols(colnames(.), "TP2", "temp")) %>% 
-#   rename_with(., replaceDistName, getDistCols(colnames(.), "TP1", "geo")) %>% 
-#   rename_with(., replaceDistName, getDistCols(colnames(.), "TP2", "geo"))
-
 
 step10 <- step9 %>% 
   rename("Actual TP1 cluster" = actual_tp1_cl, , 
@@ -250,14 +244,25 @@ step10 <- step9 %>%
          "Actual growth rate = (TP2 size - TP1 size) / (TP1 size)" = actual_growth_rate, 
          "Novel growth = (TP2 size) / (TP2 size - number of novels)" = new_growth, 
          "Type" = type) %>% 
-  arrange(`TP2 cluster`, `TP1 cluster`)#, Strain)
+  arrange(`TP2 cluster`, `TP1 cluster`) %>% 
+  unique()#, Strain)
 
-# writeData(fp = "results/Merged_strain_results.tsv", df = step8)
+writeData(fp = "results/Merged_cluster_results.tsv", df = step10)
 
-# step8 %>% 
-#   group_by(`TP2 cluster`) %>% slice(1) %>% 
-#   select(-Strain) %>% ungroup() %>% 
-#   writeData(fp = "results/Merged_cluster_results.tsv", df = .)
+metadata <- read_tsv(arg$metadata) %>% processedStrains()
+cnames <- strsplit(params$cnames[2], split = ",") %>% unlist()
+strains <- metadata$strain_data %>% select(Strain, all_of(cnames), Latitude, Longitude, Day, Month, Year)
+
+ivls <- names(clustersets)
+for (i in 2:length(ivls)) {
+  ivl_i <- paste0(ivls[i-1], "-", ivls[i])
+  step11 <- clustersets[[i]]$ivl %>% select(isolate, heightx) %>% rename(Strain = isolate) %>% 
+    add_column(interval = ivl_i) %>% 
+    inner_join(step10, ., by = c("TP2 cluster" = "heightx", "interval")) %>% 
+    inner_join(., strains, by = "Strain") %>% 
+    select(interval, colnames(strains), colnames(step10))
+  writeData(fp = paste0("results/Merged_strain_results/", ivl_i, ".Rds"), df = step11)
+}
 
 cat(paste0("See 'results' folder for cluster-specific and strain-specific files.\n"))
 cat(paste0("\n||", paste0(rep("-", 35), collapse = ""), " End of merging step ", 

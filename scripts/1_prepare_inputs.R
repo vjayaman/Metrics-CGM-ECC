@@ -132,13 +132,14 @@ if (as.logical(params$has_prov[2])) {
 
 # NON-SINGLETON CLUSTERS ---------------------------------------------------------------------------------------
 outputDetails("Making table for matching TP2 clusters to integers (for metrics process) ...", TRUE)
-processed_tp2 <- intClusters(time2); rm(time2)
+# processed_tp2 <- intClusters(time2); #rm(time2)
+tp2_processed <- natNumberClusters(time2)
 
 th <- params$th[2]
 
 if (as.logical(params$nsTP2[2])) {
-  remove_strains <- strainsInSingletons(processed_tp2$new_cols, th)
-  processed_tp2$new_cols %<>% filter(!(Strain %in% remove_strains))
+  remove_strains <- strainsInSingletons(tp2_processed, th)
+  tp2_processed$new_cols %<>% filter(!(Strain %in% remove_strains))
   strain_data %<>% filter(!(Strain %in% remove_strains))
 }
 
@@ -154,7 +155,7 @@ metadata <- strain_data %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = 
   arrange(Week) %>% as.data.table()
 rm(strain_data)
 
-f2 <- processed_tp2$new_cols %>% as.data.table() %>% select(Strain, all_of(params$th[2])) %>% 
+f2 <- tp2_processed$new_cols %>% as.data.table() %>% select(Strain, all_of(params$th[2])) %>% 
   rename(isolate = Strain) %>% arrange(isolate)
 
 if (params$int_type[2] == "weekly") {
@@ -215,8 +216,8 @@ rm(sofar); rm(int_j); rm(interval_clusters); rm(interval_list)
 # SAVING RESULTS -----------------------------------------------------------------------------------------------
 saveRDS(clustersets, file.path("inputs", "processed", "clustersets.Rds")); rm(clustersets)
 writeData(metadata, file.path("inputs", "processed", "strain_info.txt")); rm(metadata)
-writeData(processed_tp2$new_cols, file.path("inputs", "processed", "tp2_clusters.txt"))
-saveRDS(processed_tp2, file.path("inputs", "processed", "allTP2.Rds")); rm(processed_tp2)
+writeData(tp2_processed$new_cols, file.path("inputs", "processed", "tp2_clusters.txt"))
+saveRDS(tp2_processed, file.path("inputs", "processed", "allTP2.Rds")); 
 
 outputDetails(paste0("\nFinished process at: ", Sys.time(), "\n||", paste0(rep("-", 14), collapse = ""), 
                      " Saved formatted inputs to 'processed' in the ",

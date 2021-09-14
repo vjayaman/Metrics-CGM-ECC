@@ -21,6 +21,17 @@ outputDetails("Sourcing required functions, reading in input data", newcat = TRU
 
 sourceCpp("scripts/epicohversions.cpp")
 
+option_list <- list(
+  make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
+  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
+              help = "Time point 2 file name (TP2)"), 
+  make_option(c("-f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
+  make_option(c("-d", "--details"), metavar = "file", 
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
+
+arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
+
+# dm <- dms[["temp"]]; cnames <- "Date"
 groupXAvgDists <- function(dm, groupX, assignments, strain_data, cnames) {
   clustersX <- pull(groupX, 1)
   
@@ -47,16 +58,6 @@ groupXAvgDists <- function(dm, groupX, assignments, strain_data, cnames) {
   assert("No NA avg dists", nrow(avgdists[is.na(AvgDist)]) == 0)
   return(avgdists)
 }
-
-option_list <- list(
-  make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
-  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
-              help = "Time point 2 file name (TP2)"), 
-  make_option(c("f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
-  make_option(c("-d", "--details"), metavar = "file", 
-              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
-
-arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
 outputDetails("Processing input data, formatting ...", newcat = TRUE)
 
@@ -116,19 +117,22 @@ for (tdx in names(typing_data)) {
   pb <- txtProgressBar(min = 0, max = length(groups), initial = 0, style = 3)
   avg_dists <- lapply(1:length(groups), function(i) {
     setTxtProgressBar(pb, i)
+    # print(i)
     x_i <- groups[i]
     dms <- paste0("group", x_i, ".Rds") %>% file.path("intermediate_data/TPN/dists", .) %>% readRDS()
     groupX <- pd2[f == x_i] %>% select(Hx, n) %>% unique()
     
-    temp_dists <- dms[["temp"]] %>% 
-      groupXAvgDists(., groupX, assignments, strain_data, "Date") %>% 
-      rename(Temp.Avg.Dist = AvgDist)
-    
-    geo_dists <- dms[["geo"]] %>% 
-      groupXAvgDists(., groupX, assignments, strain_data, c("Longitude", "Latitude")) %>% 
-      rename(Geo.Avg.Dist = AvgDist)
-    
-    merge.data.table(temp_dists, geo_dists)
+    if (nrow(groupX) > 0) {
+      temp_dists <- dms[["temp"]] %>% 
+        groupXAvgDists(., groupX, assignments, strain_data, "Date") %>% 
+        rename(Temp.Avg.Dist = AvgDist)
+      
+      geo_dists <- dms[["geo"]] %>% 
+        groupXAvgDists(., groupX, assignments, strain_data, c("Longitude", "Latitude")) %>% 
+        rename(Geo.Avg.Dist = AvgDist)  
+      
+      return(merge.data.table(temp_dists, geo_dists))
+    }
   }) %>% bind_rows() %>% inner_join(., sizes, by = "Hx")
   close(pb)
   

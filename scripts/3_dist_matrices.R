@@ -18,7 +18,7 @@ option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
               help = "Time point 2 file name (TP2)"), 
-  make_option(c("f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
+  make_option(c("-f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
