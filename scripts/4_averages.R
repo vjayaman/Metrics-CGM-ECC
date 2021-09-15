@@ -45,12 +45,19 @@ groupXAvgDists <- function(dm, groupX, assignments, strain_data, cnames) {
     }else {
       dr_counts <- cx %>% group_by(dr) %>% summarise(n_drs = n()) %>% as.data.table()
       dmx <- dm[rownames(dm) %in% dr_counts$dr, colnames(dm) %in% dr_counts$dr,drop=FALSE]
-      dr_counts <- dr_counts[match(rownames(dmx), dr_counts$dr)]
-      dmxcols <- sweep(dmx, MARGIN = 2, dr_counts$n_drs, `*`)
-      dmxrest <- sweep(dmxcols, MARGIN = 1, dr_counts$n_drs, `*`)
-      # return(mean(dmxrest))
+      # multiplying columns and rows by repetition, but not necessary when looking at 
+      # averages (duplicates will cause unnecessary issues)
+      # dr_counts <- dr_counts[match(rownames(dmx), dr_counts$dr)]
+      # dmxcols <- sweep(dmx, MARGIN = 2, dr_counts$n_drs, `*`)
+      # dmxrest <- sweep(dmxcols, MARGIN = 1, dr_counts$n_drs, `*`)
+      
       # counting each pair in one direction only:
-      avg_dist <- sum(dmxrest[upper.tri(dmxrest)]) / length(dmxrest[upper.tri(dmxrest)])
+      # avg_dist <- sum(dmxrest[upper.tri(dmxrest)]) / length(dmxrest[upper.tri(dmxrest)])
+      
+      # metadata[Strain %in% cx$Strain] %>% summarise(avg = as.numeric(mean(diff(Date))))
+      # avg_dist <- sum(dmxrest[upper.tri(dmxrest)]) / length(unique(cx$dr))
+      
+      avg_dist <- sum(dmx[upper.tri(dmx)]) / length(unique(cx$dr))
       return(avg_dist)
     }
     # if (is.na(avg_dist)) {print(x)}

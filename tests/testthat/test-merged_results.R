@@ -123,11 +123,8 @@ test_results[[1]] <- test_that("cluster_results", {
   tp2_geo_avg_dist <- sum(tp2gdists[upper.tri(tp2gdists)]) / length(tp2gdists[upper.tri(tp2gdists)])
   expect_equal(rowx$tp2_geo.avg.dist, tp2_geo_avg_dist)
 
-  # FAILS 
-  # tp2tdists <- tp2_cl %>% pull(Date) %>% 
-  #   dist(diag = FALSE, upper = FALSE, method = "euclidean") %>% as.matrix()
-  # tp2_temp_avg_dist <- sum(tp2tdists[upper.tri(tp2tdists)]) / length(tp2tdists[upper.tri(tp2tdists)])
-  # expect_equal(rowx$tp2_temp.avg.dist, tp2_temp_avg_dist)
+  tp2_temp_avg_dist <- tp2_cl$Date %>% diff() %>% mean() %>% as.numeric()
+  expect_equal(rowx$tp2_temp.avg.dist, tp2_temp_avg_dist)
   
   expect_equal(rowx$average_tp1_latitude, mean(tp1_cl$Latitude))
   expect_equal(rowx$average_tp2_latitude, mean(tp2_cl$Latitude))
@@ -138,7 +135,6 @@ test_results[[1]] <- test_that("cluster_results", {
   expect_identical(as.character(rowx$average_tp1_date), as.character(mean(tp1_cl$Date)))
   expect_identical(as.character(rowx$average_tp2_date), as.character(mean(tp2_cl$Date)))
   
-  
   tpx1 <- tp2$new_cols[Strain %in% strain_data[Date <= end_of_tp1]$Strain]
   tpx2 <- tp2$new_cols[Strain %in% strain_data[Date <= end_of_tp2]$Strain]
   ph <- max(nchar(colnames(tpx1)[-1]), nchar(colnames(tpx2)[-1]))
@@ -148,9 +144,6 @@ test_results[[1]] <- test_that("cluster_results", {
   # note that these are the same if we are looking at the same cluster sets
   # but if we someday want to revisit separately clustered time points again, 
   # this will become highly relevant
-  
-  # tracked_to_tp2 <- tp2clusters %>% group_by(variable, value) %>% 
-  #   summarise(n = n(), .groups = "drop") %>% as.data.table()
   
   # only strains available at TP1
   alltp1data <- tp2clusters[Strain %in% strain_data[Date <= end_of_tp1]$Strain]
@@ -183,27 +176,12 @@ test_results[[1]] <- test_that("cluster_results", {
   tracked_tp2s[n == first_tp2$n] %>% slice(n()) %>% 
     newID(., "tp2", "variable", "value", ph, pc) %>% pull(id) %>% 
     expect_identical(rowx$last_tp2_flag, .)
-
   
-  
-  
-  # TP2_h000_c094
-  # TP2_h003_c053
-  
-  
-  
-  
-  
-  
-  
-  
-    
   expect_equal(rowx$tp2_cluster, first_tp2$value)
   
   starter_set[new_h == as.double(as.character(first_tp2$variable)) & 
                 new_cl == first_tp2$value]$old_cl %>% 
     expect_equal(rowx$actual_tp2_cluster, .)
-  
   
   ((nrow(tp2_cl) - nrow(tp1_cl)) / (nrow(tp1_cl)+1)) %>% round(., digits = 3) %>% 
     expect_equal(rowx$actual_growth_rate, .)
@@ -221,6 +199,7 @@ test_results[[1]] <- test_that("cluster_results", {
     expect_equal(rowx$type, "Type4")
   }
   
+  extremes <- readRDS("intermediate_data/TPN/extreme_dists.Rds")
   
   
 })
@@ -233,7 +212,6 @@ test_results[[1]] <- test_that("cluster_results", {
 # "tp2_ecc.0.0.1"
 # "delta_ecc_0.1.0"
 # "delta_ecc_0.0.1"
-# "tp2_temp.avg.dist"
 
 
 
