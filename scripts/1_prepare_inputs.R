@@ -150,6 +150,8 @@ dir.create(file.path(save_to, "cgms"), showWarnings = FALSE, recursive = TRUE)
 dir.create(file.path(save_to, "eccs"), showWarnings = FALSE, recursive = TRUE)
 dir.create(file.path(save_to, "avgdists"), showWarnings = FALSE, recursive = TRUE)
 
+# YearMonth:
+#   if a strain was added on or before the last day of the month, given that YearMonth designation
 metadata <- strain_data %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
   mutate(YearMonth = format(Date, "%Y-%m")) %>% mutate(Week = strftime(Date, format = "%V")) %>% 
   arrange(Week) %>% as.data.table()
@@ -162,17 +164,17 @@ if (params$int_type[2] == "weekly") {
   interval <- "Week"
   interval_list <- metadata$Week %>% unique() %>% sort()
   
-  interval_clusters <- metadata %>% select(c(Strain, all_of(interval))) %>% 
+  interval_clusters <- metadata %>% select(c(Strain, all_of(interval), Date)) %>% 
     inner_join(., f2, by = c("Strain" = "isolate")) %>% 
-    set_colnames(c("isolate", "ivl", "heightx"))
+    set_colnames(c("isolate", "ivl", "Date", "heightx"))
   
 }else if (params$int_type[2] == "monthly") {
   interval <- "YearMonth"
   interval_list <- metadata %>% pull(interval) %>% unique() %>% sort()
   
-  interval_clusters <- metadata %>% select(c(Strain, all_of(interval))) %>% 
+  interval_clusters <- metadata %>% select(c(Strain, all_of(interval), Date)) %>% 
     inner_join(., f2, by = c("Strain" = "isolate")) %>% 
-    set_colnames(c("isolate", "ivl", "heightx"))
+    set_colnames(c("isolate", "ivl", "Date", "heightx"))
   
 }else if (params$int_type[2] == "multiset") {
   setdivider <- strsplit(params$divs[2], split = ",") %>% unlist() %>% as.Date(., format = "%Y-%m-%d")

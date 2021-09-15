@@ -47,6 +47,7 @@ if (params$int_type[2] == "multiset") {
 save_to <- file.path("intermediate_data", tolower(params$int_type[2]), "cgms")
 # i <- 1
 
+# rowx <- readRDS("results/rowx.Rds")
 for (i in 1:(length(interval_list)-1)) {
   
   n1 <- as.character(interval_list[i])

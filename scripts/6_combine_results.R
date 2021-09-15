@@ -227,7 +227,8 @@ step9 <- step8 %>%
 #          # + all cluster-specific columns
 
 step10 <- step9 %>% 
-  rename("Actual TP1 cluster" = actual_tp1_cl, , 
+  rename("Actual TP1 cluster" = actual_tp1_cl, 
+         "Actual TP2 cluster" = actual_tp2_cl, 
          "TP1 cluster" = tp1_cl, "TP1 cluster size (1)" = TP1_Size, 
          "TP2 cluster" = tp2_cl, "TP2 cluster size (1)" = TP2_Size, 
          # "TP1" = found_in_TP1, "TP2" = found_in_TP2, 
