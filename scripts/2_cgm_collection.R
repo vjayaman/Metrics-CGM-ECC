@@ -14,7 +14,9 @@ y <- lapply(libs, require, character.only = TRUE); rm(libs); rm(y)
 option_list <- list(
   make_option(c("-f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
-              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"), 
+  make_option(c("-n", "--tpn"), metavar = "file", 
+              default = "inputs/processed/allTP2.Rds", help = "TPN data"))
 
 arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
@@ -45,16 +47,18 @@ if (params$int_type[2] == "multiset") {
 }
 
 save_to <- file.path("intermediate_data", tolower(params$int_type[2]), "cgms")
-# i <- 1
+tpn <- readRDS(arg$tpn)$new_cols
 
 # rowx <- readRDS("results/rowx.Rds")
 for (i in 1:(length(interval_list)-1)) {
   
   n1 <- as.character(interval_list[i])
-  tpx1 <- clustersets[[n1]]$sofar %>% select(-ivl) %>% set_colnames(c("isolate", heights))
+  tpx1a <- clustersets[[n1]]$sofar %>% select(-ivl) %>% set_colnames(c("isolate", heights))
+  tpx1 <- tpn %>% rename("isolate" = "Strain") %>% left_join(tpx1a, .)
   
   n2 <- as.character(interval_list[i+1])
-  tpx2 <- clustersets[[n2]]$sofar %>% select(-ivl) %>% set_colnames(c("isolate", heights))
+  tpx2a <- clustersets[[n2]]$sofar %>% select(-ivl) %>% set_colnames(c("isolate", heights))
+  tpx2 <- tpn %>% rename("isolate" = "Strain") %>% left_join(tpx2a, .)
   
   # if (i > 1) {
   #   fullset <- clustersets[[n1]]$sofar

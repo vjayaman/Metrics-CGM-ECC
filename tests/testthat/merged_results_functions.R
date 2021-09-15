@@ -24,8 +24,12 @@ processedStrains <- function(base_strains) {
        "dr_matches" = dr_matches) %>% return()
 }
 
-# For padding height and cluster columns with h0..0.., and c0..0.., respectively
-padCol <- function(cvals, padval, padchr) {
-  ifelse(!is.na(cvals), formatC(cvals, width = padval, format = "d", flag = "0") %>% 
-           paste0(padchr, .), NA) %>% return()
+# Given a dataframe df, two column names c1 and c2 (height and cluster respectively) and a new
+# ID prefix tpx (e.g. "tp1"), creates an ID column and adds to df before returning df
+newID <- function(df, tpx, c1, c2, ph, pc) {
+  newh <- df %>% pull(c1) %>% as.character() %>% as.integer() %>% 
+    formatC(., width = max(3, ph), format = "d", flag = "0") %>% paste0("h", .)
+  newc <- df %>% pull(c2) %>% as.character() %>% as.integer() %>% 
+    formatC(., width = max(3, pc), format = "d", flag = "0") %>% paste0("c", .)
+  df %>% add_column(id = paste0(toupper(tpx), "_", newh, "_", newc)) %>% return()
 }

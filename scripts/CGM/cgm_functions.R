@@ -108,6 +108,7 @@ addingType <- function(dfx) {
   return(df)
 }
 
+# tp_comps <- tp1$comps; tpx <- tp1$name
 # Identifying the first and last time each TPX cluster was seen in TPX - flags (for TP1 and TP2 individually)
 flaggingClusters <- function(tp_comps, tpx) {
   t_fal <- tp_comps %>% group_by(composition) %>% slice(1, n()) %>% 
@@ -427,6 +428,7 @@ findingSneakers <- function(novels, q1, q2, matched) {
 
 # August 9, 2021
 # --------------------------------------------------------------------------------------------
+# show_msg <- FALSE
 tpDataSetup <- function(tpx1, tpx2, ph, pc, show_msg, msgtexts) {
   all_isolates <- unique(c(tpx1$isolate, tpx2$isolate)) %>% as_tibble() %>% 
     set_colnames("char_isolate") %>% rowid_to_column("num_isolate")

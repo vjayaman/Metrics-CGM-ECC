@@ -36,21 +36,26 @@ cgm_results <- read_tsv(arg$cgm_results) %>% as.data.table() %>%
 colnames(cgm_results) <- colnames(cgm_results) %>% gsub(" ", "_", .)
 
 tp2 <- readRDS(arg$tp2)
+tp2clusters <- tp2$new_cols %>% melt.data.table(id.vars = "Strain")
+
 metadata <- read_tsv(arg$metadata) %>% processedStrains()
 strain_data <- metadata$strain_data %>% as.data.table()
 
 test_results[[1]] <- test_that("cluster_results", {
 
-  # # Randomly select a cluster to track (TP1)
-  # starter_set <- tp2$lookup_table[new_h == '0']
-  # random_cluster_row <- sample.int(n = nrow(starter_set), size = 1, replace = FALSE)
+  # Randomly select a cluster to track (TP1)
+  starter_set <- tp2$lookup_table[new_h == '0']
+  random_cluster_row <- sample.int(n = nrow(starter_set), size = 1, replace = FALSE)
   # random_cluster_row <- 402
-  # cluster_id <- starter_set[random_cluster_row]
-  # 
-  # x1 <- tp2$original %>% select(Strain, cluster_id$old_h) %>%
-  #   set_colnames(c("Strain", "Hx")) %>%
-  #   filter(Hx %in% cluster_id$old_cl)
-  # # the strains within the randomly selected cluster (actual cluster name)
+  random_cluster_row <- 94
+  print(random_cluster_row)
+  cluster_id <- starter_set[random_cluster_row]
+  print(cluster_id)
+  
+  x1 <- tp2$original %>% select(Strain, cluster_id$old_h) %>%
+    set_colnames(c("Strain", "Hx")) %>%
+    filter(Hx %in% cluster_id$old_cl)
+  # the strains within the randomly selected cluster (actual cluster name)
   # x1
 
   # # the strains within the randomly selected cluster (new cluster number)
@@ -100,7 +105,7 @@ test_results[[1]] <- test_that("cluster_results", {
   # strains found at TP2 but not at TP1
   present_at_tp2 <- strain_data[Date <= end_of_tp2]
   originals <- strain_data[Date <= end_of_tp1]
-  number_of_novels <- length(intersect(a1$Strain, novels$Strain)) - length(intersect(a1$Strain, originals$Strain))
+  number_of_novels <- length(intersect(a1$Strain, present_at_tp2$Strain)) - length(intersect(a1$Strain, originals$Strain))
   expect_equal(rowx$num_novs, number_of_novels)
   
   tp1gdists <- tp1_cl %>% select(Longitude, Latitude) %>% 
@@ -133,107 +138,104 @@ test_results[[1]] <- test_that("cluster_results", {
   expect_identical(as.character(rowx$average_tp1_date), as.character(mean(tp1_cl$Date)))
   expect_identical(as.character(rowx$average_tp2_date), as.character(mean(tp2_cl$Date)))
   
-  # first (by threshold) tp2 cluster to contain all of the tp1 strains
-  # note that these are the same if we are looking at the same cluster sets
-  # but if we someday want to revisit separately clustered time points again, 
-  # this will become highly relevant
-  tp2_cluster <- tp2$new_cols[Strain %in% tp2_cl$Strain][Strain %in% tp1_cl$Strain] %>% 
-    melt.data.table(id.vars = "Strain") %>% group_by(variable, value) %>% 
-    summarise(n = n(), .groups = "drop") %>% filter(n >= nrow(tp1_cl)) %>% slice(1)
-  expect_equal(rowx$tp2_cluster, tp2_cluster$value)
-  
-  starter_set[new_h == as.double(as.character(tp2_cluster$variable)) & 
-                new_cl == tp2_cluster$value]$old_cl %>% 
-    expect_equal(rowx$actual_tp2_cluster, .)
   
   tpx1 <- tp2$new_cols[Strain %in% strain_data[Date <= end_of_tp1]$Strain]
   tpx2 <- tp2$new_cols[Strain %in% strain_data[Date <= end_of_tp2]$Strain]
   ph <- max(nchar(colnames(tpx1)[-1]), nchar(colnames(tpx2)[-1]))
   pc <- tpx2 %>% select(-Strain) %>% max(., tpx2 %>% select(-Strain)) %>% nchar()
   
-  c1 <- "TP1"
-  c2 <- tp2_cluster %>% pull(variable) %>% as.character() %>% as.integer() %>% 
-    formatC(., width = max(3, ph), format = "d", flag = "0") %>% paste0("h", .)
-  c3 <- tp2_cluster %>% pull(value) %>% as.character() %>% as.integer() %>% 
-    formatC(., width = max(3, pc), format = "d", flag = "0") %>% paste0("c", .)
-  expect_identical(rowx$first_tp1_flag, paste(c1, c2, c3, sep = "_"))
+  # first (by threshold) tp2 cluster to contain all of the tp1 strains
+  # note that these are the same if we are looking at the same cluster sets
+  # but if we someday want to revisit separately clustered time points again, 
+  # this will become highly relevant
+  
+  # tracked_to_tp2 <- tp2clusters %>% group_by(variable, value) %>% 
+  #   summarise(n = n(), .groups = "drop") %>% as.data.table()
+  
+  # only strains available at TP1
+  alltp1data <- tp2clusters[Strain %in% strain_data[Date <= end_of_tp1]$Strain]
+  tp1sizes <- alltp1data %>% group_by(variable, value) %>% summarise(n = n(), .groups = "drop") %>% as.data.table()
+  
+  # of those, which were the first and last clusters to contain only the tp1_cl strains?
+  tracked_tp1s <- alltp1data[Strain %in% tp1_cl$Strain] %>% select(-Strain) %>% unique() %>% 
+    merge.data.table(., tp1sizes)
+  
+  first_tp1 <- tracked_tp1s %>% slice(1)
+  first_tp1 %>% newID(., "tp1", "variable", "value", ph, pc) %>% pull(id) %>% 
+    expect_identical(rowx$first_tp1_flag, .)
+  
+  tracked_tp1s[n == first_tp1$n] %>% slice(n()) %>% 
+    newID(., "tp1", "variable", "value", ph, pc) %>% pull(id) %>% 
+    expect_identical(rowx$last_tp1_flag, .)
+  
+  # only strains available at TP2
+  alltp2data <- tp2clusters[Strain %in% strain_data[Date <= end_of_tp2]$Strain]
+  tp2sizes <- alltp2data %>% group_by(variable, value) %>% summarise(n = n(), .groups = "drop") %>% as.data.table()
+  
+  tracked_tp2s <- alltp2data[Strain %in% tp2_cl$Strain] %>% select(-Strain) %>% unique() %>% 
+    merge.data.table(., tp2sizes)
+  
+  # first TP2 cluster to contain the tp1_cl strains
+  first_tp2 <- tracked_tp2s %>% slice(1)
+  first_tp2 %>% newID(., "tp2", "variable", "value", ph, pc) %>% pull(id) %>% 
+    expect_identical(rowx$first_tp2_flag, .)
+  
+  tracked_tp2s[n == first_tp2$n] %>% slice(n()) %>% 
+    newID(., "tp2", "variable", "value", ph, pc) %>% pull(id) %>% 
+    expect_identical(rowx$last_tp2_flag, .)
+
+  
+  
+  
+  # TP2_h000_c094
+  # TP2_h003_c053
+  
+  
+  
+  
+  
+  
+  
+  
+    
+  expect_equal(rowx$tp2_cluster, first_tp2$value)
+  
+  starter_set[new_h == as.double(as.character(first_tp2$variable)) & 
+                new_cl == first_tp2$value]$old_cl %>% 
+    expect_equal(rowx$actual_tp2_cluster, .)
+  
+  
+  ((nrow(tp2_cl) - nrow(tp1_cl)) / (nrow(tp1_cl)+1)) %>% round(., digits = 3) %>% 
+    expect_equal(rowx$actual_growth_rate, .)
+  
+  ((nrow(tp2_cl) + 1) / (nrow(tp2_cl) + 1 - number_of_novels)) %>% round(., digits = 3) %>% 
+    expect_equal(rowx$num_novs, number_of_novels)
+  
+  if (nrow(tp1_cl) > 1 & nrow(tp2_cl) > 1 & nrow(tp1_cl) == nrow(tp2_cl)) {
+    expect_equal(rowx$type, "Type1")
+  }else if (nrow(tp1_cl) > 1 & nrow(tp2_cl) > 1 & nrow(tp2_cl) > nrow(tp1_cl)) {
+    expect_equal(rowx$type, "Type2")
+  }else if (nrow(tp1_cl) < 2 & nrow(tp2_cl) > 1) {
+    expect_equal(rowx$type, "Type3")
+  }else {
+    expect_equal(rowx$type, "Type4")
+  }
+  
+  
+  
 })
 
 
 
-"interval"
-"actual_tp1_cluster"
-"tp1_cluster"
-"tp1_cl_size1"
 # "tp1_ecc.0.1.0"
 # "tp1_ecc.0.0.1"
-"actual_tp2_cluster"
-"tp2_cluster"
-"tp2_cl_size1"
 # "tp2_ecc.0.1.0"
 # "tp2_ecc.0.0.1"
 # "delta_ecc_0.1.0"
 # "delta_ecc_0.0.1"
-"average_tp1_date"
-"tp1_temp.avg.dist"
-"average_tp1_latitude"
-"average_tp1_longitude"
-"tp1_geo.avg.dist"
-"average_tp2_date"
 # "tp2_temp.avg.dist"
-"average_tp2_latitude"
-"average_tp2_longitude"
-"tp2_geo.avg.dist"
-# "first_tp1_flag"
-# "last_tp1_flag"
-# "first_tp2_flag"
-# "last_tp2_flag"
-"tp1_cl_size2"
-"tp2_cl_size2"
-# "actual_cl_growth"
-"add_tp1"
-"num_novs"
-# "actual_growth_rate"
-# "novel_growth"
-# "type"
 
 
-
-
-# (4) outputMessages() function
-test_results[[3]] <- test_that("outputMessages()", {
-  expect_identical(outputMessages(""), cat(paste0("\n","")))
-  expect_output(outputMessages("Test"), "\nTest")
-  expect_silent(outputMessages())
-})
-
-
-test_results[[4]] <- test_that("transformData2() - temp", {
-  fake_obj <- fakeSecCluster(sample.int(50,1), sample.int(200,1)*2, sample.int(20,1))
-  results <- fake_obj$b$results
-  inds <- fake_obj$b$drs[["th"]] %in% pull(results[[1]], "th")
-  cluster_x <- fake_obj$b$drs[inds,-"Strain"]
-  cluster_asmts <- fake_obj$a[dr %in% pull(cluster_x, dr)]
-  
-  dm_temp <- cluster_asmts %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
-  
-  returned <- transformData2(dm_temp, "temp", min(dm_temp), max(dm_temp))
-  
-  logtr <- dm_temp %>% add(10) %>% log10()
-  logtr[logtr == -Inf] <- 0
-  min_dm <- min(dm_temp) %>% add(10) %>% log10()
-  max_dm <- max(dm_temp) %>% add(10) %>% log10()
-  
-  pairs <- expand.grid(cluster_asmts$dr, cluster_asmts$dr)
-  
-  for (i in 1:nrow(pairs)) {
-    ri <- as.character(pairs$Var1[i])
-    ci <- as.character(pairs$Var2[i])
-    
-    x1 <- (logtr[ri, ci] - min_dm) / (max_dm - min_dm)
-    expect_equal(returned[ri, ci], x1)  
-  }
-})
 
 
 
