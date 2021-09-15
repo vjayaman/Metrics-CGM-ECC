@@ -8,6 +8,8 @@ option_list <- list(
               default = "inputs/processed/strain_info.txt", help = "Metadata file"),
   make_option(c("-f", "--intervalfile"), metavar = "file", 
               default = "inputs/processed/clustersets.Rds"), 
+  make_option(c("-b", "--tp2"), metavar = "file", 
+              default = "inputs/processed/allTP2.Rds", help = "TP2 data"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
@@ -238,7 +240,7 @@ step10 <- step9 %>%
          "First time this cluster was seen in TP2" = first_tp2_flag, 
          "Last time this cluster was seen in TP2" = last_tp2_flag, 
          "TP1 cluster size + 1 (2)"	= tp1_cl_size, "TP2 cluster size + 1 (2)"	= tp2_cl_size, 
-         "Actual cluster size (TP2 size - TP1 size)" = actual_size_change, 
+         "Actual cluster growth (TP2 size - TP1 size)" = actual_size_change, 
          "Number of additional TP1 strains in the TP2 match" = add_TP1, 
          "Number of novels in the TP2 match" = num_novs, 
          "Actual growth rate = (TP2 size - TP1 size) / (TP1 size)" = actual_growth_rate, 

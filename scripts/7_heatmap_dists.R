@@ -1,6 +1,6 @@
 #! /usr/bin/env Rscript
 
-msg <- file("logs/logfile_heatmaps.txt", open="wt")
+msg <- file("logs/heatmaps.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("optparse", "magrittr", "fossil", "tidyr", "plyr", "dplyr", "readr", 
@@ -16,55 +16,60 @@ source("report_specific/epi-helper-no-source.R")
 
 dir.create("report_specific/heatmaps/", showWarnings = FALSE)
 
-fnames <- list.files("intermediate_data/TP2/dists/", full.names = TRUE)
-distfiles <- lapply(fnames, function(f) readRDS(fnames))
-extremes <- readRDS("intermediate_data/dist_extremes.Rds")
+fnames <- list.files("intermediate_data/TPN/dists/", full.names = TRUE)
+distfiles <- lapply(fnames, function(f) readRDS(f))
+extremes <- readRDS("intermediate_data/TPN/extreme_dists.Rds")
 
 option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", 
               default = "inputs/processed/strain_info.txt", help = "Metadata file"),
-  make_option(c("-a", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "TP1 cluster assignments"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"), 
   make_option(c("-c", "--CGMs"), metavar = "file", 
-              default = "results/CGM_strain_results.tsv", help = "CGM result file"),
-  make_option(c("-t", "--tau"), metavar = "numeric", help = "temporal coefficient", 
-              default = 0.0), 
-  make_option(c("-g", "--gamma"), metavar = "numeric", help = "geographic coefficient", 
-              default = 1.0), 
+              default = "results/CGM-monthly-intervals.Rds", help = "CGM result file"),
+  make_option(c("-t", "--tau"), metavar = "numeric", help = "temporal coefficient", default = 0.0), 
+  make_option(c("-g", "--gamma"), metavar = "numeric", help = "geographic coefficient", default = 1.0), 
   make_option(c("-l", "--clusters"), metavar = "numeric", 
               help = "Number of clusters to get heatmaps for", default = 5),
-  make_option(c("-x", "--heights"), metavar = "character", default = "0",
-              help = "Comma-delimited string of heights to collect ECCs for")
-)
+  make_option(c("-d", "--details"), metavar = "file", 
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"), 
+  make_option(c("-s", "--maxclsize"), metavar = "numeric", 
+              help = "Max cluster size to make heatmaps for", default = 1000))
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
-cgms <- suppressMessages(read_tsv(arg$CGMs))
+params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
+  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
+              "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl"))
+
+hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
+
+cgms <- readRDS(arg$CGMs)
 
 strain_data <- suppressMessages(read_tsv(arg$metadata)) %>% 
   mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")),
          Location = paste(Country, Province, City, sep = "_"))
 
 # NON-REDUNDANT METHOD
-size_details <- cgms %>% arrange(-tp2_cl_size) %>% select(Strain, tp2_cl, tp2_cl_size) %>%
-  rename(TP2_cluster_size = tp2_cl_size)
+last_ivl <- unique(cgms$interval) %>% last()
 
-top_clusters <- size_details %>% select(-Strain) %>% unique() %>%
-  arrange(-TP2_cluster_size) %>% filter(TP2_cluster_size < 10000) %>%
-  slice(1:arg$clusters) %>% pull(tp2_cl)
+size_details <- cgms[interval == last_ivl] %>% 
+  arrange(-tp2_cl_size) %>% select(first_tp2_flag, tp2_cl_size) %>%
+  rename(TP2_cluster_size = tp2_cl_size) %>% unique()
 
-clusters <- top_clusters %>% gsub("c", "", .) %>% as.integer()
+top_clusters <- size_details %>% arrange(-TP2_cluster_size) %>% 
+  filter(TP2_cluster_size < arg$maxclsize) %>%
+  slice(1:arg$clusters) %>% pull(first_tp2_flag)
 
-hx <- arg$heights %>% strsplit(split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
+clusters <- substr(top_clusters, 11, 13) %>% as.integer()
 
-tp1 <- Timepoint$new(arg$tp1, "tp1")$Process(hx)$listHeights(hx)
-tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
-typing_data <- tp1$height_list %>% append(tp2$height_list)
+tpn <- tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
+typing_data <- list(tp2$height_list)
 
 m <- suppressMessages(read_tsv(arg$metadata)) %>% processedStrains()
 
-assignments <- typing_data %>% extract2(2) %>% set_colnames("tp_cl") %>% 
-  rownames_to_column("Strain") %>% filter(tp_cl %in% clusters) %>% as.data.table()
+assignments <- typing_data[[1]] %>% as.data.frame() %>% set_colnames("tp_cl") %>% 
+  rownames_to_column("Strain") %>% as.data.table() %>% 
+  filter(tp_cl %in% clusters)
 
 cl_drs <- lapply(1:length(clusters), function(i) {
   x1 <- assignments[tp_cl %in% clusters[i]] %>% pull(Strain)
@@ -107,10 +112,11 @@ saveRDS(epi.tables, "report_specific/heatmaps/epitables_for_heatmaps.Rds")
 epi.matrix <- lapply(1:length(clusters), function(j) EpiMatrix(epi.tables[[j]]))
 
 for (i in 1:length(top_clusters)) {
-  cl_strains <- size_details %>% filter(tp2_cl %in% top_clusters[i])
-  if (length(cl_strains$Strain) > 1) {
+  cl_strains <- size_details %>% filter(first_tp2_flag %in% top_clusters[i])
+  if (cl_strains$TP2_cluster_size > 1) {
     cl_epi <- epi.matrix[[i]]
-    cl_id <- cgms %>% filter(tp2_cl == top_clusters[i]) %>% slice(1) %>% pull(first_tp2_flag)
+    cl_id <- cgms %>% filter(first_tp2_flag == top_clusters[i]) %>% slice(1) %>% 
+      pull(first_tp2_flag)
     
     png(paste0("report_specific/heatmaps/", cl_id, ".png"))
     EpiHeatmap_pdf(cl_epi)
