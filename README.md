@@ -5,11 +5,11 @@ Metrics-CGM-ECC
 
 ## Method 1 (Latest version, ready for beta testing):
 
-1. Download version [v3.0](https://github.com/vjayaman/Metrics-CGM-ECC/releases/tag/v3.0)
+1. Download version [v4.1](https://github.com/vjayaman/Metrics-CGM-ECC/releases/tag/v4.1)
 
-2. Move the input files you want to use (a strain metadata file and two cluster assignment files - one for each time point) into *Metrics-CGM-ECC/inputs/*, then rename to match the examples in the *inputs/* directory.
+2. Move the input files you want to use (a strain metadata file and one cluster assignment file - one for each time point) into *Metrics-CGM-ECC/inputs/*, then rename to match the examples in the *inputs/* directory.
  
-3. Open **Metrics-CGM-ECC/form.html** in a browser, then fill with inputs corresponding to your input files
+3. Open **Metrics-CGM-ECC/form.html** in a browser, then fill out the form (arguments should correspond to your input file data)
 	* Download the resulting text file, and move it to the *inputs/* directory
 
 4. Navigate to the *Metrics-CGM-ECC/* directory in a terminal window. Alternatively, the scripts can be run individually in RStudio.
@@ -18,13 +18,11 @@ Metrics-CGM-ECC
 
         .../Metrics-CGM-ECC/$ Rscript environment_setup.R
 
-6. Open **run_process.sh** and update the "height" and ECC coefficient "params" input arguments to run on what you would prefer. The defaults are threshold 0 and coefficient sets 010, 001 (source, temporal, geographic).
-
-5. Give the script *run_process.sh* executable permission
+6. Give the script *run_process.sh* executable permission
 
         .../Metrics-CGM-ECC/$ chmod u+x run_process.sh
 
-6. Run the script *run_process.sh* in a terminal
+7. Run the script *run_process.sh* in a terminal
 
         .../Metrics-CGM-ECC/$ bash run_process.sh
 	or
