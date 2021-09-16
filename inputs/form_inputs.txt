@@ -5,9 +5,10 @@ Has defined date information (day, month, and year): true
 Has province-level data: false
 Province of interest: none
 Threshold of interest: 0
-Is in a non-singleton cluster (at TP1): false
 Is in a non-singleton cluster (at TP2): false
 Filtering by date: [,]
-Column names: Source,Country,Province,City
+Column names: Country,Province,City
+Interval type: monthly
+Dividers: none
 Source-temporal-geographic coefficents: 0-1-0,0-0-1
 Generate heatmaps for top __ largest clusters: 0
