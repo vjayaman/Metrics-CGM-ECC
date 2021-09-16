@@ -7,12 +7,13 @@ Timedata <- R6Class(
   "Timedata", lock_objects = FALSE, 
   public = list(
     name = NULL, raw = NULL, flagged = NULL, cnames = NULL, coded = NULL, 
-    melted = NULL, comps = NULL, status = NULL, msg = TRUE, ind_prog = TRUE, 
+    melted = NULL, comps = NULL, status = NULL, msg = TRUE, ind_prog = TRUE, msg_text = NULL, 
     
-    initialize = function(name, raw, isos, pad_height, pad_cluster, msg, ind_prog) {
+    initialize = function(name, raw, isos, pad_height, pad_cluster, msg, ind_prog, msg_text) {
       self$name <- name
       self$msg <- msg
       self$ind_prog <- ind_prog
+      self$msg_text <- msg_text
       if (msg) {self$start()}
       self$raw <- raw
       self$coded <- codeIsolates(raw, name, isos, pad_height, pad_cluster)
@@ -20,7 +21,7 @@ Timedata <- R6Class(
       invisible(self)
     }, 
     start = function() {
-      cat(paste0("  Constructing ", toupper(self$name), " data object:\n"))
+      cat(self$msg_text)
     }, 
     coded_status = function(nov_code) {
       self$status <- self$coded %>% mutate(status = ifelse(isolate %in% nov_code, "novs", NA))
@@ -107,6 +108,7 @@ addingType <- function(dfx) {
   return(df)
 }
 
+# tp_comps <- tp1$comps; tpx <- tp1$name
 # Identifying the first and last time each TPX cluster was seen in TPX - flags (for TP1 and TP2 individually)
 flaggingClusters <- function(tp_comps, tpx) {
   t_fal <- tp_comps %>% group_by(composition) %>% slice(1, n()) %>% 
@@ -423,3 +425,93 @@ findingSneakers <- function(novels, q1, q2, matched) {
   
   results %>% return()
 }
+
+# August 9, 2021
+# --------------------------------------------------------------------------------------------
+# show_msg <- FALSE
+tpDataSetup <- function(tpx1, tpx2, ph, pc, show_msg, msgtexts) {
+  all_isolates <- unique(c(tpx1$isolate, tpx2$isolate)) %>% as_tibble() %>% 
+    set_colnames("char_isolate") %>% rowid_to_column("num_isolate")
+  
+  if (show_msg) {
+    outputDetails("  Processing timepoint clusters for easier data handling and flagging clusters", newcat = TRUE)  
+  }
+  
+  tp1 <- Timedata$new("tp1", raw = tpx1, all_isolates, pad_height = ph, 
+                      pad_cluster = pc, msg = TRUE, ind_prog = TRUE, msgtexts[1])$
+    set_comps()$flag_clusters()
+  
+  tp2 <- Timedata$new("tp2", raw = tpx2, all_isolates, pad_height = ph, 
+                      pad_cluster = pc, msg = TRUE, ind_prog = TRUE, msgtexts[2])$
+    set_comps()$set_cnames()
+  
+  if (show_msg) {
+    outputDetails("  Collecting and counting novel isolates in TP2 clusters ...", newcat = TRUE)  
+  }
+  
+  novels <- setdiff(tp2$coded$isolate, tp1$coded$isolate)
+  
+  tp2$comps <- tp2$coded %>% filter(isolate %in% novels) %>% 
+    group_by(tp2_id) %>% 
+    summarise(num_novs = n(), .groups = "drop") %>% 
+    left_join(tp2$comps, ., by = "tp2_id") %>% 
+    mutate(num_novs = ifelse(is.na(num_novs), 0, num_novs))
+  
+  tp2$flag_clusters()$coded_status(novels)
+  tp1$coded_status(novels)
+  
+  return(list("tp1" = tp1, "tp2" = tp2, "novs" = novels))
+}
+
+
+novelHandling <- function(tp1, tp2, clusters_just_tp1, heights) {
+  isolates_base <- tp1$melted %>% mutate(across(tp1_h, as.integer)) %>% 
+    filter(tp1_h %in% heights) %>% 
+    left_join(., clusters_just_tp1, by = c("tp1_id", "tp1_h", "tp1_cl")) %>% 
+    arrange(tp1_h, tp1_cl, tp2_h, tp2_cl)
+  
+  # NOVELS -------------------------------------------------------------------------------------------------------
+  first_nov_flag <- tp2$status %>% filter(!is.na(status)) %>% group_by(isolate) %>% slice(1) %>% ungroup() %>% pull(tp2_id)
+  
+  partA <- tp2$flagged %>% filter(tp2_id %in% first_nov_flag)
+  novels_only_tracking <- left_join(partA, tp2$comps[,c("tp2_id", "num_novs")], 
+                                    by = intersect(colnames(partA), 
+                                                   colnames(tp2$comps[,c("tp2_id", "num_novs")]))) %>% 
+    arrange(tp2_h, tp2_cl) %>% 
+    add_column(tp1_id = NA, tp1_h = NA, tp1_cl = NA, first_tp1_flag = NA, last_tp1_flag = NA)
+  
+  novel_asmts <- tp2$melted %>% mutate(across(tp2_h, as.integer)) %>% 
+    filter(isolate %in% setdiff(tp2$raw$isolate, tp1$raw$isolate))
+  
+  # Pure novel TP2 cluster
+  pure_novels <- novels_only_tracking %>% filter(num_novs == tp2_cl_size) %>% 
+    mutate(tp1_cl_size = 0, add_TP1 = 0) %>% 
+    right_join(novel_asmts, ., by = c("tp2_h", "tp2_cl", "tp2_id")) %>% select(colnames(isolates_base))
+  
+  # Mixed novel TP2 clusters
+  mixed_novels <- novels_only_tracking %>% filter(num_novs != tp2_cl_size) %>% 
+    left_join(., novel_asmts, by = c("tp2_id", "tp2_h", "tp2_cl"))
+  
+  # Mixed novels clusters should inherit data from the tracked TP1 strains
+  a1 <- isolates_base %>% 
+    select(-isolate, -tp1_id, -tp1_h, -tp1_cl, -first_tp1_flag, -last_tp1_flag) %>% unique()
+  all_mixed <- left_join(mixed_novels, a1, by = intersect(colnames(a1), colnames(mixed_novels))) %>% 
+    select(colnames(isolates_base))
+  
+  # FULL STRAIN FILE ---------------------------------------------------------------------------------------------
+  # note: two types of novel clusters, those that are fully novel, and those that are not
+  
+  if (nrow(pure_novels) > 0) {
+    isolates_file <- bind_rows(isolates_base, pure_novels)  
+  }else {
+    isolates_file <- isolates_base
+  }
+  
+  rm(isolates_base)
+  gc()
+  
+  if (nrow(all_mixed) > 0) {isolates_file %<>% bind_rows(., all_mixed)}
+  return(isolates_file)
+}
+
+

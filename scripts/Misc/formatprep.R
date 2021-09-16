@@ -27,6 +27,24 @@ writeData <- function(df, filepath) {
   write.table(df, filepath, row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
 }
 
+natNumberClusters <- function(original) {
+  df <- original %>% select(-Strain) %>% unique() %>% as.data.table()
+  thresholds <- colnames(df)
+  
+  lookup_table <- lapply(1:length(thresholds), function(i) {
+    clusters_i <- df %>% pull(thresholds[i]) %>% unique()
+    data.table(old_h = thresholds[i], old_cl = clusters_i, 
+               new_h = i-1, new_cl = 1:length(clusters_i))
+  }) %>% bind_rows()
+  
+  mapping <- original %>% as.data.table() %>% melt.data.table(id.vars = "Strain") %>% 
+    left_join(., lookup_table, by = c("variable" = "old_h", "value" = "old_cl"))
+  
+  mapping %>% select(Strain, new_h, new_cl) %>% 
+    dcast(., Strain ~ new_h, value.var = "new_cl") %>% 
+    list(lookup_table = lookup_table, new_cols = ., original = original) %>% return()
+}
+
 # Creates a lookup table of integer cluster (in case clusters with character names are provided)
 # Returns lookup table and new integer columns, with integer thresholds as well, from 0 to # of thresholds - 1
 # If the clusters are already integers, simply renames the columns names to be 0 to # of thresholds
@@ -55,29 +73,45 @@ intClusters <- function(df) {
   }
 }
 
-updateStrains <- function(type, strain_data, time1, time2, sizes) {
+updateStrains <- function(type, strain_data, time2) {
   # Strains with metadata and defined lineage info at TP1
-  x1 <- intersect(strain_data$Strain, time1$Strain)
-  time1 <- time1 %>% filter(Strain %in% x1)
+  # x1 <- intersect(strain_data$Strain, time1$Strain)
+  # time1 <- time1 %>% filter(Strain %in% x1)
   
   # Strains with metadata and defined lineage info at TP1
   x2 <- intersect(strain_data$Strain, time2$Strain)
   time2 <- time2 %>% filter(Strain %in% x2)
   
   # Strains that have defined lineage info
-  strain_data <- strain_data %>% filter(Strain %in% c(x1, x2))
+  strain_data <- strain_data %>% filter(Strain %in% x2)
   
-  sizes %<>% bind_rows(tibble(type=type, a=nrow(strain_data), b=nrow(time1), d=nrow(time2)))
-  list(sd = strain_data, t1 = time1, t2 = time2, sizes = sizes) %>% return()
+  # sizes %<>% bind_rows(tibble(type=type, a=nrow(strain_data), d=nrow(time2)))
+  list(sd = strain_data, t2 = time2) %>% return()
 }
 
-strainsInSingletons <- function(df, cname) {
-  singletons <- df %>% 
-    select(all_of(cname)) %>% 
-    group_by(!!as.symbol(cname)) %>% 
+strainsInSingletons <- function(tp2_processed, th) {
+  df <- tp2_processed$lookup_table[new_h == th]
+  
+  singletons <- tp2_processed$original %>% 
+    select(Strain, unique(df$old_h)) %>% 
+    set_colnames(c("Strain", "old_h")) %>% 
+    filter(old_h %in% df$old_cl) %>% 
+    group_by(old_h) %>% 
     summarise(n = n()) %>% 
     filter(n == 1) %>% 
-    pull(all_of(cname))
+    pull(old_h)
   
-  df %>% filter(!!as.symbol(cname) %in% singletons) %>% pull(Strain) %>% return()
+  tp2_processed$original %>% filter(!!as.symbol(unique(df$old_h)) %in% singletons) %>% 
+    pull(Strain) %>% return()
 }
+
+# strainsInSingletons <- function(df, cname) {
+#   singletons <- df %>% 
+#     select(all_of(cname)) %>% 
+#     group_by(!!as.symbol(cname)) %>% 
+#     summarise(n = n()) %>% 
+#     filter(n == 1) %>% 
+#     pull(all_of(cname))
+#   
+#   df %>% filter(!!as.symbol(cname) %in% singletons) %>% pull(Strain) %>% return()
+# }

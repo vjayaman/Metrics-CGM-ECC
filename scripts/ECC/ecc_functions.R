@@ -1,3 +1,150 @@
+source("scripts/ECC/epicohesionversions.R")
+
+# -----------------------------------------------------------------------------------------------------
+
+### Incorporating the allele data with the epidemiological data 
+# strain_data <- selected_tp; tpx <- k_i; cluster_y <- cluster_x[dr %in% k_drs]
+epiCollectionByClusterV2 <- function(strain_data, tau, gamma, tr_dists, tpx, cluster_y) {
+  # cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
+  
+  epi_melt <- epiMat(tr_dists$temp, tr_dists$geo, as.double(tau), as.double(gamma)) %>% 
+    set_rownames(rownames(tr_dists$temp)) %>% set_colnames(colnames(tr_dists$temp))
+
+  invisible(gc())
+  
+  # outputMessages("      Incorporating the metadata with the clusters (typing data) ...")
+  # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
+  cx <- colnames(cluster_y)[1]
+  tallied_reps <- cluster_y %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
+  cnames <- intersect(colnames(tallied_reps), colnames(cluster_y))
+  g_cuts <- left_join(cluster_y, tallied_reps, by = cnames) %>%
+    unique() %>% mutate(across(dr, as.character))
+  
+  
+  td_i <- epiCohesionV4(g_cuts, epi_melt, tr_dists) %>% 
+    set_colnames(c(paste0("TP", tpx, "_", colnames(.))))
+  colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
+  
+  return(td_i)
+}
+
+### Incorporating the allele data with the epidemiological data
+# strain_data <- selected_tp; tpx <- k; cluster_y <- cluster_x[dr %in% k_drs]
+epiCollectionByClusterV1 <- function(strain_data, tau, gamma, transformed_dists, tpx, cluster_y) {
+  # cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
+
+  # outputMessages(paste0("      Preparing table of distances: sqrt(", tau, "*(temp^2) + ", gamma, "*(geo^2))"))
+  epi_melt <- transformed_dists %>%
+    mutate(Total.Distinv = 1 - sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>%
+    select(dr1, dr2, Total.Distinv) %>% set_colnames(c("dr_1", "dr_2", "value")) %>% as.data.table()
+  invisible(gc())
+
+  # outputMessages("      Incorporating the metadata with the clusters (typing data) ...")
+  # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
+  cx <- colnames(cluster_y)[1]
+  tallied_reps <- cluster_y %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
+  cnames <- intersect(colnames(tallied_reps), colnames(cluster_y))
+  g_cuts <- left_join(cluster_y, tallied_reps, by = cnames) %>%
+      unique() %>% mutate(across(dr, as.character))
+
+  td_i <- epiCohesionV3(g_cuts, epi_melt) %>%
+    set_colnames(c(paste0("TP", tpx, "_", colnames(.))))
+  colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
+
+  return(td_i)
+}
+
+# tm <- matrix(data = 2, nrow = 3, ncol = 3)
+# epiMelt(tm, tm, 1, 2)
+# EPI-HELPER-MODULAR -----------------------------------------------------------------------------
+# # maxd <- max(logdata) # mind <- min(logdata)
+transformData2 <- function(dm, dtype, min_dist, max_dist) {
+  logdata <- dm %>% add(10) %>% log10()
+  x1 <- min_dist %>% add(10) %>% log10()
+  x2 <- max_dist %>% add(10) %>% log10()
+  if (dtype == "temp") {
+    logdata[logdata == -Inf] <- 0
+    if (x2 == 0) {
+      logdata <- 0
+    }else {
+      logdata <- ((logdata - x1) / (x2 - x1))
+    }
+  }else if (dtype == "geo") {
+    if(x2 == 1){
+      logdata[1:nrow(logdata), 1:nrow(logdata)] <- 0
+    } else {
+      logdata <- ((logdata - x1) / (x2 - x1))
+    }
+  }
+  return(logdata)
+}
+
+collectTransforms2 <- function(dms, extremes) {
+  transformed_temp <- dms$temp %>% 
+    transformTempDists(., extremes$mint, extremes$maxt) %>%
+    set_rownames(., rownames(dms$temp)) %>% set_colnames(., colnames(dms$temp)) 
+  
+  transformed_geo <- dms$geo %>%
+    transformGeoDists(., extremes$ming, extremes$maxg) %>%
+    set_rownames(., rownames(dms$geo)) %>% set_colnames(., colnames(dms$geo))
+  
+  rm(dms); gc()
+  
+  return(list("temp" = transformed_temp, "geo" = transformed_geo))
+}
+
+collectTransforms <- function(dms, extremes) {
+  transformed_temp <- dms$temp %>%
+    transformData2(., "temp", extremes$mint, extremes$maxt) %>%
+    formatData(., c("dr1","dr2","Temp.Dist"))
+
+  transformed_geo <- dms$geo %>%
+    transformData2(., "geo", extremes$ming, extremes$maxg) %>%
+    formatData(., c("dr1","dr2","Geog.Dist"))
+
+  rm(dms); gc()
+
+  transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
+
+  rm(transformed_temp); rm(transformed_geo); gc()
+  return(transformed_dists)
+}
+
+formatData <- function(dm, newnames) {
+  dm %>% as.data.frame() %>% rownames_to_column("dr1") %>% as.data.table() %>% 
+    melt.data.table(., id.vars = "dr1", variable.name = "dr2", value.name = newnames[3]) %>%
+    # as_tibble() %>% 
+    mutate(dr2 = as.character(dr2)) %>% 
+    # as.data.table() %>% 
+    set_colnames(newnames) %>% return()
+}
+
+processedStrains <- function(base_strains) {
+  loc_cols <- intersect(c("Country", "Province", "City"), colnames(base_strains)) %>% sort()
+  
+  if (length(loc_cols) > 0) {
+    strain_data <- base_strains %>% 
+      mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")), 
+             Location = do.call(paste, c(base_strains[loc_cols], sep = "_")))
+    
+    assignments <- strain_data %>% select(Date, Latitude, Longitude, Location) %>% 
+      unique() %>% rownames_to_column("dr") %>% as.data.table()
+    dr_matches <- left_join(strain_data, assignments, 
+                            by = c("Latitude", "Longitude", "Date", "Location")) %>% 
+      select(Strain, dr)
+  }else {
+    strain_data <- base_strains %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-")))
+    assignments <- strain_data %>% select(Date, Latitude, Longitude) %>% 
+      unique() %>% rownames_to_column("dr") %>% as.data.table()
+    dr_matches <- left_join(strain_data, assignments, 
+                            by = c("Latitude", "Longitude", "Date")) %>% select(Strain, dr)
+  }
+  
+  list("strain_data" = strain_data, 
+       "assignments" = assignments, 
+       "dr_matches" = dr_matches) %>% return()
+}
+
 # Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
 # ("pt") and a two-element named vector with Sys.time() values named "start_time" and "end_time"
 timeTaken <- function(pt, sw) {
@@ -42,185 +189,4 @@ outputMessages <- function(msgs = NULL) {
 # -----------------------------------------------------------------------------------------------------
 checkEncoding <- function(fp) {
   readr::guess_encoding(fp) %>% arrange(-confidence) %>% slice(1) %>% pull(encoding) %>% return()
-}
-
-# -----------------------------------------------------------------------------------------------------
-# -----------------------------------------------------------------------------------------------------
-
-### Incorporating the allele data with the epidemiological data 
-epiCollectionByCluster <- function(strain_data, tau, gamma, transformed_dists, tpx, cluster_x) {
-  cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
-  
-  outputMessages(paste0("      Preparing table of distances: sqrt(", tau, "*(temp^2) + ", gamma, "*(geo^2))"))
-  epi_table <- transformed_dists %>% 
-    mutate(Total.Dist = sqrt( ((Temp.Dist^2)*tau) + ((Geog.Dist^2)*gamma) )) %>% 
-    select(dr1, dr2, Total.Dist) %>% as.data.table()
-  invisible(gc())
-  
-  outputMessages("      Generating epi distance matrix ...")
-  epi_matrix <- dcast(epi_table, formula = dr1 ~ dr2, value.var = "Total.Dist")
-  epi_matrix <- as.matrix(epi_matrix[,2:ncol(epi_matrix)]) 
-  rownames(epi_matrix) <- colnames(epi_matrix)
-  rm(epi_table)
-  invisible(gc())
-  
-  outputMessages("      Formatting into table of similarity values from epi distance matrix ...")
-  epi_melt <- as.matrix(1-epi_matrix) %>% 
-    as.data.table(., keep.rownames = TRUE) %>% 
-    melt(., id.vars = "rn", variable.factor = FALSE, value.factor = FALSE) %>% 
-    set_colnames(c("dr_1", "dr_2", "value")) %>% as.data.table()
-  
-  rm(epi_matrix)
-  invisible(gc())
-  
-  outputMessages("      Incorporating the metadata with the clusters (typing data) ...")
-  # Counting data representatives (so we know how much to multiply each ECC value by to represent all strains)
-  cx <- colnames(cluster_x)[1]
-  tallied_reps <- cluster_x %>% group_by(!!as.symbol(cx)) %>% count(dr) %>% ungroup()
-  cnames <- intersect(colnames(tallied_reps), colnames(cluster_x))
-  g_cuts <- left_join(cluster_x, tallied_reps, by = cnames) %>%
-      unique() %>% mutate(across(dr, as.character))
-  
-  td_i <- epiCohesion(g_cuts, epi_melt) %>% 
-    set_colnames(c(paste0("TP", tpx, "_", colnames(.))))
-  colnames(td_i) %<>% gsub("ECC", paste0("ECC.0.", tau, ".", gamma), x = .)
-
-  return(td_i)
-}
-
-# EPI-HELPER-MODULAR -----------------------------------------------------------------------------
-# maxd <- max(logdata) # mind <- min(logdata)
-transformData2 <- function(dm, dtype, min_dist, max_dist) {
-  logdata <- dm %>% add(10) %>% log10()
-  x1 <- min_dist %>% add(10) %>% log10()
-  x2 <- max_dist %>% add(10) %>% log10()
-  if (dtype == "temp") {
-    logdata[logdata == -Inf] <- 0
-    if (x2 == 0) {
-      logdata <- 0
-    }else {
-      logdata <- ((logdata - x1) / (x2 - x1))
-    }
-  }else if (dtype == "geo") {
-    if(x2 == 1){
-      logdata[1:nrow(logdata), 1:nrow(logdata)] <- 0
-    } else {
-      logdata <- ((logdata - x1) / (x2 - x1))
-    }
-  }
-  return(logdata)
-}
-
-formatData <- function(dm, newnames) {
-  dm %>% 
-    as.data.frame() %>% rownames_to_column("dr1") %>% as.data.table() %>% 
-    melt.data.table(., id.vars = "dr1", variable.name = "dr2", value.name = newnames[3]) %>%
-    as_tibble() %>% 
-    mutate(dr2 = as.character(dr2)) %>% 
-    as.data.table() %>% set_colnames(newnames) %>% return()
-}
-
-epiCohesion <- function(g_cuts, epi_melt) {
-  dr_names <- g_cuts %>% select(dr) %>% pull() %>% unique()
-  dr_assignments <- g_cuts %>% set_colnames(c("cluster", "dr", "n"))
-  
-  epi_melt_joined <-
-    expand_grid(dr_names, dr_names, .name_repair = function(x) {c("dr_1", "dr_2")}) %>%
-    inner_join(., epi_melt, by = c("dr_1", "dr_2")) %>% as.data.table()
-  
-  sizes <- lapply(unique(dr_assignments$cluster), function(h) {
-    dr_assignments %>% filter(cluster == h) %>% 
-      pull(n) %>% sum() %>% tibble(cluster = h, cluster_size = .)
-  }) %>% bind_rows()
-  
-  cut_cluster_members <-
-    g_cuts %>% select(-n) %>% 
-    pivot_longer(-dr, names_to = "cut", values_to = "cluster") %>%
-    group_by(cut, cluster) %>%
-    summarise(members = list(cur_data()$dr), .groups = "drop") %>%
-    left_join(., sizes, by = "cluster") %>% as.data.table()
-  
-  calculate_s1 <- function(i) {
-    k <- cut_cluster_members[cluster == i, members] %>% unlist()
-    matches <- dr_assignments %>% filter(cluster == i)
-    
-    epi_melt_joined[dr_1 %in% k][dr_2 %in% k] %>% 
-      left_join(., matches, by = c("dr_1" = "dr")) %>% rename(n1 = n) %>% select(-cluster) %>% 
-      left_join(., matches, by = c("dr_2" = "dr")) %>% rename(n2 = n) %>% select(-cluster) %>% 
-      mutate(value2 = value * n1 * n2) %>%
-      select(value2) %>% pull() %>% sum()
-  }
-  
-  th <- names(g_cuts)[1]
-  cut_cluster_members %>%
-    mutate(
-      s1 = map_dbl(cluster, calculate_s1),
-      ECC = (s1 - cluster_size) / (cluster_size * (cluster_size - 1))
-    ) %>%
-    ungroup() %>% 
-    select(-cut, -members, -s1) %>%
-    set_colnames(c(th, paste0(th, "_Size"), paste0(th, "_ECC")))
-}
-
-processedStrains <- function(base_strains) {
-  loc_cols <- intersect(c("Country", "Province", "City"), colnames(base_strains)) %>% sort()
-  
-  if (length(loc_cols) > 0) {
-    strain_data <- base_strains %>% 
-      mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")), 
-             Location = do.call(paste, c(base_strains[loc_cols], sep = "_")))
-    
-    assignments <- strain_data %>% select(Date, Latitude, Longitude, Location) %>% 
-      unique() %>% rownames_to_column("dr") %>% as.data.table()
-    dr_matches <- left_join(strain_data, assignments, 
-                            by = c("Latitude", "Longitude", "Date", "Location")) %>% 
-      select(Strain, dr)
-  }else {
-    strain_data <- base_strains %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-")))
-    assignments <- strain_data %>% select(Date, Latitude, Longitude) %>% 
-      unique() %>% rownames_to_column("dr") %>% as.data.table()
-    dr_matches <- left_join(strain_data, assignments, 
-                            by = c("Latitude", "Longitude", "Date")) %>% select(Strain, dr)
-  }
-  
-  list("strain_data" = strain_data, 
-       "assignments" = assignments, 
-       "dr_matches" = dr_matches) %>% return()
-}
-
-
-collectECCs <- function(k, m, parts, extremes, c1, read_from, save_to) {
-  df <- parts$drs
-  cx <- setdiff(colnames(df), c("Strain", "dr"))
-  results <- parts$results
-  
-  tau <- c1[2]
-  gamma <- c1[3]
-  
-  fname <- formatC(1:length(results), width=nchar(length(results)), format="d", flag="0")
-  
-  final_steps <- lapply(1:length(results), function(j) {
-    outputMessages(paste0("   Collecting ECCs for group of clusters ", j, " / ", length(results)))
-    
-    cluster_x <- df[df[[cx]] %in% pull(results[[j]], cx),-"Strain"]
-    dms <- readRDS(paste0(read_from, "group", fname[j], ".Rds"))
-    
-    transformed_temp <- dms$temp %>% 
-      transformData2(., "temp", extremes$mint, extremes$maxt) %>% 
-      formatData(., c("dr1","dr2","Temp.Dist"))
-    
-    transformed_geo <- dms$geo %>%
-      transformData2(., "geo", extremes$ming, extremes$maxg) %>%
-      formatData(., c("dr1","dr2","Geog.Dist"))
-    
-    rm(dms); gc()
-    
-    transformed_dists <- merge.data.table(transformed_temp, transformed_geo)
-    
-    outputMessages("   Clearing up some memory")
-    rm(transformed_temp); rm(transformed_geo); gc()
-    
-    epiCollectionByCluster(m$strain_data, tau, gamma, transformed_dists, k, cluster_x) %>% 
-      saveRDS(., paste0(save_to, "group", fname[j], ".Rds"))
-  })
 }

@@ -2,128 +2,99 @@
 
 # Current working directory should be Metrics-CGM-ECC/
 
-msg <- file("logs/logfile_generatedists.txt", open="wt")
+msg <- file("logs/dist_matrices.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
           "reshape2","fossil","tidyr","purrr", "data.table")
 y <- lapply(libs, require, character.only = TRUE)
-assert("All packages loaded correctly", all(unlist(y)))
+assert("All packages loaded correctly", all(unlist(y))); rm(y); rm(libs)
 
 # Current working directory should be Metrics-CGM-ECC/
 files <- c("scripts/ECC/classes_ecc.R", "scripts/ECC/ecc_functions.R", "scripts/ECC/dist_functions.R")
-invisible(sapply(files, source))
+invisible(sapply(files, source)); rm(files)
 
 option_list <- list(
-  make_option(c("-m", "--strains"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
-  make_option(c("-a", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "TP1 cluster assignments"),
-  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"),
+  make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
+  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
+              help = "Time point 2 file name (TP2)"), 
+  make_option(c("-f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
-
-stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
-
-arg <- parse_args(OptionParser(option_list=option_list))
-
-# Extract threshold of interest from form inputs ---------------------------------------------------------------
-params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ")
-
-test_params <- c("Region of interest", "Country of interest", "Has defined lineage information", 
-                 "Has defined date information (day, month, and year)", "Has province-level data", 
-                 "Province of interest", "Threshold of interest", "Is in a non-singleton cluster (at TP1)", 
-                 "Is in a non-singleton cluster (at TP2)", "Filtering by date", "Column names", 
-                 "Source-temporal-geographic coefficents", "Generate heatmaps for top __ largest clusters")
-
-assert("Input parameters are correctly labelled", identical(sapply(params, '[[', 1), test_params))
-
-params %<>% set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-                        "th","nsTP1","nsTP2", "temp_win","cnames","coeffs", "numcl"))
-
-# Comma-delimited string of heights to collect ECCs for, e.g. '50,75,100' 
-hx <- as.character(params$th[2]) %>% strsplit(., split = ",") %>% unlist() %>% 
-  tibble(h = ., th = paste0("T", .))
-
-# TP preparation -----------------------------------------------------------------------------------------------
-
-tp1 <- Timepoint$new(arg$tp1, "tp1")$Process(hx)$listHeights(hx)
-tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
-typing_data <- tp1$height_list %>% append(tp2$height_list)
-
-m <- read_tsv(arg$strains) %>% processedStrains()
+arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
 cat(paste0("\n||", paste0(rep("-", 23), collapse = ""), 
            " Generating non-redundant pairwise distances ", 
            paste0(rep("-", 23), collapse = ""), "||\nStarted process at: ", Sys.time()))
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
-# Note: dr stands for data representative
-# in example: strain_data has 35,627 rows (strains), assignments has 5,504 rows (> 6-fold smaller)
-# cat(paste0("\n\nStep 1:"))
-# cat(paste0("\n   Note that the source coefficent is always 0 in this version"))
-# outputMessages("   Removing redundancy (comparing date, lat-long, etc. - not every pair of strains)")
-# outputMessages("   Identifying which strains match which non-redundant 'data representatives'")
+# COLLECT dist matrices using TPN clusters ---------------------------------------------------------
+outputMessages(paste0("\nCollecting and saving distances for groups at TPN"))
 
-# COLLECT dist matrices using TP2 clusters ---------------------------------------------------------
+params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
+  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
+              "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl"))
 
-for (k in c(2,1)) {
-  dir.create(paste0("intermediate_data/TP", k), showWarnings = FALSE)
-  dir.create(paste0("intermediate_data/TP", k, "/dists"), showWarnings = FALSE)
-  
-  outputMessages(paste0("\nCollecting and saving distances for groups at TP", k))
-  dists <- paste0("intermediate_data/TP", k, "/dists/")
-  parts <- sectionClusters(k, typing_data, m)
-  
-  if (k == 2) {
-    geo_dists <- m$assignments %>% select(Longitude, Latitude) %>% unique() %>% 
-      rownames_to_column("id") %>% distMatrix(., "geo", c("Longitude", "Latitude"))
-    temp_dists <- m$assignments %>% select(Date) %>% unique() %>% 
-      rownames_to_column("id") %>% distMatrix(., "temp", "Date")
-    
-    extremes <- list(maxt = max(temp_dists), mint = min(temp_dists), 
-                     maxg = max(geo_dists), ming = min(geo_dists))
-    saveRDS(extremes, "intermediate_data/dist_extremes.Rds")
-  }
-  
-  outputMessages("\nGenerating intra-cluster distances:")
-  # assignments <- m$assignments; fpaths <- dists
-  collectDistances(m$assignments, parts, fpaths = dists)
-  # collectDistances(TRUE, m$assignments, parts, fpaths = dists, extremes)
+hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
+tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
+m <- read_tsv(arg$metadata) %>% processedStrains()
+basedir <- "intermediate_data/TPN/"
+
+# Extremes, for scaling ----------------------------------------------------------------------
+ext_geo_dists <- m$assignments %>% select(Longitude, Latitude) %>% unique() %>% 
+  rownames_to_column("id") %>% distMatrix(., "geo", c("Longitude", "Latitude"))
+ext_temp_dists <- m$assignments %>% select(Date) %>% unique() %>% 
+  rownames_to_column("id") %>% distMatrix(., "temp", "Date")
+
+extremes <- list(maxt = max(ext_temp_dists), mint = min(ext_temp_dists), 
+                 maxg = max(ext_geo_dists), ming = min(ext_geo_dists))
+saveRDS(extremes, paste0(basedir, "extreme_dists.Rds"))
+rm(ext_geo_dists); rm(ext_temp_dists); rm(extremes)
+
+# Pairwise distances within clusters at TPN --------------------------------------------------
+metadata <- m$strain_data %>% as.data.table()
+
+clustersets <- readRDS(arg$intervalfile)
+interval_list <- names(clustersets)
+rm(clustersets)
+
+k <- last(interval_list)
+save_to <- paste0("intermediate_data/TPN/dists/")
+dir.create(save_to,  recursive = TRUE, showWarnings = FALSE)
+
+if (params$int_type[2] == "multiset") {
+  interval <- "Multiset"
+}else if (params$int_type[2] == "monthly") {
+  interval <- "YearMonth"
+}else if (params$int_type[2] == "weekly") {
+  interval <- "Week"
 }
 
-outputMessages("\nFinished saving non-redundant pairwise distances, in groups.")
+typing_data <- lapply(1:length(interval_list), function(i) {
+  n1 <- as.character(interval_list[i])
+  tpkstrains <- metadata[get(interval) <= n1]$Strain
+  dfz <- tp2$filedata %>% rownames_to_column("isolate") %>%
+    select(isolate, all_of(hx$h)) %>%
+    filter(isolate %in% tpkstrains) %>% column_to_rownames("isolate")
+  dfz[,hx$h[1],drop=FALSE] %>% set_colnames(hx$th[1])
+}) %>% set_names(as.character(interval_list))
 
-# Average distances --------------------------------------------------------------------------
-assert("Distances were collected and saved", file.exists("intermediate_data/dist_extremes.Rds"))
+td <- typing_data[[length(typing_data)]] %>% rownames_to_column("Strain") %>% as.data.table()
+rm(typing_data)
 
-outputMessages("\nCollecting average distances ...")
-avg_dists <- lapply(1:2, function(tpx) {
-  tpx_dists <- paste0("intermediate_data/TP", tpx, "/dists/") %>% 
-    list.files(., pattern = "group", full.names = TRUE)
-  
-  groups <- sectionClusters(tpx, typing_data, m)
-  groups$drs %<>% set_colnames(c("Strain", "Th", "dr"))
-  
-  dr_td1 <- typing_data[[tpx]] %>% 
-    rownames_to_column("Strain") %>% as_tibble() %>%
-    left_join(., m$dr_matches, by = "Strain") %>%
-    mutate(across(dr, as.character)) %>% select(-Strain)  
-  
-  g_cuts <- countDataReps(dr_td1)
-  
-  temp_dists <- avgsFromDM(tpx_dists, groups, g_cuts, "temp", "Temp.Dist", tpx)
-  geo_dists <- avgsFromDM(tpx_dists, groups, g_cuts, "geo", "Geog.Dist", tpx)
-  
-  inner_join(temp_dists, geo_dists, 
-             by = intersect(colnames(temp_dists), colnames(geo_dists))) %>% return()
-}) %>% set_names(c("TP1", "TP2"))
+parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>% 
+  left_join(td, ., by = "Strain") %>% sectionClusters(.)
+saveRDS(parts, "intermediate_data/TPN/parts.Rds")
 
-tp1_avg_dists <- tp1$proc %>% select(-TP1) %>% 
-  left_join(., avg_dists[["TP1"]], by = intersect(colnames(.), colnames(avg_dists[["TP1"]])))
-tp2_avg_dists <- tp2$proc %>% select(-TP2) %>% 
-  left_join(., avg_dists[["TP2"]], by = intersect(colnames(.), colnames(avg_dists[["TP2"]])))
+outputMessages(paste0("Collecting and saving distances for cluster groups at TP", k, ":\n"))
 
-all_avg_dists <- right_join(tp1_avg_dists, tp2_avg_dists, by = "Strain")
-saveRDS(all_avg_dists, "intermediate_data/average_dists.Rds")
+tpkstrains <- metadata[get(interval) <= k]$Strain
+collectDistances(parts$drs, parts$results, m$dr_matches, m$assignments, tpkstrains, save_to)
+rm(m); rm(parts)
 
-cat(paste0("\nEnded process at ", Sys.time(), "\n||", paste0(rep("-", 31), collapse = ""), 
+assert("Distances were collected and saved", file.exists(paste0(basedir, "extreme_dists.Rds")))
+
+stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
+timeTaken(pt = "distances collection", stopwatch) %>% outputDetails(., newcat = TRUE)
+cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), 
            " End of distances collection ", paste0(rep("-", 31), collapse = ""), "||\n"))

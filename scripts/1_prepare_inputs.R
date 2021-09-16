@@ -2,23 +2,21 @@
 
 # Current working directory should be Metrics-CGM-ECC/
 
-msg <- file("logs/logfile_inputs.txt", open="wt")
+msg <- file("logs/prepare_inputs.txt", open="wt")
 sink(msg, type="message")
 
-libs <- c("optparse", "magrittr", "readr", "dplyr", "testit", "data.table")
-y <- lapply(libs, require, character.only = TRUE)
+libs <- c("optparse", "magrittr", "readr", "dplyr", "testit", "data.table", "tibble")
+y <- lapply(libs, require, character.only = TRUE); rm(y); rm(libs)
 
 option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", 
               default = "inputs/strain_info.txt", help = "Metadata file"),
-  make_option(c("-a", "--tp1"), metavar = "file", 
-              default = "inputs/tp1_clusters_init.txt", help = "TP1 cluster assignments"), 
   make_option(c("-b", "--tp2"), metavar = "file", 
               default = "inputs/tp2_clusters_init.txt", help = "TP2 cluster assignments"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
-arg <- parse_args(OptionParser(option_list=option_list))
+arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
 # FUNCTIONS ----------------------------------------------------------------------------------------------------
 source("scripts/Misc/formatprep.R")
@@ -32,24 +30,25 @@ params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ")
 
 test_params <- c("Region of interest", "Country of interest", "Has defined lineage information", 
                  "Has defined date information (day, month, and year)", "Has province-level data", 
-                 "Province of interest", "Threshold of interest", "Is in a non-singleton cluster (at TP1)", 
+                 "Province of interest", "Threshold of interest", 
                  "Is in a non-singleton cluster (at TP2)", "Filtering by date", "Column names", 
-                 "Source-temporal-geographic coefficents", "Generate heatmaps for top __ largest clusters")
+                 "Interval type", "Dividers", "Source-temporal-geographic coefficents", 
+                 "Generate heatmaps for top __ largest clusters")
 
 assert("Input parameters are correctly labelled", identical(sapply(params, '[[', 1), test_params))
+rm(test_params)
 
 params %<>% set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-                        "th","nsTP1","nsTP2", "temp_win","cnames","coeffs", "numcl"))
+                        "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl"))
 
 a1 <- readData(arg$metadata, FALSE)
 a2 <- suppressWarnings(readData(arg$metadata, check_enc = TRUE))
 if (nrow(a1) > nrow(a2)) {strain_data <- a1}else {strain_data <- a2}
-
-time1 <- suppressWarnings(readData(arg$tp1, check_enc = TRUE))
-if (!exists("time1")) {time1 <- readData(arg$tp1, FALSE)}
+rm(a1); rm(a2)
 
 time2 <- suppressWarnings(readData(arg$tp2, check_enc = TRUE))
 if (!exists("time2")) {time2 <- readData(arg$tp2, FALSE)}
+rm(arg)
 
 # Check that coefficient sets each add up to 1 -----------------------------------------------------------------
 coeffset <- params$coeffs[2] %>% strsplit(",") %>% unlist()
@@ -63,11 +62,11 @@ for (i in 1:length(coeffset)) {
 assert("Number of clusters (for heatmap generation) is an integer >= 0", as.integer(params$numcl[2]) >= 0)
 
 # LINEAGE INFO -------------------------------------------------------------------------------------------------
-initial_sizes <- tibble(type="initial", a=nrow(strain_data), b=nrow(time1), d=nrow(time2))
 
 assert("Has lineage info", as.logical(params$has_lin[2]))
-x <- updateStrains("lin_info", strain_data, time1, time2, initial_sizes)
-strain_data <- x$sd; time1 <- x$t1; time2 <- x$t2; initial_sizes <- x$sizes
+x <- updateStrains("lin_info", strain_data, time2)
+strain_data <- x$sd; time2 <- x$t2
+rm(x)
 
 # COLUMN NAMES -------------------------------------------------------------------------------------------------
 reqnames <- c("Strain", "Latitude", "Longitude", "Day", "Month", "Year")
@@ -85,9 +84,6 @@ if (nchar(params$cnames[2]) > 3) { # nchar([,]) == 3
 strain_data <- strain_data %>% select(all_of(fullcnames)) %>% 
   na.omit(Strain) %>% na.omit(Latitude) %>% na.omit(Longitude) %>% na.omit(Day) %>% 
   na.omit(Month) %>% na.omit(Year)
-
-# add column to show which strains are found in TP1
-strain_data %<>% mutate(TP1 = ifelse(Strain %in% time1$Strain, 1, 0))
 
 # add column to show which strains are found in TP2
 strain_data %<>% mutate(TP2 = ifelse(Strain %in% time2$Strain, 1, 0))
@@ -115,10 +111,9 @@ if (nchar(params$temp_win[2]) > nchar("[,]")) {
   
   strain_data %<>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
     filter(Date >= tempwindow[1] & Date <= tempwindow[2])
-
-  # Strains with metadata and defined lineage info at TP1
-  y <- updateStrains("temp_win", strain_data, time1, time2, initial_sizes)
-  strain_data <- y$sd; time1 <- y$t1; time2 <- y$t2; initial_sizes <- y$sizes
+  
+  y <- updateStrains("temp_win", strain_data, time2)
+  strain_data <- y$sd; time2 <- y$t2
 }
 
 # HAS PROVINCE-LEVEL DATA --------------------------------------------------------------------------------------
@@ -131,44 +126,101 @@ if (as.logical(params$has_prov[2])) {
   }
   
   # Strains with metadata and defined lineage info at TP2
-  z <- updateStrains("aft_prov", strain_data, time1, time2, initial_sizes)
-  strain_data <- z$sd; time1 <- z$t1; time2 <- z$t2; initial_sizes <- z$sizes
+  z <- updateStrains("aft_prov", strain_data, time2)
+  strain_data <- z$sd; time2 <- z$t2
 }
 
 # NON-SINGLETON CLUSTERS ---------------------------------------------------------------------------------------
-outputDetails("Making table for matching TP1 clusters to integers (for metrics process) ...", TRUE)
-processed_tp1 <- intClusters(time1)
-
 outputDetails("Making table for matching TP2 clusters to integers (for metrics process) ...", TRUE)
-processed_tp2 <- intClusters(time2)
+# processed_tp2 <- intClusters(time2); #rm(time2)
+tp2_processed <- natNumberClusters(time2)
 
 th <- params$th[2]
 
-if (as.logical(params$nsTP1[2])) {
-  remove_strains <- strainsInSingletons(processed_tp1$new_cols, th)
-  processed_tp1$new_cols %<>% filter(!(Strain %in% remove_strains))
-  processed_tp2$new_cols %<>% filter(!(Strain %in% remove_strains))
-  strain_data %<>% filter(!(Strain %in% remove_strains))
-  
-  initial_sizes %<>% add_row(tibble(type="tp1_ns", a=nrow(strain_data), b=nrow(time1), d=nrow(time2)))
-}
-
 if (as.logical(params$nsTP2[2])) {
-  remove_strains <- strainsInSingletons(processed_tp2$new_cols, th)
-  processed_tp1$new_cols %<>% filter(!(Strain %in% remove_strains))
-  processed_tp2$new_cols %<>% filter(!(Strain %in% remove_strains))
+  remove_strains <- strainsInSingletons(tp2_processed, th)
+  tp2_processed$new_cols %<>% filter(!(Strain %in% remove_strains))
   strain_data %<>% filter(!(Strain %in% remove_strains))
-  
-  initial_sizes %<>% add_row(tibble(type="tp2_ns", a=nrow(strain_data), b=nrow(time1), d=nrow(time2)))
 }
 
-writeData(strain_data, file.path("inputs", "processed", "strain_info.txt"))
+# INTERVAL TYPE ------------------------------------------------------------------------------------------------
+save_to <- file.path(paste0("intermediate_data/", tolower(params$int_type[2])))
+dir.create(save_to, showWarnings = FALSE)
+dir.create(file.path(save_to, "cgms"), showWarnings = FALSE, recursive = TRUE)
+dir.create(file.path(save_to, "eccs"), showWarnings = FALSE, recursive = TRUE)
+dir.create(file.path(save_to, "avgdists"), showWarnings = FALSE, recursive = TRUE)
 
-writeData(processed_tp1$new_cols, file.path("inputs", "processed", "tp1_clusters.txt"))
-saveRDS(processed_tp1, file.path("inputs", "processed", "allTP1.Rds"))
+# YearMonth:
+#   if a strain was added on or before the last day of the month, given that YearMonth designation
+metadata <- strain_data %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
+  mutate(YearMonth = format(Date, "%Y-%m")) %>% mutate(Week = strftime(Date, format = "%V")) %>% 
+  arrange(Week) %>% as.data.table()
+rm(strain_data)
 
-writeData(processed_tp2$new_cols, file.path("inputs", "processed", "tp2_clusters.txt"))
-saveRDS(processed_tp2, file.path("inputs", "processed", "allTP2.Rds"))
+f2 <- tp2_processed$new_cols %>% as.data.table() %>% select(Strain, all_of(params$th[2])) %>% 
+  rename(isolate = Strain) %>% arrange(isolate)
 
-outputDetails(paste0("\nFinished process at: ", Sys.time(), "\n||", paste0(rep("-", 14), collapse = ""), " Saved formatted inputs to 'processed' in the ",
+if (params$int_type[2] == "weekly") {
+  interval <- "Week"
+  interval_list <- metadata$Week %>% unique() %>% sort()
+  
+  interval_clusters <- metadata %>% select(c(Strain, all_of(interval), Date)) %>% 
+    inner_join(., f2, by = c("Strain" = "isolate")) %>% 
+    set_colnames(c("isolate", "ivl", "Date", "heightx"))
+  
+}else if (params$int_type[2] == "monthly") {
+  interval <- "YearMonth"
+  interval_list <- metadata %>% pull(interval) %>% unique() %>% sort()
+  
+  interval_clusters <- metadata %>% select(c(Strain, all_of(interval), Date)) %>% 
+    inner_join(., f2, by = c("Strain" = "isolate")) %>% 
+    set_colnames(c("isolate", "ivl", "Date", "heightx"))
+  
+}else if (params$int_type[2] == "multiset") {
+  setdivider <- strsplit(params$divs[2], split = ",") %>% unlist() %>% as.Date(., format = "%Y-%m-%d")
+  
+  assertion1 <- lapply(setdivider, function(x) nchar(as.character(x)) == 10) %>% unlist()
+  assert("Provided input(s) has/have 10 characters", all(assertion1))
+  assert("Provided input(s) is/are date type, correct format", !any(is.na(setdivider)))
+  assertion3 <- lapply(setdivider, function(x) x >= min(metadata$Date) & x <= max(metadata$Date)) %>% unlist()
+  assert("Provided input(s) is/are between min date and max date", all(assertion3))
+  
+  sdiv <- c(min(metadata$Date), setdivider, max(metadata$Date))
+  fdivs <- tibble(start = sdiv[1:(length(sdiv)-1)], end = sdiv[2:length(sdiv)]) %>% 
+    mutate(ivl = paste0("set", 1:nrow(.)))
+  
+  metadata <- metadata %>% add_column(Multiset = "")
+  for (i in 1:nrow(fdivs)) {
+    metadata[metadata$Date >= fdivs$start[i] & metadata$Date < fdivs$end[i]]$Multiset <- fdivs$ivl[i]
+  }
+  metadata[metadata$Date == fdivs$end[i]]$Multiset <- fdivs$ivl[i]
+  rm(fdivs)
+  
+  interval <- "Multiset"
+  interval_list <- metadata %>% pull(interval) %>% unique() %>% sort()
+  
+  interval_clusters <- metadata %>% select(c(Strain, Multiset)) %>%
+    inner_join(., f2, by = c("Strain" = "isolate")) %>%
+    set_colnames(c("isolate", "ivl", "heightx"))
+}
+rm(f2)
+
+clustersets <- vector(mode = "list", length = length(interval_list)) %>% set_names(interval_list)
+
+for (xj in interval_list) {
+  # cluster assignments for clusters that changed when interval i strains were added
+  int_j <- interval_clusters[ivl == xj]
+  sofar <- interval_clusters[ivl <= xj]
+  clustersets[[xj]] <- list(int_j, sofar) %>% set_names(c("ivl", "sofar"))
+}
+rm(sofar); rm(int_j); rm(interval_clusters); rm(interval_list)
+
+# SAVING RESULTS -----------------------------------------------------------------------------------------------
+saveRDS(clustersets, file.path("inputs", "processed", "clustersets.Rds")); rm(clustersets)
+writeData(metadata, file.path("inputs", "processed", "strain_info.txt")); rm(metadata)
+writeData(tp2_processed$new_cols, file.path("inputs", "processed", "tp2_clusters.txt"))
+saveRDS(tp2_processed, file.path("inputs", "processed", "allTP2.Rds")); 
+
+outputDetails(paste0("\nFinished process at: ", Sys.time(), "\n||", paste0(rep("-", 14), collapse = ""), 
+                     " Saved formatted inputs to 'processed' in the ",
                      "inputs", " directory", paste0(rep("-", 15), collapse = ""), "||"), TRUE)

@@ -2,200 +2,163 @@
 
 # Current working directory should be Metrics-CGM-ECC/
 
-msg <- file("logs/logfile_datacollection.txt", open="wt")
+msg <- file("logs/cgm_collection.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("R6", "tibble", "optparse", "magrittr", "dplyr", "reshape2", "progress", 
-          "testit", "data.table")
-y <- lapply(libs, require, character.only = TRUE)
-
-files <- paste0("scripts/CGM") %>% list.files(., full.names = TRUE)
-invisible(sapply(files, source))
+          "testit", "data.table", "readr")
+y <- lapply(libs, require, character.only = TRUE); rm(libs); rm(y)
 
 # READING IN THE INPUTS ----------------------------------------------------------------------------------------
 # Change the default values to read in your own files, or feed through terminal arguments
 option_list <- list(
-  make_option(c("-a", "--tp1"), metavar = "file", default = "inputs/processed/tp1_clusters.txt", help = "Time point 1 file name (TP1)"),
-  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "Time point 2 file name (TP2)"),
+  make_option(c("-f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
-              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"), 
+  make_option(c("-n", "--tpn"), metavar = "file", 
+              default = "inputs/processed/allTP2.Rds", help = "TPN data"))
 
-arg <- parse_args(OptionParser(option_list=option_list))
+arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
+
+files <- paste0("scripts/CGM") %>% list.files(., full.names = TRUE)
+invisible(sapply(files, source)); rm(files)
 
 # BASIC STARTUP MESSAGES ---------------------------------------------------------------------------------------
 outputDetails(paste0("\n||", paste0(rep("-", 32), collapse = ""), " Cluster metric generation ", 
                      paste0(rep("-", 32), collapse = ""), "||\nStarted process at: ", Sys.time()))
-cat(paste0("\nIf at any point the process cuts off with no success message, please see the log file.\n"))
-outputDetails("\nStep 1 OF 3: Data processing ", newcat = TRUE)
-
+cat(paste0("\nIf at any point the process cuts off with no success message, please see the log file.\n\n"))
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
-# Extract threshold of interest from form inputs ---------------------------------------------------------------
-params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ")
-
-test_params <- c("Region of interest", "Country of interest", "Has defined lineage information", 
-                 "Has defined date information (day, month, and year)", "Has province-level data", 
-                 "Province of interest", "Threshold of interest", "Is in a non-singleton cluster (at TP1)", 
-                 "Is in a non-singleton cluster (at TP2)", "Filtering by date", "Column names", 
-                 "Source-temporal-geographic coefficents", "Generate heatmaps for top __ largest clusters")
-
-assert("Input parameters are correctly labelled", identical(sapply(params, '[[', 1), test_params))
-
-params %<>% set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-                        "th","nsTP1","nsTP2", "temp_win","cnames","coeffs", "numcl"))
-
-# A string of comma-delimited numbers, e.g. '50,75,100' to use as heights for metric 
-# generation (strain table outputs): 
-heights <- strsplit(as.character(params$th[2]), split = ",") %>% unlist()
-
 # TP DATA PREPARATION ------------------------------------------------------------------------------------------
-f1 <- readBaseData(arg$tp1, 1, reader::get.delim(arg$tp1))
-f2 <- readBaseData(arg$tp2, 2, reader::get.delim(arg$tp2))
-colnames(f1)[1] <- colnames(f2)[1] <- "isolate"
+params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
+  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
+              "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl"))
 
-all_isolates <- unique(c(f1$isolate, f2$isolate)) %>% as_tibble() %>% 
-  set_colnames("char_isolate") %>% rowid_to_column("num_isolate")
+heights <- strsplit(as.character(params$th[2]), split = ",") %>% unlist()
+clustersets <- readRDS(arg$intervalfile)
+interval_list <- names(clustersets)
 
-ph <- max(nchar(colnames(f1)[-1]), nchar(colnames(f2)[-1]))
-pc <- f2 %>% select(-isolate) %>% max(., f2 %>% select(-isolate)) %>% nchar()
+if (params$int_type[2] == "multiset") {
+  interval <- "Multiset"
+}else if (params$int_type[2] == "monthly") {
+  interval <- "YearMonth"
+}else if (params$int_type[2] == "weekly") {
+  interval <- "Week"
+}
 
-outputDetails("  Processing timepoint clusters for easier data handling and flagging clusters", newcat = TRUE)
-tp1 <- Timedata$new("tp1", raw = f1, all_isolates, pad_height = ph, 
-                    pad_cluster = pc, msg = TRUE, ind_prog = TRUE)$
-  set_comps()$flag_clusters()
+save_to <- file.path("intermediate_data", tolower(params$int_type[2]), "cgms")
+tpn <- readRDS(arg$tpn)$new_cols
 
-tp2 <- Timedata$new("tp2", raw = f2, all_isolates, pad_height = ph, 
-                    pad_cluster = pc, msg = TRUE, ind_prog = TRUE)$
-  set_comps()$set_cnames()
+# rowx <- readRDS("results/rowx.Rds")
+for (i in 1:(length(interval_list)-1)) {
+  
+  n1 <- as.character(interval_list[i])
+  tpx1a <- clustersets[[n1]]$sofar %>% select(-ivl,-Date) %>% set_colnames(c("isolate", heights))
+  tpx1 <- tpn %>% rename("isolate" = "Strain") %>% 
+    left_join(tpx1a, ., by = intersect(colnames(tpx1a), colnames(.)))
+  
+  n2 <- as.character(interval_list[i+1])
+  tpx2a <- clustersets[[n2]]$sofar %>% select(-ivl,-Date) %>% set_colnames(c("isolate", heights))
+  tpx2 <- tpn %>% rename("isolate" = "Strain") %>% 
+    left_join(tpx2a, ., by = intersect(colnames(tpx2a), colnames(.)))
+  
+  # if (i > 1) {
+  #   fullset <- clustersets[[n1]]$sofar
+  #   ivl_i <- clustersets[[n1]]$ivl
+  #   unchanged_clusters <- setdiff(fullset, ivl_i) %>% pull(heightx) %>% unique()
+  #   strains <- fullset[heightx %in% unchanged_clusters] %>% pull(isolate)
+  #   rm(fullset); rm(unchanged_clusters); rm(ivl_i)
+  #   unchanged_data <- tmp %>% filter(Strain %in% strains)
+  # }
+  
+  ph <- max(nchar(colnames(tpx1)[-1]), nchar(colnames(tpx2)[-1]))
+  pc <- tpx2 %>% select(-isolate) %>% max(., tpx2 %>% select(-isolate)) %>% nchar()
+  
+  msgtexts <- c(
+    paste0("  Constructing ", n1, " data object, ", nrow(tpx1), " (", i, " / ", length(interval_list), "):\n"), 
+    paste0("  Constructing ", n2, " data object, ", nrow(tpx2), " (", i+1, " / ", length(interval_list), "):\n")
+  )
+  
+  tplist <- tpDataSetup(tpx1, tpx2, ph, pc, FALSE, msgtexts)#; rm(tpx1); rm(tpx2)
+  tp1 <- tplist[["tp1"]]
+  tp2 <- tplist[["tp2"]]
+  novels <- tplist[["novs"]]
+  rm(tplist)
+  
+  # BASE CASE (FIRST HEIGHT) -------------------------------------------------------------------------------------
+  outputDetails(paste0("  Tracking clusters from ", n1, " to ", n2, ", from height ", heights[1], " ..."), newcat = TRUE)
+  
+  hx <- Heightdata$new(starter = heights[1], t1_comps = tp1$comps, hvals = heights)$
+    clust_tracking(tp2$comps, tp2$cnames, tp1$coded, tp2$coded, TRUE)$
+    update_iteration()
+  
+  # outputDetails("  Identifying and counting 'additional TP1 strains'.\n", newcat = FALSE)
+  clusters_just_tp1 <- lapply(heights, function(h) {
+    df1 <- hx$results[[h]]
+    df2 <- left_join(df1, tp1$flagged, by = intersect(colnames(df1), colnames(tp1$flagged)))
+    
+    left_join(df2, tp2$flagged, by = intersect(colnames(df2), colnames(tp2$flagged))) %>% 
+      arrange(tp1_h, tp1_cl, tp2_h, tp2_cl) %>% 
+      findingSneakers(novels, tp1$status, tp2$status, .) %>% return()
+  }) %>% bind_rows()
+  
+  # outputDetails("  Handling novel tracking, adding to dataset.\n", newcat = FALSE)
+  isolates_file <- novelHandling(tp1, tp2, clusters_just_tp1, heights)
+  
+  isolates_file %<>% 
+    mutate(novel = ifelse(isolate %in% setdiff(tp2$raw$isolate, tp1$raw$isolate), 1, 0)) %>% 
+    rename(Strain = isolate)
+  
+  isolates_file[,c("tp1_h", "tp2_h")] %<>% apply(., 2, padCol, padval = ph, padchr = "h")
+  isolates_file[,c("tp1_cl", "tp2_cl")] %<>% apply(., 2, padCol, padval = pc, padchr = "c")
+  
+  # outputDetails("  Incrementing all cluster sizes by 1, then calculating growth columns.\n", newcat = FALSE)
+  # outputDetails("  Also adding 'type' column to CGM results table.\n", newcat = FALSE)
+  isolates_file %<>% 
+    mutate(tp1_cl_size = tp1_cl_size + 1, tp2_cl_size = tp2_cl_size + 1) %>% 
+    oneHeight()
+  
+  # if (i > 1) {isolates_file <- unchanged_data %>% bind_rows(isolates_file, .)}
+  
+  # tmp <- isolates_file
+  isolates_file %<>% addingType(.)
+  
+  # outputDetails("  Saving the data in a file with cluster identifiers.\n", newcat = FALSE)
+  # strains removed
+  isolates_file <- isolates_file %>% 
+    select(tp1_id, tp1_cl_size, first_tp1_flag, last_tp1_flag, 
+           first_tp2_flag, tp2_cl_size, last_tp2_flag, add_TP1, novel, 
+           num_novs, actual_size_change, actual_growth_rate, new_growth, type) %>% 
+    unique() %>% as.data.table()
+  
+  correcthere <- isolates_file
+  
+  indices <- which(is.na(isolates_file$tp1_id) & isolates_file$tp1_cl_size == 1)
+  isolates_file[indices]$tp1_id <- isolates_file$first_tp2_flag[indices] %>% 
+    sapply(., strsplit, "_") %>% sapply(., '[[', 3) %>% 
+    paste0("AbsentAtTP1-", "TP2_", .)
+  
+  cgm_results <- isolates_file %>% 
+    mutate(across(colnames(isolates_file), as.character)) %>% 
+    melt.data.table(id.vars = "tp1_id") %>% 
+    add_column(Interval = paste0(n1, "-", n2), .after = 1) %>% 
+    set_colnames(c("Cluster", paste0(arg$intervaltype, "Interval"), "Field", "Value"))
+  
+  cgm_results <- isolates_file %>% 
+    add_column(interval = paste0(n1, "-", n2), .before = 1)# %>% add_column(TP = n2, .before = 1)
+  
+  saveRDS(cgm_results, file.path(save_to, paste0("TP", n2, ".Rds")))
+}
 
-outputDetails("  Collecting and counting novel isolates in TP2 clusters ...", newcat = TRUE)
-novels <- setdiff(tp2$coded$isolate, tp1$coded$isolate)
-
-tp2$comps <- tp2$coded %>% filter(isolate %in% novels) %>% 
-  group_by(tp2_id) %>% 
-  summarise(num_novs = n(), .groups = "drop") %>% 
-  left_join(tp2$comps, ., by = "tp2_id") %>% 
-  mutate(num_novs = ifelse(is.na(num_novs), 0, num_novs))
-
-tp2$flag_clusters()$coded_status(novels)
-tp1$coded_status(novels)
-
-# BASE CASE (FIRST HEIGHT) -------------------------------------------------------------------------------------
-outputDetails("\nStep 2 OF 3: Tracking and flagging clusters for base case ", newcat = TRUE)
-outputDetails(paste0("  Collecting height data for base case, height ", heights[1], "..."), newcat = TRUE)
-
-hx <- Heightdata$new(starter = heights[1], t1_comps = tp1$comps, hvals = heights)$
-  clust_tracking(tp2$comps, tp2$cnames, tp1$coded, tp2$coded, TRUE)$
-  update_iteration()
-
-# # REST OF THE HEIGHTS ------------------------------------------------------------------------------------------
-# if (length(heights) > 1) {
-#   outputDetails(paste0("\nStep 3 OF 3: Tracking and flagging clusters for the rest of the heights (",
-#                        length(heights) - 1, " of them) ..........."), newcat = TRUE)
-#   outputDetails(paste0("  This may take some time. \n  For a more detailed look at progress, ",
-#                        "see the logfile in the logs directory.\n"))
-#   outputDetails("  Collecting data for other heights: ", newcat = TRUE)
-# 
-#   fcb <- txtProgressBar(min = 0, max = length(heights[-1])*2, initial = 0, style = 3)
-#   for (j in 1:length(heights[-1])) {
-#     hx$h_after <- heights[-1][j]
-#     message(paste0("  Height ", j + 1, " / ", length(heights)))
-# 
-#     # Part 1: unchanged(): identifying clusters that have not changed from the previous height
-#     # Part 2: takes comps for new height, previous height, and the tracked data for the previous height
-#     #   --> identifies clusters that have not changed since the previous height, and reuses their tracking data
-#     hx$post_data(tp1$comps)$unchanged()
-# 
-#     # Part 2: tracking clusters that changed, saving to results list, and prepping variable for next height
-#     hx$comps <- hx$aft %>% filter(!(id_aft %in% hx$same$tp1_id)) %>% set_colnames(colnames(tp1$comps))
-# 
-#     setTxtProgressBar(fcb, j*2 - 1)
-# 
-#     hx$clust_tracking(tp2$comps, tp2$cnames, tp1$coded, tp2$coded, FALSE)$
-#       update_iteration()$reset_values()
-# 
-#     setTxtProgressBar(fcb, j*2)
-#   }
-#   close(fcb)
-# }else {
-#   outputDetails(paste0("\nStep 3 OF 3: Only one threshold provided, so no further tracking necessary"), newcat = TRUE)
-# }
-
-outputDetails("  Identifying and counting 'additional TP1 strains'.\n", newcat = FALSE)
-
-clusters_just_tp1 <- lapply(heights, function(h) {
-  hx$results[[h]] %>% left_join(., tp1$flagged) %>% 
-    left_join(., tp2$flagged) %>% 
-    arrange(tp1_h, tp1_cl, tp2_h, tp2_cl) %>% 
-    findingSneakers(novels, tp1$status, tp2$status, .) %>% return()
-}) %>% bind_rows()
-
-isolates_base <- tp1$melted %>% mutate(across(tp1_h, as.integer)) %>% 
-  filter(tp1_h %in% heights) %>% 
-  left_join(., clusters_just_tp1, by = c("tp1_id", "tp1_h", "tp1_cl")) %>% 
-  arrange(tp1_h, tp1_cl, tp2_h, tp2_cl)
-
-outputDetails("  Handling novel tracking, adding to dataset.\n", newcat = FALSE)
-
-# NOVELS -------------------------------------------------------------------------------------------------------
-first_nov_flag <- tp2$status %>% filter(!is.na(status)) %>% group_by(isolate) %>% slice(1) %>% ungroup() %>% pull(tp2_id)
-
-novels_only_tracking <- tp2$flagged %>% filter(tp2_id %in% first_nov_flag) %>% 
-  left_join(., tp2$comps[,c("tp2_id", "num_novs")]) %>% arrange(tp2_h, tp2_cl) %>% 
-  add_column(tp1_id = NA, tp1_h = NA, tp1_cl = NA, first_tp1_flag = NA, last_tp1_flag = NA)
-
-novel_asmts <- tp2$melted %>% mutate(across(tp2_h, as.integer)) %>% 
-  filter(isolate %in% setdiff(tp2$raw$isolate, tp1$raw$isolate))
-
-# Pure novel TP2 cluster
-pure_novels <- novels_only_tracking %>% filter(num_novs == tp2_cl_size) %>% 
-  mutate(tp1_cl_size = 0, add_TP1 = 0) %>% 
-  right_join(novel_asmts, ., by = c("tp2_h", "tp2_cl", "tp2_id")) %>% select(colnames(isolates_base))
-
-# Mixed novel TP2 clusters
-mixed_novels <- novels_only_tracking %>% filter(num_novs != tp2_cl_size) %>% 
-  left_join(., novel_asmts, by = c("tp2_id", "tp2_h", "tp2_cl"))
-
-# Mixed novels clusters should inherit data from the tracked TP1 strains
-all_mixed <- isolates_base %>% 
-  select(-isolate, -tp1_id, -tp1_h, -tp1_cl, -first_tp1_flag, -last_tp1_flag) %>% 
-  unique() %>% left_join(mixed_novels, .) %>% select(colnames(isolates_base))
-
-# FULL STRAIN FILE ---------------------------------------------------------------------------------------------
-# note: two types of novel clusters, those that are fully novel, and those that are not
-
-if (nrow(pure_novels) > 0) {
-  isolates_file <- bind_rows(isolates_base, pure_novels)  
+if (params$int_type[2] == "multiset") {
+  res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
+    paste0("results/CGM-", ., "-midpoints.Rds")  
 }else {
-  isolates_file <- isolates_base
+  res_file <- paste0("results/CGM-", params$int_type[2], "-intervals.Rds")
 }
 
-if (nrow(all_mixed) > 0) {
-  isolates_file %<>% bind_rows(., all_mixed)
-}
- 
-isolates_file %<>% 
-  mutate(novel = ifelse(isolate %in% setdiff(tp2$raw$isolate, tp1$raw$isolate), 1, 0)) %>% 
-  rename(Strain = isolate)
-
-isolates_file[,c("tp1_h", "tp2_h")] %<>% apply(., 2, padCol, padval = ph, padchr = "h")
-isolates_file[,c("tp1_cl", "tp2_cl")] %<>% apply(., 2, padCol, padval = pc, padchr = "c")
-
-outputDetails("  Incrementing all cluster sizes by 1, then calculating growth columns.\n", newcat = FALSE)
-outputDetails("  Also adding 'type' column to CGM results table.\n", newcat = FALSE)
-
-isolates_file %<>% 
-  mutate(tp1_cl_size = tp1_cl_size + 1, tp2_cl_size = tp2_cl_size + 1) %>% 
-  oneHeight() %>% 
-  addingType(.)
-
-outputDetails("  Saving the data in a file with strain identifiers.\n", newcat = FALSE)
-
-isolates_file %>% 
-  select(Strain, novel, first_tp2_flag, tp2_h, tp2_cl, tp2_cl_size, last_tp2_flag, 
-         tp1_id, tp1_h, tp1_cl, tp1_cl_size, first_tp1_flag, last_tp1_flag, add_TP1, 
-         num_novs, actual_size_change, actual_growth_rate, new_growth, type) %>% 
-  write.table(., file.path("results","CGM_strain_results.tsv"), row.names = FALSE, quote = FALSE, sep = "\t")
+cgmfiles <- list.files(save_to, full.names = TRUE)
+lapply(cgmfiles, function(fi) {readRDS(fi)}) %>% bind_rows() %>% saveRDS(., res_file)
 
 # WRAPPING THINGS UP -------------------------------------------------------------------------------------------
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
@@ -205,3 +168,5 @@ timeTaken(pt = "CGM data collection", stopwatch) %>% outputDetails(., newcat = T
 outputDetails(paste0("||", paste0(rep("-", 28), collapse = ""), " End of cluster metric generation ", 
                      paste0(rep("-", 29), collapse = ""), "||\n"))
 closeAllConnections()
+
+# for 264052 strains, and 53 weeks, took 32 min and 10 sec to run the whole thing

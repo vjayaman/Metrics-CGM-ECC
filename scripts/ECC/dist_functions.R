@@ -76,36 +76,45 @@ distMatrix <- function(input_data, dtype, cnames) {
   }
 }
 
-collectDistances <- function(assignments, parts, fpaths = NULL) {
-  df <- parts$drs
-  cx <- setdiff(colnames(df), c("Strain", "dr"))
-  results <- parts$results
-  p <- length(results)
+# parts_drs <- parts$drs; results <- parts$results
+# drmatches <- m$dr_matches; assignments <- m$assignments
+collectDistances <- function(parts_drs, results, drmatches, assignments, tpkstrains, save_to) {
   
-  for (j in 1:p) {
-    outputMessages(paste0("Working through group ", j, " / ", p))
-    cluster_x <- df[df[[cx]] %in% pull(results[[j]], cx),-"Strain"]
-    cluster_asmts <- assignments[dr %in% pull(cluster_x, dr)]
+  key_cls <- parts_drs[Strain %in% tpkstrains] %>% select(-Strain, -dr) %>% pull() %>% unique()
+  y <- lapply(results, function(x) any(key_cls %in% pull(x, 1))) %>% unlist()
+  
+  cx <- setdiff(colnames(parts_drs), c("Strain", "dr"))
+  pb <- txtProgressBar(min = 0, max = length(names(y[y])), initial = 0, style = 3)
+  
+  for (l in names(y[y])) {
+    setTxtProgressBar(pb, which(names(y[y]) == l))
+    cluster_x <- parts_drs[parts_drs[[cx]] %in% pull(results[[l]], cx),-"Strain"]
     
-    outputMessages("   Generating all possible date pair distances ...")
-    dm_temp <- cluster_asmts %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
+    k_drs <- drmatches %>% filter(Strain %in% tpkstrains) %>% pull(dr)
+    cluster_asmts <- assignments[dr %in% intersect(pull(cluster_x, dr), k_drs)]
+
+    # if (is.null(read_from)) {
+      # outputMessages("   Generating all possible date pair distances ...")
+      dm_temp <- cluster_asmts %>% select(dr, Date) %>% distMatrix(., "temp", "Date")
     
-    outputMessages("   Generating all possible lat-long pair distances ...")
-    dm_geo <- cluster_asmts %>% select(dr, Longitude, Latitude) %>% 
-      distMatrix(., "geo", c("Longitude", "Latitude"))
+      # outputMessages("   Generating all possible lat-long pair distances ...")
+      dm_geo <- cluster_asmts %>% select(dr, Longitude, Latitude) %>% 
+        distMatrix(., "geo", c("Longitude", "Latitude"))
+    # }
+    # else {
+    #   dm0 <- readRDS(paste0(read_from, "group", l, ".Rds"))
+    #   dm_temp <- dm0$temp[rownames(dm0$temp) %in% cluster_asmts$dr, colnames(dm0$temp) %in% cluster_asmts$dr]
+    #   dm_geo <- dm0$geo[rownames(dm0$geo) %in% cluster_asmts$dr, colnames(dm0$geo) %in% cluster_asmts$dr]
+    # }
     
-    if (!is.null(fpaths)) {
-      if (length(fpaths) == 1) {
-        fname <- paste0(fpaths[[1]], "group", formatC(j, width=nchar(p), format="d", flag="0"), ".Rds")
-        dm <- list(temp = dm_temp, geo = dm_geo)
-        saveRDS(dm, fname)
-      }
-    }
+    dm <- list(temp = dm_temp, geo = dm_geo)
+    saveRDS(dm, paste0(save_to, "group", l, ".Rds"))
     
     rm(dm_temp)
     rm(dm_geo)
     gc()
   }
+  close(pb)
 }
 
 # Indicates length of a process in hours, minutes, and seconds, when given a name of the process 
@@ -188,15 +197,31 @@ avgDists <- function(g_cuts, dm, cname, newname) {
   }) %>% unlist() %>% tibble(clusters, .) %>% set_colnames(c(newname, x))
 }
 # -----------------------------------------------------------------------------------------------------
-sectionClusters <- function(k, typing_data, m) {
-  df <- typing_data[[k]] %>% rownames_to_column("Strain") %>%
-    as.data.table() %>% left_join(., m$dr_matches, by = "Strain")
-  
-  gc()
+# sectionClusters <- function(k, typing_data, m) {
+#   df <- typing_data[[as.character(k)]] %>% rownames_to_column("Strain") %>%
+#     as.data.table() %>% left_join(., m$dr_matches, by = "Strain")
+#   gc()
+#   results <- formatForSectioning(df, 1000) %>% sectionTypingData(.)
+#   assert("No clusters overlooked", length(setdiff(pull(df,2), pull(rbindlist(results),1))) == 0)
+#   return(list("drs" = df, "results" = results))
+# }
 
-  results <- formatForSectioning(df, 1000) %>% sectionTypingData(.)
+# sectionClusters <- function(k, typing_data, dr_matches) {
+#   df <- typing_data[[as.character(k)]] %>% rownames_to_column("Strain") %>%
+#     as.data.table() %>% left_join(., dr_matches, by = "Strain")
+#   gc()
+#   results <- formatForSectioning(df, 1000) %>% sectionTypingData(.)
+#   assert("No clusters overlooked", length(setdiff(pull(df,2), pull(rbindlist(results),1))) == 0)
+#   return(list("drs" = df, "results" = results))
+# }
+
+sectionClusters <- function(df) {
+  # df <- td %>% rownames_to_column("Strain") %>%
+  #   as.data.table() %>% left_join(., dr_matches, by = "Strain")
+  # gc()
+  results <- formatForSectioning(df, 1000) %>% sectionTypingData(.) %>% 
+    set_names(formatC(1:length(.), width=4, format="d", flag="0"))
   assert("No clusters overlooked", length(setdiff(pull(df,2), pull(rbindlist(results),1))) == 0)
-  
   return(list("drs" = df, "results" = results))
 }
 

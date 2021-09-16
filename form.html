@@ -39,9 +39,9 @@
 		var dateinfo=window.document.myform.date_info.checked;
 		var prov=window.document.myform.prov_info.checked;
 		var threshold=window.document.myform.threshold.value;
-		var nsTP1=window.document.myform.non_singletonTP1.checked;
 		var nsTP2=window.document.myform.non_singletonTP2.checked;
 		var tempwindow=window.document.myform.temp_win.checked;
+		var intype=window.document.querySelector('input[name="intervaltype"]:checked').id;
 		var tau1=window.document.myform.tau1.value;
 		var gamma1=window.document.myform.gamma1.value;
 		var tau2=window.document.myform.tau2.value;
@@ -65,6 +65,12 @@
 			var prov_results="none";
 		}
 		
+		if (intype == "multiset") {
+		  var divider=encodeURIComponent(window.document.myform.date_set.value) + "\n";
+		}else {
+		  var divider="none" + "\n";
+		}
+		
 		var pom=document.createElement('a');
 		pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + 
 			"Region of interest: " + encodeURIComponent(reg) + "\n" + 
@@ -75,10 +81,11 @@
 			"Has province-level data: " + encodeURIComponent(prov) + "\n" + 
 			"Province of interest: " + prov_results + "\n" + 
 			"Threshold of interest: " + encodeURIComponent(threshold) + "\n" + 
-			"Is in a non-singleton cluster (at TP1): " + encodeURIComponent(nsTP1) + "\n" + 
 			"Is in a non-singleton cluster (at TP2): " + encodeURIComponent(nsTP2) + "\n" + 
 			"Filtering by date: " + temp_results + "\n" + 
 			"Column names: " + cnames + "\n" + 
+			"Interval type: " + intype + "\n" + 
+			"Dividers: " + divider + 
 			"Source-temporal-geographic coefficents: " + "0-" + encodeURIComponent(tau1) + 
 			"-" + encodeURIComponent(gamma1) + ",0-" + encodeURIComponent(tau2) + 
 			"-" + encodeURIComponent(gamma2) + "\n" + 
@@ -112,6 +119,19 @@
 		}
 	}
 
+  function dateSet() {
+    var radButton=document.getElementById("multiset");
+    var box=document.getElementById("multidates").style;
+    var text=document.getElementById("date_set").style;
+    if (radButton.checked == true) {
+      text.display="inline";
+      box.display="inline";
+    }else {
+      text.display="none";
+      box.display="none";
+    }
+  }
+  
 	function provLevel() {
 		var checkBox=document.getElementById("prov_info");
 		var prov_int=document.getElementById("interest");
@@ -185,16 +205,22 @@
 			Threshold of interest: <input type="text" id="threshold" value="0"/>
 			<br>
 			<label class="chk_container">
-				Is in a non-singleton cluster (at TP1, at above threshold)
-				<input type="checkbox" id="non_singletonTP1" class="chkbox"/>
-				<span class="cbox"></span>
-			</label>
-			<br>
-			<label class="chk_container">
 				Is in a non-singleton cluster (at TP2, at above threshold)
 				<input type="checkbox" id="non_singletonTP2" class="chkbox"/>
 				<span class="cbox"></span>
 			</label>
+			<br>
+			Type of intervals you would like the analysis to run for:<br>
+			<input type="radio" id="monthly" name="intervaltype" value = "monthly" onclick="dateSet()">
+			<label for="monthly">Monthly</label><br>
+			<input type="radio" id="weekly" name="intervaltype" value = "weekly" onclick="dateSet()">
+			<label for="weekly">Weekly</label><br>
+			<input type="radio" id="multiset" name="intervaltype" value = "multiset" onclick="dateSet()">
+			<label for="multiset">Multi-set</label>
+			<p id="multidates" style="display:none; padding-left: 25px; width:100px;">
+			  <label for="date_set">e.g. "yyyy-mm-dd,yyyy-mm-dd"</label>
+			  <input type="text" id="date_set" value=""/>
+			</p>
 			<br>
 			<label >Parameter set 1: </label>
 			<label for="quantity">temporal (tau) </label>
@@ -213,7 +239,7 @@
 			The "source" coefficient is frozen at 0 (for now).
 			<br>
 			<label for="quantity">Generate heatmaps for top __ largest clusters:</label>
-			<input id="num_cl" type="number" min="0" max="25" step="1" value="5"/>
+			<input id="num_cl" type="number" min="0" step="1" value="0"/>
 			<fieldset>
 				<legend><b>Expected column names of metadata</b></legend>
 				Required: <em>Strain, Latitude, Longitude, Day, Month, Year</em>
@@ -253,7 +279,7 @@
 				    </td>
 				  </tr>
 				</table>
-				Additional column names (excluding TP1, TP2). Separate with commas: 
+				Additional column names. Separate with commas: 
 				<br>
 				  	<input type="text" id="othercnames" value="" style="width: 480px;" />
 			</fieldset>
