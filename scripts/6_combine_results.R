@@ -252,7 +252,7 @@ step10 <- step9 %>%
 
 writeData(fp = "results/Merged_cluster_results.tsv", df = step10)
 
-metadata <- read_tsv(arg$metadata) %>% processedStrains()
+metadata <- suppressMessages(read_tsv(arg$metadata)) %>% processedStrains()
 cnames <- strsplit(params$cnames[2], split = ",") %>% unlist()
 strains <- metadata$strain_data %>% select(Strain, all_of(cnames), Latitude, Longitude, Day, Month, Year)
 

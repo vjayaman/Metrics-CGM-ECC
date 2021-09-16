@@ -12,7 +12,9 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 sourceCpp("scripts/epicohversions.cpp")
 
 # Current working directory should be Metrics-CGM-ECC/
-files <- c("scripts/ECC/classes_ecc.R", "scripts/ECC/ecc_functions.R", "scripts/ECC/dist_functions.R")
+files <- c("scripts/ECC/classes_ecc.R", 
+           "scripts/ECC/ecc_functions.R", 
+           "scripts/ECC/dist_functions.R")
 invisible(sapply(files, source)); rm(files)
 
 assert("Distances were collected and saved", file.exists("intermediate_data/TPN/extreme_dists.Rds"))

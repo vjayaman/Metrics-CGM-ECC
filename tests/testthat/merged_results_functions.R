@@ -33,3 +33,40 @@ newID <- function(df, tpx, c1, c2, ph, pc) {
     formatC(., width = max(3, pc), format = "d", flag = "0") %>% paste0("c", .)
   df %>% add_column(id = paste0(toupper(tpx), "_", newh, "_", newc)) %>% return()
 }
+
+manualEpiMelt <- function(df, extremes) {
+  geo_dists <- df %>% select(Longitude, Latitude) %>% 
+    as.data.frame() %>% earth.dist(dist = TRUE) %>% as.matrix() %>% 
+    set_rownames(df$Strain) %>% set_colnames(df$Strain) %>% 
+    add(10) %>% log10()
+  g1 <- extremes$ming %>% add(10) %>% log10()
+  g2 <- extremes$maxg %>% add(10) %>% log10()
+  if(g2 == 1){
+    geo_dists[1:nrow(geo_dists), 1:nrow(geo_dists)] <- 0
+  } else {
+    geo_dists <- ((geo_dists - g1) / (g2 - g1))
+  }
+  
+  temp_dists <- df %>% pull(Date) %>% 
+    dist(diag = FALSE, upper = FALSE, method = "euclidean") %>% as.matrix() %>% 
+    set_rownames(df$Strain) %>% set_colnames(df$Strain) %>% add(10) %>% log10()
+  t1 <- extremes$mint %>% add(10) %>% log10()
+  t2 <- extremes$maxt %>% add(10) %>% log10()
+  
+  temp_dists[temp_dists == -Inf] <- 0
+  if (t2 == 0) {
+    temp_dists <- 0
+  }else {
+    temp_dists <- ((temp_dists - t1) / (t2 - t1))
+  }
+  
+  temp_dists <- temp_dists %>% as.data.frame() %>% rownames_to_column("Strain.1") %>% 
+    as.data.table() %>% melt.data.table(., id.vars = "Strain.1", variable.name = "Strain.2", 
+                                        value.name = "Temp.Dist")
+  
+  geo_dists <- geo_dists %>% as.data.frame() %>% rownames_to_column("Strain.1") %>% 
+    as.data.table() %>% melt.data.table(., id.vars = "Strain.1", variable.name = "Strain.2", 
+                                        value.name = "Geog.Dist")
+  
+  merge.data.table(temp_dists, geo_dists) %>% return()
+}
