@@ -6,10 +6,10 @@ y <- suppressMessages(lapply(libs, require, character.only = TRUE))
 option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", 
               default = "inputs/processed/strain_info.txt", help = "Metadata file"),
+  make_option(c("-b", "--tpn"), metavar = "file", 
+              default = "inputs/processed/allTP2.Rds", help = "TP2 data"), 
   make_option(c("-f", "--intervalfile"), metavar = "file", 
               default = "inputs/processed/clustersets.Rds"), 
-  make_option(c("-b", "--tp2"), metavar = "file", 
-              default = "inputs/processed/allTP2.Rds", help = "TP2 data"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
@@ -51,7 +51,7 @@ padCol <- function(cvals, padval, padchr) {
 }
 
 # read in CGM results, and use "first_tp2_flag" get the padding values for height and cluster
-cgms <- readRDS("results/CGM-monthly-intervals.Rds")
+cgms <- list.files("results/", full.names = TRUE) %>% grep("CGM", ., value = TRUE) %>% readRDS()
 
 a1 <- unlist(strsplit(cgms$first_tp2_flag[1], split = "_"))[2:3] %>% 
   nchar() %>% `-`(1) %>% set_names(c("ph", "pc"))
@@ -59,14 +59,14 @@ h_id <- padCol(as.double(hx$h), a1[['ph']], "h")
 
 # read in AVERAGE results and use the TP column to create a TP1_ID column and an identical TP2_ID column: 
 # since each TP set is both a TP1 and a TP2, depending on which two timepoints we are comparing
-avgs <- readRDS("results/AVGS-monthly-intervals.Rds")
+avgs <- list.files("results/", full.names = TRUE) %>% grep("AVGS", ., value = TRUE) %>% readRDS()
 colnames(avgs)[grep("Avg", colnames(avgs))] %<>% paste0(hx$th, "_", .)
 avgs <- avgs %>% 
   mutate(tp1_id = paste0("TP1_", h_id, "_", padCol(!!as.symbol(hx$th), a1[['pc']], "c"))) %>% 
   mutate(first_tp2_flag = tp1_id %>% gsub("TP1", "TP2", .))
 
 # read in ECC results and repeat the process
-eccs <- readRDS("results/ECC-monthly-intervals.Rds") %>% 
+eccs <- list.files("results/", full.names = TRUE) %>% grep("ECC", ., value = TRUE) %>% readRDS() %>% 
   mutate(tp1_id = paste0("TP1_", h_id, "_", padCol(!!as.symbol(hx$th), a1[['pc']], "c"))) %>% 
   mutate(first_tp2_flag = tp1_id %>% gsub("TP1", "TP2", .))
 
@@ -188,50 +188,41 @@ for (i in 1:(length(ecccols)/2)) {
   step4[a] <- z
 }
 
-step5 <- step4
-step6 <- step5
+dist_avgs <- grep("Avg", colnames(step4), value = TRUE) %>% grep("Dist", ., value = TRUE) %>% sort()
 
-dist_avgs <- grep("Avg", colnames(step6), value = TRUE) %>% grep("Dist", ., value = TRUE) %>% sort()
+step5 <- step4 %>% add_column(tp1_cl = NA, tp2_cl = NA) %>% as.data.table(); rm(step4)
+cl_indices <- grep("Absent", step5$tp1_id, invert = TRUE)
 
-step7 <- step6 %>% add_column(tp1_cl = NA, tp2_cl = NA) %>% as.data.table(); rm(step6)
-cl_indices <- grep("Absent", step7$tp1_id, invert = TRUE)
-
-step7$tp1_cl[cl_indices] <- lapply(step7$tp1_id[cl_indices], function(p) {
+step5$tp1_cl[cl_indices] <- lapply(step5$tp1_id[cl_indices], function(p) {
   strsplit(p, split = "_c") %>% unlist() %>% extract2(., 2) %>% as.double()
 }) %>% unlist()
 
-step7$tp2_cl <- lapply(step7$first_tp2_flag, function(p) {
+step5$tp2_cl <- lapply(step5$first_tp2_flag, function(p) {
   strsplit(p, split = "_c") %>% unlist() %>% extract2(., 2) %>% as.double()
 }) %>% unlist()
 
-timeN <- readRDS("inputs/processed/allTP2.Rds")
-# actual_col <- which(colnames(timeN$new_cols) == params$th[2])
+timeN <- readRDS(arg$tpn)
 matched_clusters <- timeN$lookup_table[new_h == params$th[2]] %>% select(old_cl, new_cl) %>%
   unique() %>% set_colnames(c("ActCol", "IntCol"))
 
-step8 <- step7 %>% 
+step6 <- step5 %>% 
   left_join(., matched_clusters, by = c("tp1_cl" = "IntCol")) %>% rename(actual_tp1_cl = ActCol) %>% 
   left_join(., matched_clusters, by = c("tp2_cl" = "IntCol")) %>% rename(actual_tp2_cl = ActCol)
 
-step9 <- step8 %>% 
+step7 <- step6 %>% 
   select(interval, actual_tp1_cl, tp1_cl, TP1_Size, all_of(tp1eccs), 
          actual_tp2_cl, tp2_cl, TP2_Size, all_of(tp2eccs),
-         grep("delta_ECC", colnames(step8), value = TRUE),
+         grep("delta_ECC", colnames(step6), value = TRUE),
          TP1_Avg.Date, TP1_Temp.Avg.Dist, TP1_Avg.Latitude, TP1_Avg.Longitude, TP1_Geo.Avg.Dist, 
          TP2_Avg.Date, TP2_Temp.Avg.Dist, TP2_Avg.Latitude, TP2_Avg.Longitude, TP2_Geo.Avg.Dist,
          first_tp1_flag, last_tp1_flag, first_tp2_flag, last_tp2_flag, tp1_cl_size,
-         tp2_cl_size, actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth, type
-         )
-# step6 <- step5 %>% 
-#   select(Strain, Country, Province, City, Latitude, Longitude, Day, Month, Year, found_in_TP1, found_in_TP2)
-#          # + all cluster-specific columns
+         tp2_cl_size, actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth, type)
 
-step10 <- step9 %>% 
+step8 <- step7 %>% 
   rename("Actual TP1 cluster" = actual_tp1_cl, 
          "Actual TP2 cluster" = actual_tp2_cl, 
          "TP1 cluster" = tp1_cl, "TP1 cluster size (1)" = TP1_Size, 
          "TP2 cluster" = tp2_cl, "TP2 cluster size (1)" = TP2_Size, 
-         # "TP1" = found_in_TP1, "TP2" = found_in_TP2, 
          "Average TP1 date" = TP1_Avg.Date, "Average TP1 latitude"	= TP1_Avg.Latitude, 
          "Average TP1 longitude" = TP1_Avg.Longitude, 
          "Average TP2 date" = TP2_Avg.Date, "Average TP2 latitude" = TP2_Avg.Latitude, 
@@ -248,9 +239,12 @@ step10 <- step9 %>%
          "Novel growth = (TP2 size) / (TP2 size - number of novels)" = new_growth, 
          "Type" = type) %>% 
   arrange(`TP2 cluster`, `TP1 cluster`) %>% 
-  unique()#, Strain)
+  unique()
 
-writeData(fp = "results/Merged_cluster_results.tsv", df = step10)
+writeData(fp = "results/Wide_merged_cluster_results.tsv", df = step8)
+
+suppressWarnings(melt.data.table(step8, id.vars = c("interval", "Actual TP1 cluster"))) %>% 
+  writeData(fp = "results/Long_merged_cluster_results.tsv", df = .)
 
 metadata <- suppressMessages(read_tsv(arg$metadata)) %>% processedStrains()
 cnames <- strsplit(params$cnames[2], split = ",") %>% unlist()
@@ -259,12 +253,12 @@ strains <- metadata$strain_data %>% select(Strain, all_of(cnames), Latitude, Lon
 ivls <- names(clustersets)
 for (i in 2:length(ivls)) {
   ivl_i <- paste0(ivls[i-1], "-", ivls[i])
-  step11 <- clustersets[[i]]$ivl %>% select(isolate, heightx) %>% rename(Strain = isolate) %>% 
+  step9 <- clustersets[[i]]$ivl %>% select(isolate, heightx) %>% rename(Strain = isolate) %>% 
     add_column(interval = ivl_i) %>% 
-    inner_join(step10, ., by = c("TP2 cluster" = "heightx", "interval")) %>% 
+    inner_join(step8, ., by = c("TP2 cluster" = "heightx", "interval")) %>% 
     inner_join(., strains, by = "Strain") %>% 
-    select(interval, colnames(strains), colnames(step10))
-  writeData(fp = paste0("results/Merged_strain_results/", ivl_i, ".Rds"), df = step11)
+    select(interval, colnames(strains), colnames(step8))
+  writeData(fp = paste0("results/Merged_strain_results/", ivl_i, ".tsv"), df = step9)
 }
 
 cat(paste0("See 'results' folder for cluster-specific and strain-specific files.\n"))

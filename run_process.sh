@@ -28,6 +28,7 @@ if [ -f inputs/processed/tp2_clusters.txt -a -f inputs/processed/clustersets.Rds
 	tp2_data=inputs/processed/tp2_clusters.txt
 	interval_file=inputs/processed/clustersets.Rds
 	STRAINS=inputs/processed/strain_info.txt
+	alldata=inputs/processed/allTP2.Rds
 	pdata=1
 else
 	echo "Data not processed properly"
@@ -36,7 +37,7 @@ fi
 
 printf "\n\n\nPart 2/6:"
 if [ $pdata == 1 ]; then
-	Rscript scripts/2_cgm_collection.R -f $interval_file -d $FORM
+	Rscript scripts/2_cgm_collection.R -f $interval_file -d $FORM -n $alldata
 else
 	echo "Not all required files found for part 2."
 fi
@@ -68,7 +69,7 @@ fi
 
 printf "\n\n\nPart 6/6:"
 # if [ -f "results/ECCs.tsv" -a -f "results/CGM_strain_results.tsv" -a -f $STRAINS ]; then
-  Rscript scripts/6_combine_results.R -m $STRAINS -f $interval_file -d $FORM
+  Rscript scripts/6_combine_results.R -m $STRAINS -b $alldata -f $interval_file -d $FORM
 # else
 #   echo "Not all required files found for part 5."
 # fi

@@ -53,12 +53,14 @@ tpn <- readRDS(arg$tpn)$new_cols
 for (i in 1:(length(interval_list)-1)) {
   
   n1 <- as.character(interval_list[i])
-  tpx1a <- clustersets[[n1]]$sofar %>% select(-ivl) %>% set_colnames(c("isolate", heights))
-  tpx1 <- tpn %>% rename("isolate" = "Strain") %>% left_join(tpx1a, .)
+  tpx1a <- clustersets[[n1]]$sofar %>% select(-ivl,-Date) %>% set_colnames(c("isolate", heights))
+  tpx1 <- tpn %>% rename("isolate" = "Strain") %>% 
+    left_join(tpx1a, ., by = intersect(colnames(tpx1a), colnames(.)))
   
   n2 <- as.character(interval_list[i+1])
-  tpx2a <- clustersets[[n2]]$sofar %>% select(-ivl) %>% set_colnames(c("isolate", heights))
-  tpx2 <- tpn %>% rename("isolate" = "Strain") %>% left_join(tpx2a, .)
+  tpx2a <- clustersets[[n2]]$sofar %>% select(-ivl,-Date) %>% set_colnames(c("isolate", heights))
+  tpx2 <- tpn %>% rename("isolate" = "Strain") %>% 
+    left_join(tpx2a, ., by = intersect(colnames(tpx2a), colnames(.)))
   
   # if (i > 1) {
   #   fullset <- clustersets[[n1]]$sofar
@@ -157,10 +159,6 @@ if (params$int_type[2] == "multiset") {
 
 cgmfiles <- list.files(save_to, full.names = TRUE)
 lapply(cgmfiles, function(fi) {readRDS(fi)}) %>% bind_rows() %>% saveRDS(., res_file)
-# if (file.exists(res_file)) {
-#   for (fi in cgmfiles) {file.remove(fi)}
-#   unlink(save_to, recursive = TRUE)
-# }
 
 # WRAPPING THINGS UP -------------------------------------------------------------------------------------------
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())

@@ -31,7 +31,6 @@ option_list <- list(
 
 arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
-
 # dm <- dms[["temp"]]; cnames <- "Date"
 groupXAvgDists <- function(dm, groupX, assignments, strain_data, cnames, metadata) {
   clustersX <- pull(groupX, 1)
@@ -52,10 +51,7 @@ groupXAvgDists <- function(dm, groupX, assignments, strain_data, cnames, metadat
       dmxrest <- sweep(dmxcols, MARGIN = 1, dr_counts$n_drs, `*`)
       dmxrest <- dmxrest[upper.tri(dmxrest)]
       
-      # num_pairs <- combn(1:nrow(metadata[Strain %in% cx$Strain]), 2) %>% ncol()
-      # metadata[Strain %in% cx$Strain] %>% summarise(avg = as.numeric(mean(diff(Date))))
       allstrains <- matrix(nrow = sum(dr_counts$n_drs), ncol = sum(dr_counts$n_drs))
-      
       avg_dist <- sum(dmxrest)/length(allstrains[upper.tri(allstrains)])
       return(avg_dist)
     }
@@ -64,43 +60,6 @@ groupXAvgDists <- function(dm, groupX, assignments, strain_data, cnames, metadat
   assert("No NA avg dists", nrow(avgdists[is.na(AvgDist)]) == 0)
   return(avgdists)
 }
-
-
-
-# dm <- dms[["temp"]]; cnames <- "Date"
-# groupXAvgDists <- function(dm, groupX, assignments, strain_data, cnames) {
-#   clustersX <- pull(groupX, 1)
-#   
-#   avgdists <- lapply(clustersX, function(x) {
-#     cx <- assignments[Hx == x]
-#     
-#     num_unique_cases <- strain_data[Strain %in% cx$Strain] %>% 
-#       select(all_of(cnames)) %>% unique() %>% nrow()
-#     if (num_unique_cases == 1) {
-#       return(0)
-#     }else {
-#       dr_counts <- cx %>% group_by(dr) %>% summarise(n_drs = n()) %>% as.data.table()
-#       dmx <- dm[rownames(dm) %in% dr_counts$dr, colnames(dm) %in% dr_counts$dr,drop=FALSE]
-#       # multiplying columns and rows by repetition, but not necessary when looking at 
-#       # averages (duplicates will cause unnecessary issues)
-#       dr_counts <- dr_counts[match(rownames(dmx), dr_counts$dr)]
-#       dmxcols <- sweep(dmx, MARGIN = 2, dr_counts$n_drs, `*`)
-#       dmxrest <- sweep(dmxcols, MARGIN = 1, dr_counts$n_drs, `*`)
-#       dmxrest <- dmxrest[upper.tri(dmxrest)]
-#       # counting each pair in one direction only:
-#       # avg_dist <- sum(dmxrest[upper.tri(dmxrest)]) / length(dmxrest[upper.tri(dmxrest)])
-#       
-#       # metadata[Strain %in% cx$Strain] %>% summarise(avg = as.numeric(mean(diff(Date))))
-#       avg_dist <- sum(dmxrest[upper.tri(dmxrest)]) / length(unique(cx$dr))
-#       
-#       # avg_dist <- sum(dmx[upper.tri(dmx)]) / length(unique(cx$dr))
-#       return(avg_dist)
-#     }
-#     # if (is.na(avg_dist)) {print(x)}
-#   }) %>% unlist() %>% data.table(Hx = clustersX, AvgDist = .)
-#   assert("No NA avg dists", nrow(avgdists[is.na(AvgDist)]) == 0)
-#   return(avgdists)
-# }
 
 outputDetails("Processing input data, formatting ...", newcat = TRUE)
 
@@ -241,11 +200,3 @@ stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 timeTaken(pt = "average distances collection", stopwatch) %>% outputDetails(., newcat = TRUE)
 cat(paste0("||", paste0(rep("-", 27), collapse = ""), " End of average distances collection ",
            paste0(rep("-", 27), collapse = ""), "||\n"))
-
-# geo_avg_dists <- lapply(groups, function(x_i) {
-#   dms <- paste0("group", x_i, ".Rds") %>%
-#     file.path("intermediate_data/TPN/dists", .) %>% readRDS()
-#   groupX <- parts$results[[x_i]] %>% as.data.table() %>% set_colnames(c("Hx", "n"))
-#   groupX <- groupX[Hx %in% assignments[Strain %in% td$Strain]$Hx]
-#   groupXAvgDists(dms[["geo"]], groupX, assignments, m$strain_data, c("Longitude", "Latitude"))
-# }) %>% bind_rows() %>% inner_join(., sizes, by = "Hx") %>% rename(Geo.Avg.Dist = AvgDist)
