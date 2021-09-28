@@ -51,7 +51,8 @@ padCol <- function(cvals, padval, padchr) {
 }
 
 # read in CGM results, and use "first_tp2_flag" get the padding values for height and cluster
-cgms <- list.files("results/", full.names = TRUE) %>% grep("CGM", ., value = TRUE) %>% readRDS()
+results_files <- list.files("results/", full.names = TRUE) %>% grep(params$int_type[2], ., value = TRUE)
+cgms <- grep("CGM", results_files, value = TRUE) %>% readRDS()
 
 a1 <- unlist(strsplit(cgms$first_tp2_flag[1], split = "_"))[2:3] %>% 
   nchar() %>% `-`(1) %>% set_names(c("ph", "pc"))
@@ -59,14 +60,14 @@ h_id <- padCol(as.double(hx$h), a1[['ph']], "h")
 
 # read in AVERAGE results and use the TP column to create a TP1_ID column and an identical TP2_ID column: 
 # since each TP set is both a TP1 and a TP2, depending on which two timepoints we are comparing
-avgs <- list.files("results/", full.names = TRUE) %>% grep("AVGS", ., value = TRUE) %>% readRDS()
+avgs <- grep("AVGS", results_files, value = TRUE) %>% readRDS()
 colnames(avgs)[grep("Avg", colnames(avgs))] %<>% paste0(hx$th, "_", .)
 avgs <- avgs %>% 
   mutate(tp1_id = paste0("TP1_", h_id, "_", padCol(!!as.symbol(hx$th), a1[['pc']], "c"))) %>% 
   mutate(first_tp2_flag = tp1_id %>% gsub("TP1", "TP2", .))
 
 # read in ECC results and repeat the process
-eccs <- list.files("results/", full.names = TRUE) %>% grep("ECC", ., value = TRUE) %>% readRDS() %>% 
+eccs <- grep("ECC", results_files, value = TRUE) %>% readRDS() %>% 
   mutate(tp1_id = paste0("TP1_", h_id, "_", padCol(!!as.symbol(hx$th), a1[['pc']], "c"))) %>% 
   mutate(first_tp2_flag = tp1_id %>% gsub("TP1", "TP2", .))
 

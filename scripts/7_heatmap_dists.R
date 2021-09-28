@@ -9,31 +9,33 @@ y <- suppressWarnings(
   suppressPackageStartupMessages(
     lapply(libs, require, character.only = TRUE)))
 
+# Adjust input parameters here: ------------------------------------------------------------------------
+# THIS IS THE SECTION THAT USERS CAN/SHOULD CHANGE
+option_list <- list(
+  make_option(c("-m", "--metadata"), metavar = "file", 
+              default = "inputs/processed/strain_info.txt", help = "Metadata file"),
+  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"), 
+  make_option(c("-t", "--tau"), metavar = "numeric", help = "temporal coefficient", default = 0.0), 
+  make_option(c("-g", "--gamma"), metavar = "numeric", help = "geographic coefficient", default = 1.0), 
+  make_option(c("-d", "--details"), metavar = "file", 
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"), 
+  make_option(c("-s", "--maxclsize"), metavar = "numeric", 
+              help = "Max cluster size to make heatmaps for", default = 1000))
+
+# Reading in required functions, checking for pre-processed results (e.g. distances) -------------------
 source("scripts/ECC/classes_ecc.R")
 source("scripts/ECC/dist_functions.R")
 source("scripts/ECC/ecc_functions.R")
 source("report_specific/epi-helper-no-source.R")
 
-dir.create("report_specific/heatmaps/", showWarnings = FALSE)
+dir.create("report_specific/heatmaps/", showWarnings = FALSE, recursive = TRUE)
 
 fnames <- list.files("intermediate_data/TPN/dists/", full.names = TRUE)
+assert("Distances were collected, script '3_dist_matrices.R' was run correctly", length(fnames) >= 1)
 distfiles <- lapply(fnames, function(f) readRDS(f))
-extremes <- readRDS("intermediate_data/TPN/extreme_dists.Rds")
 
-option_list <- list(
-  make_option(c("-m", "--metadata"), metavar = "file", 
-              default = "inputs/processed/strain_info.txt", help = "Metadata file"),
-  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"), 
-  make_option(c("-c", "--CGMs"), metavar = "file", 
-              default = "results/CGM-monthly-intervals.Rds", help = "CGM result file"),
-  make_option(c("-t", "--tau"), metavar = "numeric", help = "temporal coefficient", default = 0.0), 
-  make_option(c("-g", "--gamma"), metavar = "numeric", help = "geographic coefficient", default = 1.0), 
-  make_option(c("-l", "--clusters"), metavar = "numeric", 
-              help = "Number of clusters to get heatmaps for", default = 5),
-  make_option(c("-d", "--details"), metavar = "file", 
-              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"), 
-  make_option(c("-s", "--maxclsize"), metavar = "numeric", 
-              help = "Max cluster size to make heatmaps for", default = 1000))
+assert("Max and min of distances collected", file.exists("intermediate_data/TPN/extreme_dists.Rds"))
+extremes <- readRDS("intermediate_data/TPN/extreme_dists.Rds")
 
 arg <- parse_args(OptionParser(option_list=option_list))
 
@@ -41,9 +43,12 @@ params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
   set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
               "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl"))
 
+# Reading in the threshold column (to get appropriate clusters)
 hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
 
-cgms <- readRDS(arg$CGMs)
+# Reading the CGM results (weekly/monthly/multiset)
+results_files <- list.files("results/", full.names = TRUE) %>% grep(params$int_type[2], ., value = TRUE)
+cgms <- grep("CGM", results_files, value = TRUE) %>% readRDS()
 
 strain_data <- suppressMessages(read_tsv(arg$metadata)) %>% 
   mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")),
@@ -58,7 +63,7 @@ size_details <- cgms[interval == last_ivl] %>%
 
 top_clusters <- size_details %>% arrange(-TP2_cluster_size) %>% 
   filter(TP2_cluster_size < arg$maxclsize) %>%
-  slice(1:arg$clusters) %>% pull(first_tp2_flag)
+  slice(1:as.integer(params$numcl[2])) %>% pull(first_tp2_flag)
 
 clusters <- substr(top_clusters, 11, 13) %>% as.integer()
 
