@@ -56,9 +56,9 @@ if (num_cl > 0) {
   results_files <- list.files("results/", full.names = TRUE) %>% grep(params$int_type[2], ., value = TRUE)
   cgms <- grep("CGM", results_files, value = TRUE) %>% readRDS()
   
-  strain_data <- suppressMessages(read_tsv(arg$metadata)) %>% 
-    mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")),
-           Location = paste(Country, Province, City, sep = "_"))
+  # strain_data <- suppressMessages(read_tsv(arg$metadata)) %>% 
+  #   mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")),
+  #          Location = paste(Country, Province, City, sep = "_"))
   
   # NON-REDUNDANT METHOD
   last_ivl <- unique(cgms$interval) %>% last()
@@ -71,7 +71,7 @@ if (num_cl > 0) {
     filter(TP2_cluster_size < arg$maxclsize) %>%
     slice(1:num_cl) %>% pull(first_tp2_flag)
   
-  clusters <- substr(top_clusters, 11, 13) %>% as.integer()
+  clusters <- strsplit(top_clusters, "_") %>% sapply(., `[[`, 3) %>% gsub("c", "", .) %>% as.integer()
   
   tpn <- tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
   typing_data <- list(tp2$height_list)
@@ -96,12 +96,12 @@ if (num_cl > 0) {
       tdm <- distfiles[[i]]$temp
       ctdm <- tdm[rownames(tdm) %in% drs, colnames(tdm) %in% drs] %>% 
         transformData2(., "temp", extremes$mint, extremes$maxt) %>% 
-        formatData(., c("dr1","dr2","Temp.Dist"))
+        formatData(., c("dr1","dr2","Temp.Dist"))  
       
-      gdm <- distfiles[[i]]$geo
+      gdm <- distfiles[[i]]$geo  
       cgdm <- gdm[rownames(gdm) %in% drs, colnames(gdm) %in% drs] %>% 
         transformData2(., "geo", extremes$ming, extremes$maxg) %>%
-        formatData(., c("dr1","dr2","Geog.Dist"))
+        formatData(., c("dr1","dr2","Geog.Dist"))  
       
       merge.data.table(ctdm, cgdm)
     }) %>% bind_rows()
@@ -109,13 +109,13 @@ if (num_cl > 0) {
     x1 <- assignments[tp_cl %in% clx] %>% pull(Strain)
     x2 <- m$dr_matches %>% filter(Strain %in% x1) %>% as.data.table()
     x3 <- inner_join(x2, rawdists, by = c("dr" = "dr1")) %>% select(-dr) %>% rename(Strain.1 = Strain)
-    
+      
     dists <- inner_join(x3, x2, by = c("dr2" = "dr")) %>% rename(Strain.2 = Strain) %>% 
       select(Strain.1, Strain.2, Temp.Dist, Geog.Dist) %>% 
       mutate(Total.Dist = sqrt( (((Temp.Dist^2)*arg$tau) + ((Geog.Dist^2)*arg$gamma)) ),
              Epi.Sym = 1 - Total.Dist)
-    
-    return(dists)
+      
+    return(dists)  
   })
   
   saveRDS(epi.tables, "report_specific/heatmaps/epitables_for_heatmaps.Rds")

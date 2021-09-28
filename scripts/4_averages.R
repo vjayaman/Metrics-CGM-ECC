@@ -186,7 +186,7 @@ all_avg_dists <- lapply(names(typing_data), function(tdx) {
 
 if (params$int_type[2] == "multiset") {
   res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
-    paste0("results/AVGS-", ., "-midpoints.Rds")  
+    paste0("results/AVGS-", params$int_type[2], "-", ., ".Rds")
 }else {
   res_file <- paste0("results/AVGS-", params$int_type[2], "-intervals.Rds")
 }

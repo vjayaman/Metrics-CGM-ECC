@@ -53,12 +53,12 @@ tpn <- readRDS(arg$tpn)$new_cols
 for (i in 1:(length(interval_list)-1)) {
   
   n1 <- as.character(interval_list[i])
-  tpx1a <- clustersets[[n1]]$sofar %>% select(-ivl,-Date) %>% set_colnames(c("isolate", heights))
+  tpx1a <- clustersets[[n1]]$sofar %>% select(isolate, heightx) %>% set_colnames(c("isolate", heights))
   tpx1 <- tpn %>% rename("isolate" = "Strain") %>% 
     left_join(tpx1a, ., by = intersect(colnames(tpx1a), colnames(.)))
   
   n2 <- as.character(interval_list[i+1])
-  tpx2a <- clustersets[[n2]]$sofar %>% select(-ivl,-Date) %>% set_colnames(c("isolate", heights))
+  tpx2a <- clustersets[[n2]]$sofar %>% select(isolate, heightx) %>% set_colnames(c("isolate", heights))
   tpx2 <- tpn %>% rename("isolate" = "Strain") %>% 
     left_join(tpx2a, ., by = intersect(colnames(tpx2a), colnames(.)))
   
@@ -152,7 +152,7 @@ for (i in 1:(length(interval_list)-1)) {
 
 if (params$int_type[2] == "multiset") {
   res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
-    paste0("results/CGM-", ., "-midpoints.Rds")  
+    paste0("results/CGM-", params$int_type[2], "-", ., ".Rds")
 }else {
   res_file <- paste0("results/CGM-", params$int_type[2], "-intervals.Rds")
 }
