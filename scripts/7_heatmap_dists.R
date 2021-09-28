@@ -56,10 +56,6 @@ if (num_cl > 0) {
   results_files <- list.files("results/", full.names = TRUE) %>% grep(params$int_type[2], ., value = TRUE)
   cgms <- grep("CGM", results_files, value = TRUE) %>% readRDS()
   
-  # strain_data <- suppressMessages(read_tsv(arg$metadata)) %>% 
-  #   mutate(Date     = as.Date(paste(Year, Month, Day, sep = "-")),
-  #          Location = paste(Country, Province, City, sep = "_"))
-  
   # NON-REDUNDANT METHOD
   last_ivl <- unique(cgms$interval) %>% last()
   
