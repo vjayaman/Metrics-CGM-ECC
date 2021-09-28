@@ -11,4 +11,4 @@ Column names: Country,Province,City
 Interval type: monthly
 Dividers: none
 Source-temporal-geographic coefficents: 0-1-0,0-0-1
-Generate heatmaps for top __ largest clusters: 6
+Generate heatmaps for top __ largest clusters: 4
