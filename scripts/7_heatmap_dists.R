@@ -60,8 +60,9 @@ if (num_cl > 0) {
   last_ivl <- unique(cgms$interval) %>% last()
   
   size_details <- cgms[interval == last_ivl] %>% 
-    arrange(-tp2_cl_size) %>% select(first_tp2_flag, tp2_cl_size) %>%
-    rename(TP2_cluster_size = tp2_cl_size) %>% unique()
+    arrange(-tp2_cl_size) %>% select(first_tp2_flag, tp2_cl_size) %>% unique()
+  colnames(size_details)[which(colnames(size_details) == "tp2_cl_size")] <- "TP2_cluster_size"
+  # rename(TP2_cluster_size = tp2_cl_size) %>% unique()
   
   top_clusters <- size_details %>% arrange(-TP2_cluster_size) %>% 
     filter(TP2_cluster_size < arg$maxclsize) %>%
@@ -104,10 +105,14 @@ if (num_cl > 0) {
     
     x1 <- assignments[tp_cl %in% clx] %>% pull(Strain)
     x2 <- m$dr_matches %>% filter(Strain %in% x1) %>% as.data.table()
-    x3 <- inner_join(x2, rawdists, by = c("dr" = "dr1")) %>% select(-dr) %>% rename(Strain.1 = Strain)
+    x3 <- inner_join(x2, rawdists, by = c("dr" = "dr1")) %>% select(-dr)
+    colnames(x3)[which(colnames(x3)=="Strain")] <- "Strain.1"
+    # rename(Strain.1 = Strain)
       
-    dists <- inner_join(x3, x2, by = c("dr2" = "dr")) %>% rename(Strain.2 = Strain) %>% 
-      select(Strain.1, Strain.2, Temp.Dist, Geog.Dist) %>% 
+    dists <- inner_join(x3, x2, by = c("dr2" = "dr"))
+    colnames(dists)[which(colnames(dists)=="Strain")] <- "Strain.2"
+    # rename(Strain.2 = Strain) %>% 
+    dists <- dists %>% select(Strain.1, Strain.2, Temp.Dist, Geog.Dist) %>% 
       mutate(Total.Dist = sqrt( (((Temp.Dist^2)*arg$tau) + ((Geog.Dist^2)*arg$gamma)) ),
              Epi.Sym = 1 - Total.Dist)
       
