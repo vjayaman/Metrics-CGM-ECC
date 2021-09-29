@@ -18,8 +18,8 @@ option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", 
               default = "inputs/processed/strain_info.txt", help = "Metadata file"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", help = "TP2 cluster assignments"), 
-  make_option(c("-t", "--tau"), metavar = "numeric", help = "temporal coefficient", default = 0.0), 
-  make_option(c("-g", "--gamma"), metavar = "numeric", help = "geographic coefficient", default = 1.0), 
+  # make_option(c("-t", "--tau"), metavar = "numeric", help = "temporal coefficient", default = 0.0), 
+  # make_option(c("-g", "--gamma"), metavar = "numeric", help = "geographic coefficient", default = 1.0), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"), 
   make_option(c("-s", "--maxclsize"), metavar = "numeric", 
@@ -62,13 +62,13 @@ if (num_cl > 0) {
   size_details <- cgms[interval == last_ivl] %>% 
     arrange(-tp2_cl_size) %>% select(first_tp2_flag, tp2_cl_size) %>% unique()
   colnames(size_details)[which(colnames(size_details) == "tp2_cl_size")] <- "TP2_cluster_size"
-  # rename(TP2_cluster_size = tp2_cl_size) %>% unique()
   
   top_clusters <- size_details %>% arrange(-TP2_cluster_size) %>% 
     filter(TP2_cluster_size < arg$maxclsize) %>%
     slice(1:num_cl) %>% pull(first_tp2_flag)
   
-  clusters <- strsplit(top_clusters, "_") %>% sapply(., `[[`, 3) %>% gsub("c", "", .) %>% as.integer()
+  clusters <- strsplit(top_clusters, "_") %>% sapply(., `[[`, 3) %>% gsub("c", "", .) %>% 
+    as.integer() %>% tibble(chr = top_clusters, int = .)
   
   tpn <- tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
   typing_data <- list(tp2$height_list)
@@ -77,28 +77,32 @@ if (num_cl > 0) {
   
   assignments <- typing_data[[1]] %>% as.data.frame() %>% set_colnames("tp_cl") %>% 
     rownames_to_column("Strain") %>% as.data.table() %>% 
-    filter(tp_cl %in% clusters)
+    filter(tp_cl %in% clusters$int)
   
-  cl_drs <- lapply(1:length(clusters), function(i) {
-    x1 <- assignments[tp_cl %in% clusters[i]] %>% pull(Strain)
+  cl_drs <- lapply(1:nrow(clusters), function(i) {
+    x1 <- assignments[tp_cl %in% clusters$int[i]] %>% pull(Strain)
     m$dr_matches %>% filter(Strain %in% x1) %>% pull(dr) %>% unique()
-  }) %>% set_names(clusters)
+  }) %>% set_names(clusters$int)
   
-  epi.tables <- lapply(1:length(clusters), function(j) {
-    clx <- clusters[j]
+  epi.tables <- lapply(1:nrow(clusters), function(j) {
+    clx <- clusters$int[j]
     
     rawdists <- lapply(1:length(distfiles), function(i) {
       drs <- cl_drs[[as.character(clx)]]
       
       tdm <- distfiles[[i]]$temp
       ctdm <- tdm[rownames(tdm) %in% drs, colnames(tdm) %in% drs] %>% 
-        transformData2(., "temp", extremes$mint, extremes$maxt) %>% 
+        # FEEL FREE to comment out this part if you don't want transformed data
+        # This is done using a function from scripts/ECC/ecc_functions.R
+        transformData2(., "temp", extremes$mint, extremes$maxt) %>%
         formatData(., c("dr1","dr2","Temp.Dist"))  
       
       gdm <- distfiles[[i]]$geo  
       cgdm <- gdm[rownames(gdm) %in% drs, colnames(gdm) %in% drs] %>% 
+        # FEEL FREE to comment out this part if you don't want transformed data
+        # This is done using a function from scripts/ECC/ecc_functions.R
         transformData2(., "geo", extremes$ming, extremes$maxg) %>%
-        formatData(., c("dr1","dr2","Geog.Dist"))  
+        formatData(., c("dr1","dr2","Geog.Dist"))
       
       merge.data.table(ctdm, cgdm)
     }) %>% bind_rows()
@@ -107,31 +111,44 @@ if (num_cl > 0) {
     x2 <- m$dr_matches %>% filter(Strain %in% x1) %>% as.data.table()
     x3 <- inner_join(x2, rawdists, by = c("dr" = "dr1")) %>% select(-dr)
     colnames(x3)[which(colnames(x3)=="Strain")] <- "Strain.1"
-    # rename(Strain.1 = Strain)
       
     dists <- inner_join(x3, x2, by = c("dr2" = "dr"))
     colnames(dists)[which(colnames(dists)=="Strain")] <- "Strain.2"
-    # rename(Strain.2 = Strain) %>% 
-    dists <- dists %>% select(Strain.1, Strain.2, Temp.Dist, Geog.Dist) %>% 
-      mutate(Total.Dist = sqrt( (((Temp.Dist^2)*arg$tau) + ((Geog.Dist^2)*arg$gamma)) ),
-             Epi.Sym = 1 - Total.Dist)
-      
-    return(dists)  
-  })
+    
+    dists %>% select(Strain.1, Strain.2, Temp.Dist, Geog.Dist)
+  }) %>% set_names(clusters$chr)
   
   saveRDS(epi.tables, "report_specific/heatmaps/epitables_for_heatmaps.Rds")
   
-  epi.matrix <- lapply(1:length(clusters), function(j) EpiMatrix(epi.tables[[j]]))
+  # distEpiMatrix() and EpiHeatmap_pdf() can be found in report_specific/epi-helper-no-source.R
   
-  for (i in 1:length(top_clusters)) {
-    cl_strains <- size_details %>% filter(first_tp2_flag %in% top_clusters[i])
+  temp_matrices <- lapply(clusters$chr, function(cl_j) {
+    epi.matrix <- epi.tables[[cl_j]] %>% select(Strain.1, Strain.2, Temp.Dist)
+    distEpiMatrix(epi.matrix, "Temp.Dist")
+  }) %>% set_names(clusters$chr)
+  
+  geo_matrices <- lapply(clusters$chr, function(cl_j) {
+    epi.matrix <- epi.tables[[cl_j]] %>% select(Strain.1, Strain.2, Geog.Dist)
+    distEpiMatrix(epi.matrix, "Geog.Dist")
+  }) %>% set_names(clusters$chr)
+  
+  for (i in 1:nrow(clusters)) {
+    outputDetails(paste0("Saving temporal and geographical distances for cluster ", 
+                         clusters$chr[i], "..."), newcat = TRUE)
+    cl_strains <- size_details %>% filter(first_tp2_flag %in% clusters$chr[i])
     if (cl_strains$TP2_cluster_size > 1) {
-      cl_epi <- epi.matrix[[i]]
-      cl_id <- cgms %>% filter(first_tp2_flag == top_clusters[i]) %>% slice(1) %>% 
+      cl_id <- cgms %>% filter(first_tp2_flag == clusters$chr[i]) %>% slice(1) %>% 
         pull(first_tp2_flag)
       
-      png(paste0("report_specific/heatmaps/", cl_id, ".png"))
-      EpiHeatmap_pdf(cl_epi)
+      cl_epi_temp <- temp_matrices[[clusters$chr[i]]]
+      cl_epi_geo <- geo_matrices[[clusters$chr[i]]]
+      
+      png(paste0("report_specific/heatmaps/", cl_id, "-temp.png"))
+      EpiHeatmap_pdf(cl_epi_temp)
+      dev.off()
+      
+      png(paste0("report_specific/heatmaps/", cl_id, "-geo.png"))
+      EpiHeatmap_pdf(cl_epi_geo)
       dev.off()
     }else {
       outputDetails(paste0("TP2 cluster ", top_clusters[i], " has only one strain, no heatmap generated"))

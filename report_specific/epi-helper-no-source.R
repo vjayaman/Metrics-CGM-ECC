@@ -268,4 +268,9 @@ EpiTableNoSource <- function(datafile, temp_coeff, geog_coeff){
   str.matrix
 }  
 
-
+distEpiMatrix <- function(epi.matrix, dist_type) {
+  epi.cast <- dcast.data.table(epi.matrix, formula = Strain.1 ~ Strain.2, value.var = dist_type)
+  epi.cast <- as.matrix(epi.cast[,2:ncol(epi.cast)]) 
+  rownames(epi.cast) <- colnames(epi.cast)
+  return(epi.cast)
+}
