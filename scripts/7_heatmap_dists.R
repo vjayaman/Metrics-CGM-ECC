@@ -115,7 +115,7 @@ if (num_cl > 0) {
     dists <- inner_join(x3, x2, by = c("dr2" = "dr"))
     colnames(dists)[which(colnames(dists)=="Strain")] <- "Strain.2"
     
-    dists %>% select(Strain.1, Strain.2, Temp.Dist, Geog.Dist)
+    dists %>% select(Strain.1, Strain.2, Temp.Dist, Geog.Dist) %>% unique()
   }) %>% set_names(clusters$chr)
   
   saveRDS(epi.tables, "report_specific/heatmaps/epitables_for_heatmaps.Rds")
