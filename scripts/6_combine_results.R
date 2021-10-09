@@ -54,6 +54,24 @@ padCol <- function(cvals, padval, padchr) {
 results_files <- list.files("results/", full.names = TRUE) %>% grep(params$int_type[2], ., value = TRUE)
 cgms <- grep("CGM", results_files, value = TRUE) %>% readRDS()
 
+first_ivl <- cgms$interval %>% unique() %>% sort() %>% first()
+
+tmp <- cgms[interval == first_ivl] %>% 
+  select(interval, grep("tp1_", colnames(cgms), value = TRUE)) %>% 
+  filter(!is.na(tp1_id)) %>% 
+  set_colnames(c("interval", "tp2_id", "tp2_cl_size", "first_tp2_flag", "last_tp2_flag"))
+tmp2 <- tmp[grep("Absent", tmp$tp2_id, invert = TRUE),] %>% 
+  select(-tp2_id) %>% 
+  mutate(across(tp2_cl_size, as.double), 
+         interval = paste0("set0-", interval_list[1]), 
+         first_tp2_flag = gsub("TP1", "TP2", first_tp2_flag), 
+         last_tp2_flag = gsub("TP1", "TP2", last_tp2_flag))
+cgms <- cgms %>% add_row(tmp2, .before = 1)
+
+
+
+
+
 a1 <- unlist(strsplit(cgms$first_tp2_flag[1], split = "_"))[2:3] %>% 
   nchar() %>% `-`(1) %>% set_names(c("ph", "pc"))
 h_id <- padCol(as.double(hx$h), a1[['ph']], "h")
@@ -77,30 +95,43 @@ assert("AVG results have data for all intervals", identical(unique(avgs$TP), int
 step0 <- merge.data.table(eccs, avgs, by = intersect(colnames(eccs), colnames(avgs)))
 stepcols <- ncol(step0)
 
-step1 <- lapply(1:(length(interval_list)-1), function(i) {
-  ivl1 <- interval_list[i]
-  ivl2 <- interval_list[i+1]
+all_intervals <- c("set0", interval_list)
 
-  # selecting columns tp1_id, Size, ECC.0.1.0, ECC.0.0.1, Temp.Avg.Dist, Geo.Avg.Dist
-  partA <- step0[TP == ivl1] %>% select(4,3,6:all_of(stepcols)) %>% 
-    set_colnames(gsub(hx$th, "TP1", colnames(.)))
+step1 <- lapply(1:length(all_intervals), function(i) {
+  ivl1 <- all_intervals[i]
+  ivl2 <- all_intervals[i+1]
   
-  # selecting columns first_tp2_flag, Size, ECC.0.1.0, ECC.0.0.1, Temp.Avg.Dist, Geo.Avg.Dist
+  partC <- cgms[which(cgms$interval == paste0(c(ivl1, ivl2), collapse = "-"))]
+  
+  # selecting columns tp1_id, Size, ECC.0.1.0, ECC.0.0.1, Temp.Avg.Dist, Geo.Avg.Dist
+  # Avg.Date, Avg.Longitude, Avg.Latitude
+  if (ivl1 == "set0") {
+    partC$type <- "Type0"
+    partA_cnames <- step0 %>% select(4,3,6:all_of(stepcols)) %>% colnames()
+    partA <- matrix(ncol = length(partA_cnames)) %>% set_colnames(partA_cnames) %>% 
+      set_colnames(gsub(hx$th, "TP1", colnames(.)))
+  }else {
+    partA <- step0[TP == ivl1] %>% select(4,3,6:all_of(stepcols)) %>% 
+      set_colnames(gsub(hx$th, "TP1", colnames(.)))
+  }
+  
+  # selecting columns first_tp2_flag, Size, ECC.0.1.0, ECC.0.0.1, Temp.Avg.Dist, Geo.Avg.Dist, 
+  # Avg.Date, Avg.Longitude, Avg.Latitude
   partB <- step0[TP == ivl2] %>% select(5,3,6:all_of(stepcols)) %>% 
     set_colnames(gsub(hx$th, "TP2", colnames(.)))
-  
-  partC <- cgms[interval == paste0(c(ivl1, ivl2), collapse = "-")] %>% 
+
+  partD <- partC %>% 
     merge.data.table(., partA, all.x = TRUE) %>% 
     merge.data.table(., partB, by = "first_tp2_flag")
   
-  partC %>% select(
-    interval, tp1_id, tp1_cl_size, TP1_Size, TP1_ECC.0.1.0, TP1_ECC.0.0.1, 
-    first_tp2_flag, tp2_cl_size, TP2_Size, TP2_ECC.0.1.0, TP2_ECC.0.0.1, 
-    TP1_Avg.Date, TP1_Temp.Avg.Dist, TP1_Avg.Longitude, 
-    TP1_Avg.Latitude, TP1_Geo.Avg.Dist, TP2_Avg.Date, TP2_Temp.Avg.Dist, 
-    TP2_Avg.Longitude, TP2_Avg.Latitude, TP2_Geo.Avg.Dist, first_tp1_flag, 
-    last_tp1_flag, first_tp2_flag, last_tp2_flag, tp1_cl_size, tp2_cl_size, 
-    actual_size_change, add_TP1, novel, num_novs, actual_growth_rate, new_growth, type)
+  ecc_cols <- grep("ECC", colnames(partD), value = TRUE)
+  partD %>% select(c(interval, tp1_id, tp1_cl_size, TP1_Size, grep("TP1", ecc_cols, value = TRUE),
+                     first_tp2_flag, tp2_cl_size, TP2_Size, grep("TP2", ecc_cols, value = TRUE),
+                     TP1_Avg.Date, TP1_Temp.Avg.Dist, TP1_Avg.Longitude,TP1_Avg.Latitude, 
+                     TP1_Geo.Avg.Dist, TP2_Avg.Date, TP2_Temp.Avg.Dist, TP2_Avg.Longitude, 
+                     TP2_Avg.Latitude, TP2_Geo.Avg.Dist, first_tp1_flag, last_tp1_flag, 
+                     first_tp2_flag, last_tp2_flag, tp1_cl_size, tp2_cl_size, actual_size_change, 
+                     add_TP1, novel, num_novs, actual_growth_rate, new_growth, type))
 }) %>% bind_rows()
 
 assert("No clusters with unassigned type", checkTypes(step1))
@@ -136,10 +167,10 @@ assert("No clusters with unassigned type", checkTypes(step1))
 # -	Eventually, include in analysis but maybe do not include them in EpiMatrix calculation
 
 step3 <- data.table()
-
-for (i in 1:(length(interval_list)-1)) {
-  cat(paste0("Interval ", interval_list[i], " - ", interval_list[i+1], "\n"))
-  int_i <- interval_list[i:(i+1)] %>% paste0(., collapse = "-")
+for (i in 1:length(interval_list)) {
+# for (i in 1:(length(interval_list)-1)) {
+  cat(paste0("Interval ", all_intervals[i], " - ", all_intervals[i+1], "\n"))
+  int_i <- all_intervals[i:(i+1)] %>% paste0(., collapse = "-")
   step2 <- step1[interval == int_i]
   
   cases2a <- step2[type == "Type2"]
@@ -171,7 +202,8 @@ for (i in 1:(length(interval_list)-1)) {
   ecccols <- grep("ECC", colnames(step2), value = TRUE) %>% sort(decreasing = TRUE)
   
   x1 <- which(is.na(step2[,..ecccols]), arr.ind = TRUE) %>% as.data.frame() %>% pull(row)
-  assert("Only blank ECCs are for Type4 cases", identical(unique(step2[x1]$type), "Type4"))
+  assert("Only blank ECCs are for Type0 or Type4 cases", 
+         unique(step2[x1]$type) %in% c("Type0", "Type4"))
   
   step3 <- step3 %>% bind_rows(step2)
 }
@@ -192,7 +224,8 @@ for (i in 1:(length(ecccols)/2)) {
 dist_avgs <- grep("Avg", colnames(step4), value = TRUE) %>% grep("Dist", ., value = TRUE) %>% sort()
 
 step5 <- step4 %>% add_column(tp1_cl = NA, tp2_cl = NA) %>% as.data.table(); rm(step4)
-cl_indices <- grep("Absent", step5$tp1_id, invert = TRUE)
+cl_vals <- grep("Absent", step5[!is.na(tp1_id)]$tp1_id, invert = TRUE, value = TRUE)
+cl_indices <- which(step5$tp1_id %in% cl_vals)
 
 step5$tp1_cl[cl_indices] <- lapply(step5$tp1_id[cl_indices], function(p) {
   strsplit(p, split = "_c") %>% unlist() %>% extract2(., 2) %>% as.double()
@@ -219,6 +252,10 @@ step7 <- step6 %>%
          first_tp1_flag, last_tp1_flag, first_tp2_flag, last_tp2_flag, tp1_cl_size,
          tp2_cl_size, actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth, type)
 
+date_order <- lapply(2:length(all_intervals), function(i) {
+  paste0(all_intervals[i-1], "-", all_intervals[i])
+}) %>% unlist()
+
 step8 <- step7 %>% 
   rename("Actual TP1 cluster" = actual_tp1_cl, 
          "Actual TP2 cluster" = actual_tp2_cl, 
@@ -240,7 +277,8 @@ step8 <- step7 %>%
          "Novel growth = (TP2 size) / (TP2 size - number of novels)" = new_growth, 
          "Type" = type) %>% 
   arrange(`TP2 cluster`, `TP1 cluster`) %>% 
-  unique()
+  unique() %>% 
+  arrange(factor(interval, levels = date_order))
 
 writeData(fp = "results/Wide_merged_cluster_results.tsv", df = step8)
 

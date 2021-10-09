@@ -3,18 +3,20 @@ checkTypes <- function(df) {
   x <- df %>% select(tp1_cl_size, tp2_cl_size, type) %>% as_tibble() %>% 
     rownames_to_column("id") %>% mutate(across(id, as.integer))
   
+  x0 <- x %>% filter(is.na(tp1_cl_size))
   x1 <- x %>% filter(tp1_cl_size > 2, tp2_cl_size > 2, tp1_cl_size == tp2_cl_size)
   x2 <- x %>% filter(tp1_cl_size > 2, tp2_cl_size > 2, tp2_cl_size > tp1_cl_size)
   x3 <- x %>% filter(tp1_cl_size < 3, tp2_cl_size > 2)
   x4 <- x %>% filter(tp1_cl_size < 3, tp2_cl_size < 3)
   
   assert("Assigned types are correct", all(
+    unique(x0$type) == "Type0", 
     unique(x1$type) == "Type1", 
     unique(x2$type) == "Type2", 
     unique(x3$type) == "Type3", 
     unique(x4$type) == "Type4"))
   
-  return(identical(sort(c(x1$id, x2$id, x3$id, x4$id)), x$id))
+  return(identical(sort(c(x0$id, x1$id, x2$id, x3$id, x4$id)), x$id))
 }
 
 colsToInherit <- function(df) {

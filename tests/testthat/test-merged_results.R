@@ -11,7 +11,7 @@ option_list <- list(
   make_option(c("-b", "--tp2"), metavar = "file", 
               default = "inputs/processed/allTP2.Rds", help = "TP2 data"), 
   make_option(c("-c", "--cgm_results"), metavar = "file", 
-              default = "results/Merged_cluster_results.tsv", help = "CGM results"))
+              default = "results/Wide_merged_cluster_results.tsv", help = "CGM results"))
 
 arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
@@ -102,7 +102,7 @@ test_results[[2]] <- test_that("intervals", {
 
 
 test_results[[3]] <- test_that("actual_tp1_cluster and tp1_cluster", {
-  expect_identical(rowx$actual_tp1_cluster, cluster_id$old_cl)
+  expect_equal(rowx$actual_tp1_cluster, cluster_id$old_cl)
   expect_identical(as.double(rowx$tp1_cluster), as.double(cluster_id$new_cl))
 })
 
@@ -336,7 +336,8 @@ if (all(test_results)) {
   print(cluster_id)
 }else {
   cat(paste0("\nTests ", paste0(names(test_results)[which(test_results == FALSE)], 
-                                collapse = ", "), " failed.\n"))
+                                collapse = ", "), " failed for randomly sampled cluster:\n"))
+  print(cluster_id)
 }
 
 
