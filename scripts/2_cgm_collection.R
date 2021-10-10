@@ -76,10 +76,12 @@ for (i in 1:(length(interval_list)-1)) {
   ph <- max(nchar(colnames(tpx1)[-1]), nchar(colnames(tpx2)[-1]))
   pc <- tpx2 %>% select(-isolate) %>% max(., tpx2 %>% select(-isolate)) %>% nchar()
   
+  if (interval == "Week") {msg1 <- "week "}else {msg1 <- ""}
+  
   msgtexts <- c(
-    paste0("  Constructing ", n1, " data object, ", nrow(tpx1), " (", i, " / ", length(interval_list), "):\n"), 
-    paste0("  Constructing ", n2, " data object, ", nrow(tpx2), " (", i+1, " / ", length(interval_list), "):\n")
-  )
+    paste0("  Constructing ", msg1, n1, " data object, ", nrow(tpx1), " (", i, " / ", length(interval_list), "):\n"), 
+    paste0("  Constructing ", msg1, n2, " data object, ", nrow(tpx2), " (", i+1, " / ", length(interval_list), "):\n")
+  ) 
   
   tplist <- tpDataSetup(tpx1, tpx2, ph, pc, FALSE, msgtexts)#; rm(tpx1); rm(tpx2)
   tp1 <- tplist[["tp1"]]
@@ -88,7 +90,7 @@ for (i in 1:(length(interval_list)-1)) {
   rm(tplist)
   
   # BASE CASE (FIRST HEIGHT) -------------------------------------------------------------------------------------
-  outputDetails(paste0("  Tracking clusters from ", n1, " to ", n2, ", from height ", heights[1], " ..."), newcat = TRUE)
+  outputDetails(paste0("  Tracking clusters from ", msg1, n1, " to ", msg1, n2, ", from height ", heights[1], " ..."), newcat = TRUE)
   
   hx <- Heightdata$new(starter = heights[1], t1_comps = tp1$comps, hvals = heights)$
     clust_tracking(tp2$comps, tp2$cnames, tp1$coded, tp2$coded, TRUE)$
