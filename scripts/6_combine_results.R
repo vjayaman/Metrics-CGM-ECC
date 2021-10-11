@@ -166,6 +166,7 @@ assert("No clusters with unassigned type", checkTypes(step1))
 # -	Filter these strains prior to analysis & give ECC blanks
 # -	Eventually, include in analysis but maybe do not include them in EpiMatrix calculation
 
+cat(paste0("Checking type modifications: \n"))
 step3 <- data.table()
 for (i in 1:length(interval_list)) {
 # for (i in 1:(length(interval_list)-1)) {
@@ -280,6 +281,7 @@ step8 <- step7 %>%
   unique() %>% 
   arrange(factor(interval, levels = date_order))
 
+cat(paste0("Saving cluster files to results/ ... \n"))
 writeData(fp = "results/Wide_merged_cluster_results.tsv", df = step8)
 
 step9 <- suppressWarnings(melt.data.table(step8, id.vars = c("interval", "Actual TP1 cluster")))
@@ -288,17 +290,34 @@ step9 %>% arrange(interval, `Actual TP1 cluster`, variable) %>%
 
 metadata <- suppressMessages(read_tsv(arg$metadata)) %>% processedStrains()
 cnames <- strsplit(params$cnames[2], split = ",") %>% unlist()
-strains <- metadata$strain_data %>% select(Strain, all_of(cnames), Latitude, Longitude, Day, Month, Year)
+strains <- metadata$strain_data %>% 
+  select(Strain, all_of(cnames), Latitude, Longitude, Day, Month, Year)
 
-ivls <- names(clustersets)
+# ivls <- names(clustersets)
+# for (i in 2:length(ivls)) {
+#   ivl_i <- paste0(ivls[i-1], "-", ivls[i])
+#   step10 <- clustersets[[i]]$ivl %>% select(isolate, heightx) %>% rename(Strain = isolate) %>% 
+#     add_column(interval = ivl_i) %>% 
+#     inner_join(step8, ., by = c("TP2 cluster" = "heightx", "interval")) %>% 
+#     inner_join(., strains, by = "Strain") %>% 
+#     select(interval, colnames(strains), colnames(step8))
+#   writeData(fp = paste0("results/Merged_strain_results/", ivl_i, ".tsv"), df = step10)
+# }
+
+cat(paste0("Saving strain files to results/Merged_strain_results/ ... \n"))
+ivls <- all_intervals
 for (i in 2:length(ivls)) {
+  
   ivl_i <- paste0(ivls[i-1], "-", ivls[i])
-  step10 <- clustersets[[i]]$ivl %>% select(isolate, heightx) %>% rename(Strain = isolate) %>% 
-    add_column(interval = ivl_i) %>% 
+  
+  step10 <- clustersets[[ivls[i]]]$sofar %>% select(isolate, heightx, Date) %>% 
+    rename(Strain = isolate) %>% add_column(interval = ivl_i) %>% 
     inner_join(step8, ., by = c("TP2 cluster" = "heightx", "interval")) %>% 
     inner_join(., strains, by = "Strain") %>% 
-    select(interval, colnames(strains), colnames(step8))
+    select(interval, colnames(strains), Date, colnames(step8))
+  
   writeData(fp = paste0("results/Merged_strain_results/", ivl_i, ".tsv"), df = step10)
+  rm(step10)
 }
 
 cat(paste0("See 'results' folder for cluster-specific and strain-specific files.\n"))
