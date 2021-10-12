@@ -291,7 +291,8 @@ step9 %>% arrange(interval, `Actual TP1 cluster`, variable) %>%
 metadata <- suppressMessages(read_tsv(arg$metadata)) %>% processedStrains()
 cnames <- strsplit(params$cnames[2], split = ",") %>% unlist()
 strains <- metadata$strain_data %>% 
-  select(Strain, all_of(cnames), Latitude, Longitude, Day, Month, Year)
+  select(Strain, all_of(cnames), Latitude, Longitude, Day, Month, Year) %>% 
+  mutate(Date = as.Date(paste(Year, Month, Day, sep = "-")))
 
 # ivls <- names(clustersets)
 # for (i in 2:length(ivls)) {
@@ -310,11 +311,11 @@ for (i in 2:length(ivls)) {
   
   ivl_i <- paste0(ivls[i-1], "-", ivls[i])
   
-  step10 <- clustersets[[ivls[i]]]$sofar %>% select(isolate, heightx, Date) %>% 
+  step10 <- clustersets[[ivls[i]]]$sofar %>% select(isolate, heightx) %>% 
     rename(Strain = isolate) %>% add_column(interval = ivl_i) %>% 
     inner_join(step8, ., by = c("TP2 cluster" = "heightx", "interval")) %>% 
     inner_join(., strains, by = "Strain") %>% 
-    select(interval, colnames(strains), Date, colnames(step8))
+    select(interval, colnames(strains), colnames(step8))
   
   writeData(fp = paste0("results/Merged_strain_results/", ivl_i, ".tsv"), df = step10)
   rm(step10)
