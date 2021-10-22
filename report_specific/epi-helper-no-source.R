@@ -224,6 +224,7 @@ EpiHeatmap_pdf <- function(m){
             xlab=NULL, ylab=NULL, 
             labRow = NA, labCol = NA,
             hclustfun = function(x) hclust(x,method = 'single'))
+  return(plot)
   # data <- m[plot$rowInd, plot$colInd]
   # return(list(plot, data))
 }
