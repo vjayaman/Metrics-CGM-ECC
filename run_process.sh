@@ -73,13 +73,8 @@ printf "\n\n\nPart 6/6:"
 # else
 #   echo "Not all required files found for part 5."
 # fi
-              
-# printf "\n\n\nPart 6/6:"
-# if [ -f "results/CGM_strain_results.tsv" -a -f "intermediate_data/dist_extremes.Rds" -a -f $STRAINS ]; then
-# 	Rscript scripts/6_heatmap_dists.R -m $STRAINS -b $tp2_data -c results/CGM_strain_results.tsv -d $FORM
-# else
-# 	echo "Not all required files found for part 6."
-# fi
+
+printf "\n\nThe heatmaps script, 7_heatmap_dists.R, can be run separately (as very large clusters may hang \nduring heatmap generation. Distances and clustering formatted in this step are saved in \nreport_specific/heatmaps/."
 
                             
-printf "\nFinished process.\n"
+printf "\n\nFinished process.\n\n"
