@@ -74,7 +74,7 @@ printf "\n\n\nPart 6/6:"
 #   echo "Not all required files found for part 5."
 # fi
 
-printf "\n\nThe heatmaps script, 7_heatmap_dists.R, can be run separately (as very large clusters may hang \nduring heatmap generation. Distances and clustering formatted in this step are saved in \nreport_specific/heatmaps/."
+printf "\n\nThe heatmaps scripts (7a then 7b), can be run separately (as very large clusters may hang \nduring heatmap generation. Distances and clustering formatted in this step are saved in \nreport_specific/heatmaps/."
 
                             
 printf "\n\nFinished process.\n\n"
