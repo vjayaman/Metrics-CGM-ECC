@@ -5,6 +5,8 @@ Metrics-CGM-ECC
 
 ## Method 1 (Latest version, ready for beta testing):
 
+Updated: Nov 3, 2021
+
 1. Download version [v4.2.4](https://github.com/vjayaman/Metrics-CGM-ECC/releases/tag/4.2.4)
 
 2. Move the input files you want to use (a strain metadata file and one cluster assignment file - one for each time point) into *Metrics-CGM-ECC/inputs/*, then rename to match the examples in the *inputs/* directory.
