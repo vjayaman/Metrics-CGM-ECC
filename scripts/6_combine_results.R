@@ -244,14 +244,17 @@ step6 <- step5 %>%
   left_join(., matched_clusters, by = c("tp1_cl" = "IntCol")) %>% rename(actual_tp1_cl = ActCol) %>% 
   left_join(., matched_clusters, by = c("tp2_cl" = "IntCol")) %>% rename(actual_tp2_cl = ActCol)
 
-step7 <- step6 %>% 
+step7 <- step6 %>% add_column(novel_only_ECCs = 0) %>% 
   select(interval, actual_tp1_cl, tp1_cl, TP1_Size, all_of(tp1eccs), 
          actual_tp2_cl, tp2_cl, TP2_Size, all_of(tp2eccs),
-         grep("delta_ECC", colnames(step6), value = TRUE),
+         grep("delta_ECC", colnames(step6), value = TRUE), novel_only_ECCs,
          TP1_Avg.Date, TP1_Temp.Avg.Dist, TP1_Avg.Latitude, TP1_Avg.Longitude, TP1_Geo.Avg.Dist, 
          TP2_Avg.Date, TP2_Temp.Avg.Dist, TP2_Avg.Latitude, TP2_Avg.Longitude, TP2_Geo.Avg.Dist,
          first_tp1_flag, last_tp1_flag, first_tp2_flag, last_tp2_flag, tp1_cl_size,
          tp2_cl_size, actual_size_change, add_TP1, num_novs, actual_growth_rate, new_growth, type)
+
+step7[TP2_Size == num_novs]$novel_only_ECCs <- 1
+assert("Novel only ECCs indicated with binary value", all(is.na(step7[novel_only_ECCs == 1]$TP1_Size)))
 
 date_order <- lapply(2:length(all_intervals), function(i) {
   paste0(all_intervals[i-1], "-", all_intervals[i])
@@ -266,6 +269,7 @@ step8 <- step7 %>%
          "Average TP1 longitude" = TP1_Avg.Longitude, 
          "Average TP2 date" = TP2_Avg.Date, "Average TP2 latitude" = TP2_Avg.Latitude, 
          "Average TP2 longitude" = TP2_Avg.Longitude, 
+         "Novel only ECCs" = novel_only_ECCs,
          "First time this cluster was seen in TP1" = first_tp1_flag, 
          "Last time this cluster was seen in TP1" = last_tp1_flag, 
          "First time this cluster was seen in TP2" = first_tp2_flag, 
