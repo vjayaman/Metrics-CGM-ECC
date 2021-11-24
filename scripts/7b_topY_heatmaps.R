@@ -16,13 +16,12 @@ y <- suppressWarnings(
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Starting heatmap generation ", 
            paste0(rep("-", 31), collapse = ""), "||\n"))
 
-heatmapFunction <- function(m, type = "heatmap.2", heatcolor, args = TRUE) {
+heatmapFunction <- function(m, type = "heatmap.2", heatcolor, args = TRUE, hc = NULL) {
   if (type == "heatmap.2") {
     if (args) {
       # hr <- hclust(as.dist(t(m)), method="single")
-      hr <- hc <- hclust(as.dist(m), method="single")
       plotx <- heatmap.2(m, col=rev(heatcolor1), 
-                         Rowv=as.dendrogram(hr), Colv=as.dendrogram(hc), revC = T, 
+                         Rowv=as.dendrogram(hc), Colv=as.dendrogram(hc), revC = T, 
                          scale="none", trace="none", margins = c(10,10), 
                          xlab=NULL, ylab=NULL, labRow = NA, labCol = NA, 
                          keysize = 1.3, key = T, key.title = NA, key.ylab= "Frequency", 
@@ -37,10 +36,9 @@ heatmapFunction <- function(m, type = "heatmap.2", heatcolor, args = TRUE) {
                          hclustfun = function(x) hclust(x,method = 'single'))    
     }
   }else if (type == "heatmap3") {
-    hr <- hc <- hclust(as.dist(m), method="single")
     m_vec <- m %>% as.vector()
     plotx <- heatmap3(m, col=rev(heatcolor1), 
-                      Rowv=as.dendrogram(hr), Colv=as.dendrogram(hc), revC = T, 
+                      Rowv=as.dendrogram(hc), Colv=as.dendrogram(hc), revC = T, 
                       scale = 'none', trace='none', margins = c(10,10),
                       xlab=NULL, ylab=NULL, labRow = NA, labCol = NA, 
                       keysize = 1.3, key = T, #distfun = function(x) as.dist(x), 
@@ -180,31 +178,33 @@ if (num_cl > 0) {
       
       # png(paste0("report_specific/heatmaps/", cl_id, "-temp-hm2-default.png"))
       # tplot1 <- heatmapFunction(temp_mat, "heatmap.2", heatcolor, FALSE) # TRUE for manual
-      # tplot1
-      # dev.off()
+      # tplot1; dev.off()
       
       png(paste0("report_specific/heatmaps/", cl_id, "-temp-hm3-manual.png"))
-      tplot3 <- heatmapFunction(temp_mat, "heatmap3", heatcolor)
-      tplot3
+      thc <- hclust(as.dist(temp_mat), method="single")
+      tplot <- heatmapFunction(temp_mat, "heatmap3", heatcolor, hc = thc)
+      tplot
       dev.off()
       
       # png(paste0("report_specific/heatmaps/", cl_id, "-geo-default.png"))
       # gplot1 <- heatmapFunction(geo_mat, "heatmap.2", heatcolor, FALSE) # TRUE for manual
-      # gplot1
-      # dev.off()
+      # gplot1; dev.off()
 
       png(paste0("report_specific/heatmaps/", cl_id, "-geo-hm3-manual.png"))
-      gplot3 <- heatmapFunction(geo_mat, "heatmap3", heatcolor)
-      gplot3
+      ghc <- hclust(as.dist(geo_mat), method="single")
+      gplot <- heatmapFunction(geo_mat, "heatmap3", heatcolor, hc = ghc)
+      gplot
       dev.off()
       
-      # # Used this method (https://stackoverflow.com/questions/18354501/how-to-get-member-of-clusters-from-rs-hclust-heatmap-2)
-      # # to extract the clustering from the heatmaps
-      # temp_clustering <- cutree(as.hclust(tplot$rowDendrogram), 1:dim(temp_mat)[1])
-      # geo_clustering <- cutree(as.hclust(gplot$rowDendrogram), 1:dim(geo_mat)[1])
-      # list("temp" = temp_clustering, "geo" = geo_clustering) %>% 
-      #   saveRDS(., paste0("report_specific/heatmaps/clustering/", 
-      #                     clusters$chr[i], "-", clusters$original_cl[i], ".Rds"))
+      # Used this method (https://stackoverflow.com/questions/18354501/how-to-get-member-of-clusters-from-rs-hclust-heatmap-2)
+      # to extract the clustering from the heatmaps
+      
+      temp_clustering <- cutree(thc, 1:dim(temp_mat)[1])
+      geo_clustering <- cutree(ghc, 1:dim(geo_mat)[1])
+      
+      list("temp" = temp_clustering, "geo" = geo_clustering) %>%
+        saveRDS(., paste0("report_specific/heatmaps/clustering/",
+                          clusters$chr[i], "-", clusters$original_cl[i], ".Rds"))
     }else {
       outputDetails(paste0("TP2 cluster ", clusters$chr[i], " has only one strain, no heatmap generated"))
     }  
