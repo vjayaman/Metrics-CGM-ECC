@@ -16,13 +16,26 @@ y <- suppressWarnings(
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Starting heatmap generation ", 
            paste0(rep("-", 31), collapse = ""), "||\n"))
 
-heatmapFunction <- function(m, type = "heatmap.2", heatcolor) {
+heatmapFunction <- function(m, type = "heatmap.2", heatcolor, args = TRUE) {
   if (type == "heatmap.2") {
-    plotx <- heatmap.2(m, col=rev(heatcolor), Rowv = T, Colv = 'Rowv', trace='none',
-                       srtCol = 45, key.title = NA, key.ylab=NA,
-                       revC=T, margins = c(10,10), keysize = 1.3, key = T, xlab=NULL, ylab=NULL, 
-                       labRow = NA, labCol = NA,
-                       hclustfun = function(x) hclust(x,method = 'single'))  
+    if (args) {
+      # hr <- hclust(as.dist(t(m)), method="single")
+      hr <- hc <- hclust(as.dist(m), method="single")
+      plotx <- heatmap.2(m, col=rev(heatcolor1), 
+                         Rowv=as.dendrogram(hr), Colv=as.dendrogram(hc), revC = T, 
+                         scale="none", trace="none", margins = c(10,10), 
+                         xlab=NULL, ylab=NULL, labRow = NA, labCol = NA, 
+                         keysize = 1.3, key = T, key.title = NA, key.ylab= "Frequency", 
+                         density.info = 'histogram')
+    }else {
+      plotx <- heatmap.2(m, col=rev(heatcolor), 
+                         Rowv = T, Colv = 'Rowv', revC=T, 
+                         scale = "none", 
+                         trace='none',margins = c(10,10), 
+                         xlab=NULL, ylab=NULL, labRow = NA, labCol = NA,
+                         keysize = 1.3, key = T, key.title = NA, key.ylab=NA,
+                         hclustfun = function(x) hclust(x,method = 'single'))    
+    }
   }
   return(plotx)
 }
@@ -108,7 +121,8 @@ if (num_cl > 0) {
   # tpn <- tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
   # typing_data <- list(tp2$height_list)
   # 
-  # m <- suppressMessages(read_tsv(arg$metadata)) %>% processedStrains()
+  # m <- 
+  metadata <- suppressMessages(read_tsv(arg$metadata)) %>% processedStrains()
   # 
   # assignments <- typing_data[[1]] %>% as.data.frame() %>% set_colnames("tp_cl") %>% 
   #   rownames_to_column("Strain") %>% as.data.table() %>% 
@@ -134,6 +148,11 @@ if (num_cl > 0) {
     epi.matrix <- epitable %>% select(Strain.1, Strain.2, Temp.Dist)
     temp_mat <- distEpiMatrix(epi.matrix, "Temp.Dist")  
     
+    m <- read_tsv("inputs/processed/strain_info.txt") %>% processedStrains()
+    ordered_by_date <- metadata %>% select(Strain, Date) %>% arrange(Date) %>%
+      filter(Strain %in% rownames(temp_mat)) %>% pull(Strain)
+    temp_mat <- temp_mat[ordered_by_date,ordered_by_date]
+    
     # Processing epitables into geographical distance matrices, one for each cluster
     epi.matrix <- epitable %>% select(Strain.1, Strain.2, Geog.Dist)
     geo_mat <- distEpiMatrix(epi.matrix, "Geog.Dist")
@@ -145,23 +164,36 @@ if (num_cl > 0) {
     if (clusters$TP2_cluster_size[i] > 1) {
       cl_id <- paste0(clusters$chr[i], "-", clusters$original_cl[i], "-after_last_TP")
       
-      png(paste0("report_specific/heatmaps/", cl_id, "-temp.png"))
-      tplot <- heatmapFunction(temp_mat, "heatmap.2", heatcolor)
-      tplot
+      
+      heatcolor1<- colorRampPalette(c("white","yellowgreen","darkgreen"))(512)
+      
+      png(paste0("report_specific/heatmaps/", cl_id, "-temp-default.png"))
+      tplot1 <- heatmapFunction(temp_mat, "heatmap.2", heatcolor, FALSE)
+      tplot1
       dev.off()
       
-      png(paste0("report_specific/heatmaps/", cl_id, "-geo.png"))
-      gplot <- heatmapFunction(geo_mat, "heatmap.2", heatcolor)
-      gplot
+      png(paste0("report_specific/heatmaps/", cl_id, "-temp-manual.png"))
+      tplot2 <- heatmapFunction(temp_mat, "heatmap.2", heatcolor, TRUE)
+      tplot2
       dev.off()
       
-      # Used this method (https://stackoverflow.com/questions/18354501/how-to-get-member-of-clusters-from-rs-hclust-heatmap-2)
-      # to extract the clustering from the heatmaps
-      temp_clustering <- cutree(as.hclust(tplot$rowDendrogram), 1:dim(temp_mat)[1])
-      geo_clustering <- cutree(as.hclust(gplot$rowDendrogram), 1:dim(geo_mat)[1])
-      list("temp" = temp_clustering, "geo" = geo_clustering) %>% 
-        saveRDS(., paste0("report_specific/heatmaps/clustering/", 
-                          clusters$chr[i], "-", clusters$original_cl[i], ".Rds"))
+      png(paste0("report_specific/heatmaps/", cl_id, "-geo-default.png"))
+      gplot1 <- heatmapFunction(geo_mat, "heatmap.2", heatcolor, FALSE)
+      gplot1
+      dev.off()
+      
+      png(paste0("report_specific/heatmaps/", cl_id, "-geo-manual.png"))
+      gplot2 <- heatmapFunction(geo_mat, "heatmap.2", heatcolor, TRUE)
+      gplot2
+      dev.off()
+
+      # # Used this method (https://stackoverflow.com/questions/18354501/how-to-get-member-of-clusters-from-rs-hclust-heatmap-2)
+      # # to extract the clustering from the heatmaps
+      # temp_clustering <- cutree(as.hclust(tplot$rowDendrogram), 1:dim(temp_mat)[1])
+      # geo_clustering <- cutree(as.hclust(gplot$rowDendrogram), 1:dim(geo_mat)[1])
+      # list("temp" = temp_clustering, "geo" = geo_clustering) %>% 
+      #   saveRDS(., paste0("report_specific/heatmaps/clustering/", 
+      #                     clusters$chr[i], "-", clusters$original_cl[i], ".Rds"))
     }else {
       outputDetails(paste0("TP2 cluster ", clusters$chr[i], " has only one strain, no heatmap generated"))
     }  
