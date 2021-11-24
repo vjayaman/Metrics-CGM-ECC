@@ -16,6 +16,17 @@ y <- suppressWarnings(
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Starting heatmap generation ", 
            paste0(rep("-", 31), collapse = ""), "||\n"))
 
+heatmapFunction <- function(m, type = "heatmap.2", heatcolor) {
+  if (type == "heatmap.2") {
+    plotx <- heatmap.2(m, col=rev(heatcolor), Rowv = T, Colv = 'Rowv', trace='none',
+                       srtCol = 45, key.title = NA, key.ylab=NA,
+                       revC=T, margins = c(10,10), keysize = 1.3, key = T, xlab=NULL, ylab=NULL, 
+                       labRow = NA, labCol = NA,
+                       hclustfun = function(x) hclust(x,method = 'single'))  
+  }
+  return(plotx)
+}
+
 # Adjust input parameters here: ------------------------------------------------------------------------
 # This section collects user-specified inputs
 option_list <- list(
@@ -107,7 +118,9 @@ if (num_cl > 0) {
   #   x1 <- assignments[tp_cl %in% clusters$int[i]] %>% pull(Strain)
   #   m$dr_matches %>% filter(Strain %in% x1) %>% pull(dr) %>% unique()
   # }) %>% set_names(clusters$int)
-  # 
+
+  heatcolor<- colorRampPalette(c("white","yellowgreen","darkgreen"))(512)
+  
   for (i in 1:nrow(clusters)) {
     epitable <- readRDS(paste0("report_specific/epitables/", 
                                clusters$chr[i], "-", clusters$original_cl[i], ".Rds"))
@@ -133,12 +146,12 @@ if (num_cl > 0) {
       cl_id <- paste0(clusters$chr[i], "-", clusters$original_cl[i], "-after_last_TP")
       
       png(paste0("report_specific/heatmaps/", cl_id, "-temp.png"))
-      tplot <- EpiHeatmap_pdf(temp_mat)
+      tplot <- heatmapFunction(temp_mat, "heatmap.2", heatcolor)
       tplot
       dev.off()
       
       png(paste0("report_specific/heatmaps/", cl_id, "-geo.png"))
-      gplot <- EpiHeatmap_pdf(geo_mat)
+      gplot <- heatmapFunction(geo_mat, "heatmap.2", heatcolor)
       gplot
       dev.off()
       
