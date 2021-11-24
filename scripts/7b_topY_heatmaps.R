@@ -24,12 +24,11 @@ heatmapFunction <- function(m, type = "heatmap.2", heatcolor, args = TRUE, hc = 
                          Rowv=as.dendrogram(hc), Colv=as.dendrogram(hc), revC = T, 
                          scale="none", trace="none", margins = c(10,10), 
                          xlab=NULL, ylab=NULL, labRow = NA, labCol = NA, 
-                         keysize = 1.3, key = T, key.title = NA, key.ylab= "Frequency", 
-                         density.info = 'histogram')
+                         keysize = 1.3, key = T, key.title = NA, 
+                         key.ylab= "Frequency", density.info = 'histogram')
     }else {
       plotx <- heatmap.2(m, col=rev(heatcolor), 
-                         Rowv = T, Colv = 'Rowv', revC=T, 
-                         scale = "none", 
+                         Rowv = T, Colv = 'Rowv', revC=T, scale = "none", 
                          trace='none',margins = c(10,10), 
                          xlab=NULL, ylab=NULL, labRow = NA, labCol = NA,
                          keysize = 1.3, key = T, key.title = NA, key.ylab=NA,
@@ -41,9 +40,9 @@ heatmapFunction <- function(m, type = "heatmap.2", heatcolor, args = TRUE, hc = 
                       Rowv=as.dendrogram(hc), Colv=as.dendrogram(hc), revC = T, 
                       scale = 'none', trace='none', margins = c(10,10),
                       xlab=NULL, ylab=NULL, labRow = NA, labCol = NA, 
-                      keysize = 1.3, key = T, #distfun = function(x) as.dist(x), 
-                      key.title = NA, key.ylab="Frequency", 
-                      legendfun=function() hist(m_vec, freq = TRUE), 
+                      keysize = 1.3, key = FALSE, #distfun = function(x) as.dist(x), 
+                      key.title = NA, key.ylab=NA, 
+                      # key.ylab="Frequency", legendfun=function() hist(m_vec, freq = TRUE), 
                       method = "complete")
   }
   return(plotx)
@@ -157,7 +156,6 @@ if (num_cl > 0) {
     epi.matrix <- epitable %>% select(Strain.1, Strain.2, Temp.Dist)
     temp_mat <- distEpiMatrix(epi.matrix, "Temp.Dist")  
     
-    metadata <- read_tsv("inputs/processed/strain_info.txt") %>% processedStrains()
     ordered_by_date <- metadata$strain_data %>% select(Strain, Date) %>% arrange(Date) %>%
       filter(Strain %in% rownames(temp_mat)) %>% pull(Strain)
     temp_mat <- temp_mat[ordered_by_date,ordered_by_date]
@@ -180,6 +178,18 @@ if (num_cl > 0) {
       # tplot1 <- heatmapFunction(temp_mat, "heatmap.2", heatcolor, FALSE) # TRUE for manual
       # tplot1; dev.off()
       
+      png(paste0("report_specific/heatmaps/", cl_id, "-temp-density.png"))
+      d <- density(temp_mat, adjust = 0.25)
+      plot(d, main = "Temporal distances density", xlab = "Temporal pairwise distances")
+      dev.off()
+      
+      png(paste0("report_specific/heatmaps/", cl_id, "-temp-frequencies.png"))
+      half_size <- temp_mat
+      half_size[upper.tri(half_size)] <- 0
+      hist(as.vector(half_size), freq = TRUE, main = "Temporal distances counts", 
+           xlab = "Temporal pairwise distances")
+      dev.off()
+      
       png(paste0("report_specific/heatmaps/", cl_id, "-temp-hm3-manual.png"))
       thc <- hclust(as.dist(temp_mat), method="single")
       tplot <- heatmapFunction(temp_mat, "heatmap3", heatcolor, hc = thc)
@@ -190,6 +200,18 @@ if (num_cl > 0) {
       # gplot1 <- heatmapFunction(geo_mat, "heatmap.2", heatcolor, FALSE) # TRUE for manual
       # gplot1; dev.off()
 
+      png(paste0("report_specific/heatmaps/", cl_id, "-geo-density.png"))
+      d <- density(geo_mat, adjust = 0.25)
+      plot(d, main = "Geographical distances density", xlab = "Geographical pairwise distances")
+      dev.off()
+      
+      png(paste0("report_specific/heatmaps/", cl_id, "-geo-frequencies.png"))
+      half_size <- geo_mat
+      half_size[upper.tri(half_size)] <- 0
+      hist(as.vector(half_size), freq = TRUE, main = "Geographical distances counts", 
+           xlab = "Geographical pairwise distances")
+      dev.off()
+      
       png(paste0("report_specific/heatmaps/", cl_id, "-geo-hm3-manual.png"))
       ghc <- hclust(as.dist(geo_mat), method="single")
       gplot <- heatmapFunction(geo_mat, "heatmap3", heatcolor, hc = ghc)
