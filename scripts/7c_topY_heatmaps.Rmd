@@ -1,0 +1,75 @@
+---
+title: "7c_topY_heatmaps"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+```{r}
+if (clusters$TP2_cluster_size[i] > 1) {
+      cl_id <- paste0(clusters$chr[i], "-", clusters$original_cl[i], "-after_last_TP")
+      
+      
+      heatcolor1<- colorRampPalette(c("white","yellowgreen","darkgreen"))(512)
+      
+      # png(paste0("report_specific/heatmaps/", cl_id, "-temp-hm2-default.png"))
+      # tplot1 <- heatmapFunction(temp_mat, "heatmap.2", heatcolor, FALSE) # TRUE for manual
+      # tplot1; dev.off()
+      
+      png(paste0("report_specific/heatmaps/", cl_id, "-temp-density.png"))
+      d <- density(temp_mat, adjust = 0.25)
+      plot(d, main = "Temporal distances density", xlab = "Temporal pairwise distances")
+      dev.off()
+      
+      png(paste0("report_specific/heatmaps/", cl_id, "-temp-frequencies.png"))
+      half_size <- temp_mat
+      half_size[upper.tri(half_size)] <- 0
+      hist(as.vector(half_size), freq = TRUE, main = "Temporal distances counts", 
+           xlab = "Temporal pairwise distances")
+      dev.off()
+      
+      png(paste0("report_specific/heatmaps/", cl_id, "-temp-hm3-manual.png"))
+      thc <- hclust(as.dist(temp_mat), method="single")
+      tplot <- heatmapFunction(temp_mat, "heatmap3", heatcolor, hc = thc)
+      tplot
+      dev.off()
+      
+      # png(paste0("report_specific/heatmaps/", cl_id, "-geo-default.png"))
+      # gplot1 <- heatmapFunction(geo_mat, "heatmap.2", heatcolor, FALSE) # TRUE for manual
+      # gplot1; dev.off()
+
+      png(paste0("report_specific/heatmaps/", cl_id, "-geo-density.png"))
+      d <- density(geo_mat, adjust = 0.25)
+      plot(d, main = "Geographical distances density", xlab = "Geographical pairwise distances")
+      dev.off()
+      
+      png(paste0("report_specific/heatmaps/", cl_id, "-geo-frequencies.png"))
+      half_size <- geo_mat
+      half_size[upper.tri(half_size)] <- 0
+      hist(as.vector(half_size), freq = TRUE, main = "Geographical distances counts", 
+           xlab = "Geographical pairwise distances")
+      dev.off()
+      
+      png(paste0("report_specific/heatmaps/", cl_id, "-geo-hm3-manual.png"))
+      ghc <- hclust(as.dist(geo_mat), method="single")
+      gplot <- heatmapFunction(geo_mat, "heatmap3", heatcolor, hc = ghc)
+      gplot
+      dev.off()
+      
+      # Used this method (https://stackoverflow.com/questions/18354501/how-to-get-member-of-clusters-from-rs-hclust-heatmap-2)
+      # to extract the clustering from the heatmaps
+      
+      temp_clustering <- cutree(thc, 1:dim(temp_mat)[1])
+      geo_clustering <- cutree(ghc, 1:dim(geo_mat)[1])
+      
+      list("temp" = temp_clustering, "geo" = geo_clustering) %>%
+        saveRDS(., paste0("report_specific/heatmaps/clustering/",
+                          clusters$chr[i], "-", clusters$original_cl[i], ".Rds"))
+    }else {
+      outputDetails(paste0("TP2 cluster ", clusters$chr[i], " has only one strain, no heatmap generated"))
+    }
+```
+

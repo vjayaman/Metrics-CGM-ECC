@@ -1,11 +1,11 @@
 #! /usr/bin/env Rscript
 
 # Will not generate heatmaps for cluster of size > max_cluster_size
-max_cluster_size <- 2000
+# max_cluster_size <- 2000
 
 # # General setup - calling libraries, etc. --------------------------------------------------------------
-msg <- file("logs/heatmaps.txt", open="wt")
-sink(msg, type="message")
+# msg <- file("logs/heatmaps.txt", open="wt")
+# sink(msg, type="message")
 
 libs <- c("optparse", "magrittr", "fossil", "tidyr", "plyr", "dplyr", "readr", "heatmap3",
           "testit", "tibble", "reshape2", "RColorBrewer", "gplots", "data.table", "R6")
@@ -75,7 +75,7 @@ if (num_cl > 0) {
   # May need to find a different function for this
   # Note that we are using: heatmap3()
   top_clusters <- size_details %>% arrange(-TP2_cluster_size) %>% 
-    filter(TP2_cluster_size < max_cluster_size) %>%
+    # filter(TP2_cluster_size < max_cluster_size) %>% 
     slice(1:num_cl) %>% pull(first_tp2_flag)
   
   # Matching these clusters to their original cluster names, for saving purposes
@@ -101,7 +101,7 @@ if (num_cl > 0) {
                                clusters$chr[i], "-", clusters$original_cl[i], ".Rds"))
     
     # euclidean distances, later using single linkage clustering (these should be user inputs)
-    
+
     # Processing epitables into temporal distance matrices, one for each cluster
     epi.matrix <- epitable %>% select(Strain.1, Strain.2, Temp.Dist)
     temp_mat <- distEpiMatrix(epi.matrix, "Temp.Dist")  
