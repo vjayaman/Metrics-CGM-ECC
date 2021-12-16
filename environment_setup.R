@@ -17,7 +17,7 @@ dir.create("intermediate_data/TPN/", recursive = TRUE, showWarnings = FALSE)
 
 required_packages <- c("R6", "testit", "optparse", "magrittr", "dplyr", "tibble", "readr", "reshape2", 
                        "fossil", "tidyr", "purrr", "progress", "reader", "data.table", "testthat", 
-                       "Rcpp", "RcppArmadillo")
+                       "Rcpp", "RcppArmadillo", "heatmap3")
 
 not_installed <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
 install.packages(not_installed, quiet = TRUE)
@@ -42,7 +42,7 @@ if (all(unlist(x)) & all(y)) {
   #   message("   $ sudo apt-get install libssl-dev\n")
   #   message("Then run env_setup.R again.")
   # }
-  cat("\nNot all packages were installed successfully. Please see logfile_env.txt for details.")
+  cat("\nNot all packages were installed successfully. Please see logfile_env.txt for details.\n")
 }
 
 cat(paste0(
