@@ -4,7 +4,7 @@
 # Will collect the largest ones, looking at the full data set (last time point, 
 # when all strains are present)
 # If this method seems alright, I'll update the form.html input file to include this parameter
-num_cl <- 20
+num_cl <- 5
 
 # General setup - calling libraries, etc. --------------------------------------------------------------
 msg <- file("logs/pairwise_strain_distances.txt", open="wt")
@@ -68,21 +68,27 @@ size_details <- cgms[interval == last_ivl] %>%
   arrange(-tp2_cl_size) %>% select(first_tp2_flag, tp2_cl_size) %>% unique()
 colnames(size_details)[which(colnames(size_details) == "tp2_cl_size")] <- "TP2_cluster_size"
 
-top_clusters <- size_details %>% arrange(-TP2_cluster_size) %>% 
-  slice(1:num_cl) %>% pull(first_tp2_flag)
+top_clusters <- size_details %>% slice(1:num_cl)
+
+manual_check <- size_details %>% 
+  filter(TP2_cluster_size < 25 & TP2_cluster_size >= 10) %>% slice(1)
+
+x_clusters <- top_clusters %>% bind_rows(manual_check) %>% pull(first_tp2_flag)
 
 # Matching these clusters to their original cluster names, for saving purposes
 clusters <- data.table(
-  new_id = top_clusters, 
-  new_h = top_clusters %>% strsplit(., split = "_") %>% sapply(., '[[', 2) %>% 
+  chr = x_clusters,
+  new_h = x_clusters %>% strsplit(., split = "_") %>% sapply(., '[[', 2) %>% 
     gsub("h", "", .) %>% as.double(), 
-  new_cl = top_clusters %>% strsplit(., split = "_") %>% sapply(., '[[', 3) %>% 
+  new_cl = x_clusters %>% strsplit(., split = "_") %>% sapply(., '[[', 3) %>% 
     gsub("c", "", .) %>% as.integer()
 ) %>% inner_join(cluster_mapping$lookup_table, ., by = c("new_h", "new_cl")) %>% 
-  select(new_id, new_cl, old_h, old_cl) %>% 
-  set_colnames(c("new_id", "new_cl", "original_h", "original_cl")) %>% 
-  inner_join(., size_details, by = c("new_id" = "first_tp2_flag")) %>% 
+  select(chr, new_cl, old_h, old_cl) %>%
+  set_colnames(c("chr", "new_cl", "original_h", "original_cl")) %>%
+  inner_join(., size_details, by = c("chr" = "first_tp2_flag")) %>%
   arrange(-TP2_cluster_size)
+
+saveRDS(clusters, "intermediate_data/heatmap_cluster_labs.Rds")
 
 # Reading in the last timepoint data, as well as the strain metadata and the 
 # data representative assignments - used for processing distance files from intermediate_data/
@@ -100,13 +106,14 @@ cl_drs <- lapply(1:nrow(clusters), function(i) {
   m$dr_matches %>% filter(Strain %in% x1) %>% pull(dr) %>% unique()
 }) %>% set_names(clusters$new_cl)
 
-# Collectiing epitable data for each of the clusters, with column names: 
+# Collecting epitable data for each of the clusters, with column names: 
 #       ||---------------------------------------------||
 #       || Strain.1 | Strain.2 | Temp.Dist | Geog.Dist ||
 #       ||---------------------------------------------||
 
 outputDetails(paste0("Collecting pairwise distances (from non-redundant set), for each of ", 
-                     nrow(clusters), " clusters"), newcat = TRUE)
+                     nrow(clusters), " clusters\n    ", num_cl, 
+                     " from user input + 1 manual check\n"), newcat = TRUE)
 for (j in 1:nrow(clusters)) {
   clx <- clusters$new_cl[j]
   outputDetails(paste0("Cluster ", gsub("TP2", "TPN", clusters$new_id[j]), " = ", 

@@ -1,7 +1,7 @@
 #! /usr/bin/env Rscript
 
 # Will not generate heatmaps for cluster of size > max_cluster_size
-max_cluster_size <- 2000
+# max_cluster_size <- 2000
 
 # # General setup - calling libraries, etc. --------------------------------------------------------------
 msg <- file("logs/heatmaps.txt", open="wt")
@@ -16,8 +16,7 @@ y <- suppressWarnings(
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Starting heatmap generation ", 
            paste0(rep("-", 31), collapse = ""), "||\n"))
 
-# Adjust input parameters here: ------------------------------------------------------------------------
-# This section collects user-specified inputs
+# This section collects user-specified inputs ----------------------------------------------------------
 option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", 
               default = "inputs/processed/strain_info.txt", help = "Metadata file"),
@@ -32,64 +31,20 @@ source("scripts/Misc/plotting_functions.R")
 
 dir.create("report_specific/heatmaps/clustering/", showWarnings = FALSE, recursive = TRUE)
 
-fnames <- list.files("intermediate_data/TPN/dists/", full.names = TRUE)
-assert("Distances were collected, script '3_dist_matrices.R' was run correctly", length(fnames) >= 1)
-distfiles <- lapply(fnames, function(f) readRDS(f))
-
-assert("Max and min of distances collected", file.exists("intermediate_data/TPN/extreme_dists.Rds"))
-extremes <- readRDS("intermediate_data/TPN/extreme_dists.Rds")
-
 arg <- parse_args(OptionParser(option_list=option_list))
-
-cluster_mapping <- readRDS(arg$tp2RData)
-
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
   set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
               "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl"))
 
-# The number of clusters to generate heatmaps for
-# Will collect the largest ones, looking at the full data set (last time point, 
-# when all strains are present)
-# This is set in the "Generate heatmaps" line in the form_inputs.txt file
+# The number of clusters to generate heatmaps for:
 num_cl <- as.integer(params$numcl[2])
+# Will collect the largest ones, looking at the full data set (last time point,
+# when all strains are present). Set in "Generate heatmaps" line in form_inputs.txt file
 
 if (num_cl > 0) {
-  # Reading in the threshold column (to get appropriate clusters)
-  hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
-  
-  # Reading the CGM results (weekly/monthly/multiset)
-  results_files <- list.files("results/", full.names = TRUE) %>% grep(params$int_type[2], ., value = TRUE)
-  cgms <- grep("CGM", results_files, value = TRUE) %>% readRDS()
-  
-  # NON-REDUNDANT METHOD
-  last_ivl <- unique(cgms$interval) %>% last()
-  
-  # Collecting the top x clusters by size (after all strains are in the data, last time point)
-  # x is given by the user in the form_input.txt file (the "Generate heatmaps" line)
-  size_details <- cgms[interval == last_ivl] %>% 
-    arrange(-tp2_cl_size) %>% select(first_tp2_flag, tp2_cl_size) %>% unique()
-  colnames(size_details)[which(colnames(size_details) == "tp2_cl_size")] <- "TP2_cluster_size"
-  
-  # Filtering so we only look at clusters of size < max_cluster_size
-  # This is because the heatmap function hangs when the data sets are too large
-  # May need to find a different function for this
-  # Note that we are using: heatmap3()
-  top_clusters <- size_details %>% arrange(-TP2_cluster_size) %>% 
-    filter(TP2_cluster_size < max_cluster_size) %>%
-    slice(1:num_cl) %>% pull(first_tp2_flag)
-  
-  # Matching these clusters to their original cluster names, for saving purposes
-  clusters <- data.table(
-    chr = top_clusters, 
-    new_h = top_clusters %>% strsplit(., split = "_") %>% sapply(., '[[', 2) %>% 
-      gsub("h", "", .) %>% as.double(), 
-    new_cl = top_clusters %>% strsplit(., split = "_") %>% sapply(., '[[', 3) %>% 
-      gsub("c", "", .) %>% as.integer()
-  ) %>% inner_join(cluster_mapping$lookup_table, ., by = c("new_h", "new_cl")) %>% 
-    select(chr, new_cl, old_h, old_cl) %>% 
-    set_colnames(c("chr", "int", "original_h", "original_cl")) %>% 
-    inner_join(., size_details, by = c("chr" = "first_tp2_flag")) %>% 
-    arrange(-TP2_cluster_size)
+  clustering_fname <- "intermediate_data/heatmap_cluster_labs.Rds"
+  assert("7a_topX_distances.R was run beforehand", file.exists(clustering_fname))
+  clusters <- readRDS(clustering_fname) %>% arrange(TP2_cluster_size)
   
   metadata <- suppressMessages(read_tsv(arg$metadata)) %>% processedStrains()
   
@@ -99,37 +54,59 @@ if (num_cl > 0) {
   for (i in 1:nrow(clusters)) {
     epitable <- readRDS(paste0("report_specific/epitables/", 
                                clusters$chr[i], "-", clusters$original_cl[i], ".Rds"))
+    epitable <- epitable %>% mutate(Temp_Geo.Dist = (Temp.Dist + Geog.Dist)/2)
     
     # euclidean distances, later using single linkage clustering (these should be user inputs)
-    
     # Processing epitables into temporal distance matrices, one for each cluster
-    epi.matrix <- epitable %>% select(Strain.1, Strain.2, Temp.Dist)
-    temp_mat <- distEpiMatrix(epi.matrix, "Temp.Dist")  
+    temp_epi.matrix <- epitable %>% select(Strain.1, Strain.2, Temp.Dist)
+    temp_mat <- distEpiMatrix(temp_epi.matrix, "Temp.Dist")  
+    rm(temp_epi.matrix); gc()
     
     ordered_by_date <- metadata$strain_data %>% select(Strain, Date) %>% arrange(Date) %>%
       filter(Strain %in% rownames(temp_mat)) %>% pull(Strain)
+    # if you want to print the matrices to check: 
     temp_mat <- temp_mat[ordered_by_date,ordered_by_date]
     
+    
     # Processing epitables into geographical distance matrices, one for each cluster
-    epi.matrix <- epitable %>% select(Strain.1, Strain.2, Geog.Dist)
-    geo_mat <- distEpiMatrix(epi.matrix, "Geog.Dist")
+    geo_epi.matrix <- epitable %>% select(Strain.1, Strain.2, Geog.Dist)
+    geo_mat <- distEpiMatrix(geo_epi.matrix, "Geog.Dist")
+    rm(geo_epi.matrix); gc()
+    geo_mat <- geo_mat[ordered_by_date,ordered_by_date]
+    
+    
+    # Processing epitables into geographical distance matrices, one for each cluster
+    tg_epi.matrix <- epitable %>% select(Strain.1, Strain.2, Temp_Geo.Dist)
+    temp_geo_mat <- distEpiMatrix(tg_epi.matrix, "Temp_Geo.Dist")
+    rm(tg_epi.matrix); gc()
+    temp_geo_mat <- temp_geo_mat[ordered_by_date,ordered_by_date]
+    
     
     # Saving the temporal and geographical distance matrices as heatmaps
-    outputDetails(paste0("Saving temporal and geographical heatmaps for cluster ", 
+    outputDetails(paste0("Saving (temporal, geographical and average of both) heatmaps for cluster ", 
                          clusters$chr[i], " (", clusters$original_cl[i], ")", "..."), newcat = TRUE)
     
     if (clusters$TP2_cluster_size[i] > 1) {
       cl_id <- paste0(clusters$chr[i], "-", clusters$original_cl[i], "-after_last_TP")
       
+      heatcolor1 <- colorRampPalette(c("white","yellowgreen","darkgreen"))(512)
+      thc <- hclust(as.dist(temp_mat), method="single")  
       
-      heatcolor1<- colorRampPalette(c("white","yellowgreen","darkgreen"))(512)
       
-      # png(paste0("report_specific/heatmaps/", cl_id, "-temp-hm2-default.png"))
-      # tplot1 <- heatmapFunction(temp_mat, "heatmap.2", heatcolor, FALSE) # TRUE for manual
-      # tplot1; dev.off()
+      # TEMPORAL ---------------------------------------------------------------------------------------
+      outputDetails(paste0("   Generating heatmap for temporal data ..."), newcat = TRUE)
+      
+      png(paste0("report_specific/heatmaps/", cl_id, "-temp.png"))
+      tplot <- heatmap3(temp_mat, col=rev(heatcolor1), labRow = NA, labCol = NA, 
+                        Rowv=as.dendrogram(thc), Colv=as.dendrogram(thc), revC = T, scale = 'none', 
+                        margins = c(10,10), xlab=NULL, ylab=NULL, method = "complete", useRaster = TRUE, 
+                        # main = paste0("Pairwise distances for temporal data"), 
+                        legendfun = function() showLegend(legend=c("Low similarity", "High similarity"), 
+                                                          col = c("white", "darkgreen")))
+      tplot
+      dev.off()
       
       outputDetails(paste0("   Generating density plot and frequency histogram ..."), newcat = TRUE)
-      
       png(paste0("report_specific/heatmaps/", cl_id, "-temp-density.png"))
       d <- density(temp_mat, adjust = 0.25)
       plot(d, main = "Temporal distances density", xlab = "Temporal pairwise distances")
@@ -142,18 +119,20 @@ if (num_cl > 0) {
            xlab = "Temporal pairwise distances")
       dev.off()
       
-      png(paste0("report_specific/heatmaps/", cl_id, "-temp-manual.png"))
-      outputDetails(paste0("   Clustering temporal data ..."), newcat = TRUE)
-      thc <- hclust(as.dist(temp_mat), method="single")
-      outputDetails(paste0("   Generating heatmap for temporal data ..."), newcat = TRUE)
-      tplot <- heatmapFunction(temp_mat, "heatmap3", heatcolor, hc = thc)
-      tplot
-      dev.off()
+      # GEOGRAPHICAL -----------------------------------------------------------------------------------
+      outputDetails(paste0("   Generating heatmap for geographical data ..."), newcat = TRUE)
       
-      # png(paste0("report_specific/heatmaps/", cl_id, "-geo-default.png"))
-      # gplot1 <- heatmapFunction(geo_mat, "heatmap.2", heatcolor, FALSE) # TRUE for manual
-      # gplot1; dev.off()
+      png(paste0("report_specific/heatmaps/", cl_id, "-geo.png"))
+      gplot <- heatmap3(geo_mat, col=rev(heatcolor1), labRow = NA, labCol = NA, 
+                        Rowv=as.dendrogram(thc), Colv=as.dendrogram(thc), revC = T, scale = 'none', 
+                        margins = c(10,10), xlab=NULL, ylab=NULL, method = "complete", useRaster = TRUE, 
+                        # main = paste0("Pairwise distances for geographical data"), 
+                        legendfun = function() showLegend(legend=c("Low similarity", "High similarity"), 
+                                                          col = c("white", "darkgreen")))
+      gplot
+      dev.off()  
       
+      outputDetails(paste0("   Generating density plot and frequency histogram ..."), newcat = TRUE)
       png(paste0("report_specific/heatmaps/", cl_id, "-geo-density.png"))
       d <- density(geo_mat, adjust = 0.25)
       plot(d, main = "Geographical distances density", xlab = "Geographical pairwise distances")
@@ -166,21 +145,42 @@ if (num_cl > 0) {
            xlab = "Geographical pairwise distances")
       dev.off()
       
-      png(paste0("report_specific/heatmaps/", cl_id, "-geo-manual.png"))
-      outputDetails(paste0("   Clustering geographical data ..."), newcat = TRUE)
-      ghc <- hclust(as.dist(geo_mat), method="single")
-      outputDetails(paste0("   Generating heatmap for geographical data ..."), newcat = TRUE)
-      gplot <- heatmapFunction(geo_mat, "heatmap3", heatcolor, hc = ghc)
-      gplot
+      
+      # TEMP AND GEO -----------------------------------------------------------------------------------
+      outputDetails(paste0("   Generating heatmap for (temp+geo)/2 data ..."), newcat = TRUE)
+      
+      png(paste0("report_specific/heatmaps/", cl_id, "-tempgeo.png"))
+      tgplot <- heatmap3(temp_geo_mat, col=rev(heatcolor1), labRow = NA, labCol = NA, 
+                        Rowv=as.dendrogram(thc), Colv=as.dendrogram(thc), revC = T, scale = 'none', 
+                        margins = c(10,10), xlab=NULL, ylab=NULL, method = "complete", useRaster = TRUE, 
+                        # main = paste0("Pairwise distances for temp and geo data"), 
+                        legendfun = function() showLegend(legend=c("Low similarity", "High similarity"), 
+                                                          col = c("white", "darkgreen")))
+      tgplot
+      dev.off()  
+      
+      outputDetails(paste0("   Generating density plot and frequency histogram ..."), newcat = TRUE)
+      png(paste0("report_specific/heatmaps/", cl_id, "-tempgeo-density.png"))
+      d <- density(temp_geo_mat, adjust = 0.25)
+      plot(d, main = "Temp and geo distances density", xlab = "Temp and geo pairwise distances")
       dev.off()
       
+      png(paste0("report_specific/heatmaps/", cl_id, "-tempgeo-frequencies.png"))
+      half_size <- temp_geo_mat
+      half_size[upper.tri(half_size)] <- 0
+      hist(as.vector(half_size), freq = TRUE, main = "Temp and geo distances counts", 
+           xlab = "Temp and geo pairwise distances")
+      dev.off()
+      
+      
+      # Save clustering separately ---------------------------------------------------------------------
       # Used this method (https://stackoverflow.com/questions/18354501/how-to-get-member-of-clusters-from-rs-hclust-heatmap-2)
       # to extract the clustering from the heatmaps
       
       temp_clustering <- cutree(thc, 1:dim(temp_mat)[1])
-      geo_clustering <- cutree(ghc, 1:dim(geo_mat)[1])
+      # geo_clustering <- cutree(ghc, 1:dim(geo_mat)[1])
       
-      list("temp" = temp_clustering, "geo" = geo_clustering) %>%
+      list("temp" = temp_clustering) %>% #, "geo" = geo_clustering) %>%
         saveRDS(., paste0("report_specific/heatmaps/clustering/",
                           clusters$chr[i], "-", clusters$original_cl[i], ".Rds"))
     }else {

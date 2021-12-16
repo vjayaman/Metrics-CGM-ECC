@@ -17,7 +17,7 @@ heatmapFunction <- function(m, type = "heatmap3", heatcolor, args = TRUE, hc = N
                          hclustfun = function(x) hclust(x,method = 'single'))    
     }
   }else if (type == "heatmap3") {
-    m_vec <- m %>% as.vector()
+    # m_vec <- m %>% as.vector()
     plotx <- heatmap3(m, col=rev(heatcolor1), 
                       Rowv=as.dendrogram(hc), Colv=as.dendrogram(hc), revC = T, 
                       scale = 'none', trace='none', margins = c(10,10),
