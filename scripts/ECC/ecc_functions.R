@@ -3,7 +3,7 @@ source("scripts/ECC/epicohesionversions.R")
 # -----------------------------------------------------------------------------------------------------
 
 ### Incorporating the allele data with the epidemiological data 
-# strain_data <- selected_tp; tpx <- k_i; cluster_y <- cluster_x[dr %in% k_drs]
+# strain_data <- selected_tp; tpx <- k_i
 epiCollectionByClusterV2 <- function(strain_data, tau, gamma, tr_dists, tpx, cluster_y) {
   # cat(paste0("\n   Collecting ECC values for temporal = ", tau, ", geo = ", gamma))
   

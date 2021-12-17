@@ -1,11 +1,5 @@
 #! /usr/bin/env Rscript
 
-# The number of clusters to generate pairwise distances for
-# Will collect the largest ones, looking at the full data set (last time point, 
-# when all strains are present)
-# If this method seems alright, I'll update the form.html input file to include this parameter
-num_cl <- 5
-
 # General setup - calling libraries, etc. --------------------------------------------------------------
 msg <- file("logs/pairwise_strain_distances.txt", open="wt")
 sink(msg, type="message")
@@ -68,6 +62,7 @@ size_details <- cgms[interval == last_ivl] %>%
   arrange(-tp2_cl_size) %>% select(first_tp2_flag, tp2_cl_size) %>% unique()
 colnames(size_details)[which(colnames(size_details) == "tp2_cl_size")] <- "TP2_cluster_size"
 
+num_cl <- as.numeric(params$numcl[2])
 top_clusters <- size_details %>% slice(1:num_cl)
 
 manual_check <- size_details %>% 
@@ -166,7 +161,7 @@ for (j in 1:nrow(clusters)) {
   
   outputDetails("saving ...", TRUE)
   saveRDS(pw_strains, file = paste0("report_specific/epitables/", 
-                                    clusters$new_id[j], "-", clusters$original_cl[j], ".Rds"))
+                                    clusters$chr[j], "-", clusters$original_cl[j], ".Rds"))
 }
 
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())

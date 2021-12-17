@@ -73,11 +73,10 @@ td <- typing_data[[length(typing_data)]] %>% rownames_to_column("Strain") %>% as
 
 parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>% 
   left_join(td, ., by = "Strain") %>% sectionClusters(.)
-df <- parts$drs
-cx <- setdiff(colnames(df), c("Strain", "dr"))
-results <- parts$results
+# cx <- setdiff(colnames(parts$drs), c("Strain", "dr"))
+# results <- parts$results
 
-dfx <- params$coeffs[2] %>% strsplit(., ",") %>% unlist() %>% 
+matched_params <- params$coeffs[2] %>% strsplit(., ",") %>% unlist() %>% 
   expand.grid(x = ., k = interval_list) %>% as.data.frame() %>% as.data.table()
 
 k <- last(interval_list)
@@ -88,7 +87,34 @@ fnames <- names(y[y]) # groups of clusters, the pairwise distances for each grou
 
 m$dr_matches <- m$dr_matches %>% as.data.table()
 
-dates <- as.character(unique(dfx$k))
+dates <- as.character(unique(matched_params$k))
+
+preProcForECC <- function(novel_only = FALSE, k_i, metadata, parts, m, matched_params, tr_dists) {
+  if (novel_only) {
+    tpkstrains <- metadata[get(interval) == k_i]$Strain
+  }else {
+    tpkstrains <- metadata[get(interval) <= k_i]$Strain
+  }
+  
+  cx <- setdiff(colnames(parts$drs), c("Strain", "dr"))
+  key_cls <- parts$drs[Strain %in% tpkstrains] %>% select(-Strain, -dr) %>% pull() %>% unique()
+  k_drs <- m$dr_matches[Strain %in% tpkstrains] %>% pull(dr)
+  cluster_x <- parts$drs[parts$drs[[cx]] %in% pull(parts$results[[f]], cx),-"Strain"]
+  
+  selected_tp <- m$strain_data %>% filter(Strain %in% tpkstrains)
+  
+  eccs <- lapply(as.character(unique(matched_params$x)), function(x_i) {
+    coeffs <- unlist(strsplit(x_i, split = "-"))
+    tau <- coeffs[2]
+    gamma <- coeffs[3]
+    outputDetails(paste0("\n   ", k_i, "           ", tau, "                ", gamma))
+    cluster_y <- cluster_x[dr %in% k_drs]
+    if (nrow(cluster_y) > 0) {
+      epiCollectionByClusterV2(selected_tp, tau, gamma, tr_dists, k_i, cluster_y)
+    }
+  })
+  return(eccs)
+}
 
 for (j in 1:length(fnames)) {
   f <- fnames[j]
@@ -98,40 +124,41 @@ for (j in 1:length(fnames)) {
   tr_dists <- collectTransforms2(dms, extremes)
   
   for (k_i in dates) {
-    # print(k_i)
-    tpkstrains <- metadata[get(interval) <= k_i]$Strain
-    key_cls <- parts$drs[Strain %in% tpkstrains] %>% select(-Strain, -dr) %>% pull() %>% unique()
-    k_drs <- m$dr_matches[Strain %in% tpkstrains] %>% pull(dr)
-    cluster_x <- df[df[[cx]] %in% pull(results[[f]], cx),-"Strain"]
-    selected_tp <- m$strain_data %>% filter(Strain %in% tpkstrains)
+    general_eccs <- preProcForECC(novel_only = FALSE, k_i, metadata, parts, m, matched_params, tr_dists)
+    novel_only_eccs <- preProcForECC(novel_only = TRUE, k_i, metadata, parts, m, matched_params, tr_dists)
     
-    eccs <- lapply(as.character(unique(dfx$x)), function(x_i) {
-      coeffs <- unlist(strsplit(x_i, split = "-"))
-      tau <- coeffs[2]
-      gamma <- coeffs[3]
-      outputDetails(paste0("\n   ", k_i, "           ", tau, "                ", gamma))
-      cluster_y <- cluster_x[dr %in% k_drs]
-      if (nrow(cluster_y) > 0) {
-        epiCollectionByClusterV2(selected_tp, tau, gamma, tr_dists, k_i, cluster_y)  
-      }
-    })
+    if (length(general_eccs[!sapply(general_eccs, is.null)]) > 0) {
+      save_to_gen <- file.path(basedir, paste0("TP", k_i), paste0("group", f, ".Rds"))
+      suppressMessages(Reduce(inner_join, general_eccs)) %>% saveRDS(., save_to_gen)  
+    }
     
-    if (length(eccs[!sapply(eccs, is.null)]) > 0) {
-      save_to <- file.path(basedir, paste0("TP", k_i), paste0("group", f, ".Rds"))
-      suppressMessages(Reduce(inner_join, eccs)) %>% saveRDS(., save_to)  
+    if (length(novel_only_eccs[!sapply(novel_only_eccs, is.null)]) > 0) {
+      save_to_nov <- file.path(basedir, paste0("TP", k_i), paste0("novels", f, ".Rds"))
+      suppressMessages(Reduce(inner_join, novel_only_eccs)) %>% saveRDS(., save_to_nov)  
     }
   }
+}
+
+mergingResults <- function(pattern, datafiles) {
+  df_subset <- datafiles[grepl(pattern, datafiles$fname)]
+  eccs <- lapply(1:nrow(df_subset), function(i) {
+    dfy <- readRDS(df_subset$fname[i]) %>% mutate(across(.cols = everything(), as.double))
+    colnames(dfy) <- gsub(paste0("TP", df_subset$tp[i], "_"), "", colnames(dfy))
+    dfy %>% add_column(TP = df_subset$tp[i], .before = 1)
+  }) %>% bind_rows()
+  if (pattern == "novels") {
+    inds <- grepl("ECC", colnames(eccs))
+    colnames(eccs)[inds] <- paste0(colnames(eccs)[inds], "_Novels_only")  
+  }
+  return(eccs)  
 }
 
 datafiles <- lapply(interval_list, function(tp) {
   data.table(tp, fname = list.files(file.path(basedir, paste0("TP", tp)), full.names = TRUE))
 }) %>% bind_rows() %>% arrange(tp)
 
-ecc_results <- lapply(1:nrow(datafiles), function(i) {
-  dfy <- readRDS(datafiles$fname[i]) %>% mutate(across(.cols = everything(), as.double))
-  colnames(dfy) <- gsub(paste0("TP", datafiles$tp[i], "_"), "", colnames(dfy))
-  dfy %>% add_column(TP = datafiles$tp[i], .before = 1)
-}) %>% bind_rows()
+eccs <- mergingResults("group", datafiles) %>% 
+  left_join(., mergingResults("novels", datafiles))
 
 if (params$int_type[2] == "multiset") {
   res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
@@ -141,7 +168,7 @@ if (params$int_type[2] == "multiset") {
 }
 
 assert("No -Inf ECC results", !any(is.infinite(abs(pull(ecc_results[,4])))))
-saveRDS(ecc_results, res_file)
+saveRDS(eccs, res_file)
 
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 timeTaken(pt = "ECC data collection", stopwatch) %>% outputDetails(., newcat = TRUE)
