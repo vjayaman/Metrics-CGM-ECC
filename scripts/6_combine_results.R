@@ -84,6 +84,9 @@ avgs <- avgs %>%
   mutate(tp1_id = paste0("TP1_", h_id, "_", padCol(!!as.symbol(hx$th), a1[['pc']], "c"))) %>% 
   mutate(first_tp2_flag = tp1_id %>% gsub("TP1", "TP2", .))
 
+
+
+
 # read in ECC results and repeat the process
 eccs <- grep("ECC", results_files, value = TRUE) %>% readRDS() %>% 
   mutate(tp1_id = paste0("TP1_", h_id, "_", padCol(!!as.symbol(hx$th), a1[['pc']], "c"))) %>% 
@@ -168,8 +171,8 @@ assert("No clusters with unassigned type", checkTypes(step1))
 
 cat(paste0("Checking type modifications: \n"))
 step3 <- data.table()
+# for (i in 1:length(all_intervals)) {
 for (i in 1:length(interval_list)) {
-# for (i in 1:(length(interval_list)-1)) {
   cat(paste0("Interval ", all_intervals[i], " - ", all_intervals[i+1], "\n"))
   int_i <- all_intervals[i:(i+1)] %>% paste0(., collapse = "-")
   step2 <- step1[interval == int_i]
@@ -200,7 +203,8 @@ for (i in 1:length(interval_list)) {
          all(c(cases4$tp1_cl_size, cases4$tp2_cl_size) < 3))
   
   # check that the only NA ECCs are for Type4 cases now:
-  ecccols <- grep("ECC", colnames(step2), value = TRUE) %>% sort(decreasing = TRUE)
+  ecccols <- grep("ECC", colnames(step2), value = TRUE) %>% sort(decreasing = TRUE) %>% 
+    grep("Novels_only", ., invert = TRUE, value = TRUE)
   
   x1 <- which(is.na(step2[,..ecccols]), arr.ind = TRUE) %>% as.data.frame() %>% pull(row)
   assert("Only blank ECCs are for Type0 or Type4 cases", 
