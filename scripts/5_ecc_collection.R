@@ -167,7 +167,7 @@ if (params$int_type[2] == "multiset") {
   res_file <- paste0("results/ECC-", params$int_type[2], "-intervals.Rds")
 }
 
-assert("No -Inf ECC results", !any(is.infinite(abs(pull(ecc_results[,4])))))
+assert("No -Inf ECC results", !any(is.infinite(abs(pull(eccs[,4])))))
 saveRDS(eccs, res_file)
 
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
