@@ -90,7 +90,10 @@ if (num_cl > 0) {
       cl_id <- paste0(clusters$chr[i], "-", clusters$original_cl[i], "-after_last_TP")
       
       heatcolor1 <- colorRampPalette(c("white","yellowgreen","darkgreen"))(512)
-      thc <- hclust(as.dist(temp_mat), method="single")  
+      cluster_by <- "temp"
+      clustering_mat <- switch(cluster_by, "temp" = temp_mat, "geo" = geo_mat, "temp_geo" = temp_geo_mat)
+      thc <- hclust(as.dist(clustering_mat), method="single")
+      # thc <- hclust(as.dist(temp_mat), method="single")
       
       
       # TEMPORAL ---------------------------------------------------------------------------------------

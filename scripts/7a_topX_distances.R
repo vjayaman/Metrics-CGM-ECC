@@ -53,22 +53,46 @@ hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(
 results_files <- list.files("results/", full.names = TRUE) %>% grep(params$int_type[2], ., value = TRUE)
 cgms <- grep("CGM", results_files, value = TRUE) %>% readRDS()
 
+num_cl <- as.numeric(params$numcl[2])
+
 # NON-REDUNDANT METHOD
 last_ivl <- unique(cgms$interval) %>% last()
 
 # Collecting the top x clusters by size (after all strains are in the data, last time point)
-# x is given by the user in the form_input.txt file (the "Generate heatmaps" line)
-size_details <- cgms[interval == last_ivl] %>% 
-  arrange(-tp2_cl_size) %>% select(first_tp2_flag, tp2_cl_size) %>% unique()
-colnames(size_details)[which(colnames(size_details) == "tp2_cl_size")] <- "TP2_cluster_size"
+# or by growth rate. x is given by the user in the form_input.txt file (the "Generate heatmaps" line)
 
-num_cl <- as.numeric(params$numcl[2])
-top_clusters <- size_details %>% slice(1:num_cl)
+# "Actual growth rate = (TP2 size - TP1 size) / (TP1 size)" = actual_growth_rate
+# "Novel growth = (TP2 size) / (TP2 size - number of novels)" = new_growth
 
-manual_check <- size_details %>% 
-  filter(TP2_cluster_size < 25 & TP2_cluster_size >= 10) %>% slice(1)
+cols_to_consider <- cgms[interval == last_ivl] %>% 
+  select(first_tp2_flag, tp2_cl_size, actual_growth_rate, new_growth) %>% unique()
 
-x_clusters <- top_clusters %>% bind_rows(manual_check) %>% pull(first_tp2_flag)
+
+top_x_by_size <- cols_to_consider %>% arrange(-tp2_cl_size) %>% slice(1:num_cl) %>% 
+  mutate(by_size = 1) %>% select(first_tp2_flag, tp2_cl_size, by_size)
+top_x_by_gr <- cols_to_consider %>% arrange(-actual_growth_rate) %>% slice(1:num_cl) %>% 
+  mutate(by_gr = 1) %>% select(first_tp2_flag, tp2_cl_size, by_gr)
+top_x_by_nr <- cols_to_consider %>% arrange(-new_growth) %>% slice(1:num_cl) %>% 
+  mutate(by_nr = 1) %>% select(first_tp2_flag, tp2_cl_size, by_nr)
+
+
+top_x <- top_x_by_size %>% 
+  merge.data.table(., top_x_by_gr, all.x = TRUE, all.y = TRUE) %>% 
+  merge.data.table(., top_x_by_nr, all.x = TRUE, all.y = TRUE)
+colnames(top_x)[which(colnames(top_x) == "tp2_cl_size")] <- "TP2_cluster_size"
+
+# size_details <- cgms[interval == last_ivl] %>% 
+#   arrange(-tp2_cl_size) %>% select(first_tp2_flag, tp2_cl_size) %>% unique()
+# colnames(size_details)[which(colnames(size_details) == "tp2_cl_size")] <- "TP2_cluster_size"
+
+# top_clusters <- size_details %>% slice(1:num_cl)
+
+manual_check <- cgms[interval == last_ivl] %>% 
+  arrange(-tp2_cl_size) %>% select(first_tp2_flag, tp2_cl_size) %>% unique() %>% 
+  filter(tp2_cl_size < 25 & tp2_cl_size >= 10) %>% slice(1)
+colnames(manual_check)[which(colnames(manual_check) == "tp2_cl_size")] <- "TP2_cluster_size"
+
+x_clusters <- top_x %>% bind_rows(manual_check) %>% pull(first_tp2_flag)
 
 # Matching these clusters to their original cluster names, for saving purposes
 clusters <- data.table(
@@ -80,7 +104,8 @@ clusters <- data.table(
 ) %>% inner_join(cluster_mapping$lookup_table, ., by = c("new_h", "new_cl")) %>% 
   select(chr, new_cl, old_h, old_cl) %>%
   set_colnames(c("chr", "new_cl", "original_h", "original_cl")) %>%
-  inner_join(., size_details, by = c("chr" = "first_tp2_flag")) %>%
+  inner_join(., top_x, by = c("chr" = "first_tp2_flag")) %>%
+  # inner_join(., size_details, by = c("chr" = "first_tp2_flag")) %>%
   arrange(-TP2_cluster_size)
 
 saveRDS(clusters, "intermediate_data/heatmap_cluster_labs.Rds")
