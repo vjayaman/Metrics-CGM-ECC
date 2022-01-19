@@ -88,3 +88,43 @@ distEpiMatrix <- function(epi.matrix, dist_type) {
   rownames(epi.cast) <- colnames(epi.cast)
   return(epi.cast)
 }
+
+# cname in c("Temp.Dist", "Geog.Dist", "Temp_Geo.Dist")
+prepEpiMatrix <- function(epitable, cname) {
+  epi.matrix <- epitable %>% select(Strain.1, Strain.2, all_of(cname))
+  mat <- distEpiMatrix(epi.matrix, cname)  
+  rm(epi.matrix); gc()
+  return(mat)
+}
+
+densityPlot <- function(save_to, plot_type, mat) {
+  png(save_to)
+  d <- density(mat, adjust = 0.25)
+  plot(d, main = paste0(plot_type, " distances density"), xlab = paste0(plot_type, " pairwise distances"))
+  dev.off()        
+}
+
+# type <- switch(plot_type, "temp" = "Temporal", "geo" = "Geographical", "tempgeo" = "Temp and geo")
+frequencyPlot <- function(save_to, plot_type, mat) {
+  png(save_to)
+  half_size <- mat
+  half_size[upper.tri(half_size)] <- 0
+  hist(as.vector(half_size), freq = TRUE, main = paste0(plot_type, " distances counts"), 
+       xlab = paste0(plot_type, " pairwise distances"))
+  dev.off()
+}
+
+heatmapPlot <- function(save_to, mat, heatcolor, hc_choice, col_dir) {
+  png(save_to)
+  heatplot <- heatmap3(
+    mat, col=rev(heatcolor), labRow = NA, labCol = NA, 
+    Rowv=as.dendrogram(hc_choice), Colv=as.dendrogram(hc_choice), revC = T, scale = 'none', 
+    margins = c(10,10), xlab=NULL, ylab=NULL, method = "complete", useRaster = TRUE, 
+    # main = paste0("Pairwise distances for geographical data"), 
+    legendfun = function() showLegend(legend=c("Low similarity", "High similarity"), col = col_dir))
+  heatplot
+  dev.off()  
+}
+
+
+

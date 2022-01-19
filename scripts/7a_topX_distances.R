@@ -43,8 +43,9 @@ extremes <- readRDS("intermediate_data/TPN/extreme_dists.Rds")
 arg <- parse_args(OptionParser(option_list=option_list))
 
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
-  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-              "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl"))
+  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov", 
+              "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
+              "clustby", "lowcol", "midcol", "highcol"))
 
 # Reading in the threshold column (to get appropriate clusters)
 hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))

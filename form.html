@@ -47,6 +47,11 @@
 		var tau2=window.document.myform.tau2.value;
 		var gamma2=window.document.myform.gamma2.value;
 		var numclusters=window.document.myform.num_cl.value;
+		var clusterby=window.document.myform.cluster_by.value;
+		var lowcol=window.document.myform.low_color.value;
+		var midcol=window.document.myform.mid_color.value;
+		var highcol=window.document.myform.high_color.value;
+
 		var cnames=checkBoxList();
 
 		if (tempwindow == true) {
@@ -89,7 +94,12 @@
 			"Source-temporal-geographic coefficents: " + "0-" + encodeURIComponent(tau1) + 
 			"-" + encodeURIComponent(gamma1) + ",0-" + encodeURIComponent(tau2) + 
 			"-" + encodeURIComponent(gamma2) + "\n" + 
-			"Generate heatmaps for top __ largest clusters: " + encodeURIComponent(numclusters) + "\n"); 
+			"Generate heatmaps for top __ largest clusters: " + encodeURIComponent(numclusters) + "\n" + 
+			"Cluster by: " + encodeURIComponent(clusterby) + "\n" + 
+			"Low value color: " + encodeURIComponent(lowcol) + "\n" + 
+			"Mid-range value color: " + encodeURIComponent(midcol) + "\n" + 
+			"High value color: " + encodeURIComponent(highcol) + "\n"
+		); 
 
 		pom.setAttribute('download', "form_inputs.txt");
 				
@@ -210,7 +220,7 @@
 				<span class="cbox"></span>
 			</label>
 			<br>
-			Type of intervals you would like the analysis to run for:<br>
+			Type of intervals you would like the analysis to run for *:<br>
 			<input type="radio" id="monthly" name="intervaltype" value = "monthly" onclick="dateSet()">
 			<label for="monthly">Monthly</label><br>
 			<input type="radio" id="weekly" name="intervaltype" value = "weekly" onclick="dateSet()">
@@ -240,6 +250,27 @@
 			<br>
 			<label for="quantity">Generate heatmaps for top __ largest clusters:</label>
 			<input id="num_cl" type="number" min="0" step="1" value="0"/>
+			<br>
+
+			<label for="cluster_select">Cluster by ____ in heatmaps:</label>
+			<select name="clustering_by" id="cluster_by">
+				<option value="temp">Temp</option>
+				<option value="geo">Geo</option>
+				<option value="temp_geo">Temp and geo</option>
+			</select>
+			<br>
+			<label >Heatmap colors:</label>
+			<br>
+
+			Low values:
+			<input type="text" id="low_color" value="white"/>
+
+			Mid-range values:
+			<input type="text" id="mid_color" value="yellowgreen"/>
+
+			High values:
+			<input type="text" id="high_color" value="darkgreen"/>
+
 			<fieldset>
 				<legend><b>Expected column names of metadata</b></legend>
 				Required: <em>Strain, Latitude, Longitude, Day, Month, Year</em>
@@ -283,6 +314,7 @@
 				<br>
 				  	<input type="text" id="othercnames" value="" style="width: 480px;" />
 			</fieldset>
+			* implies required field
 			<br>
 			<div class="btnwrapper">
 				<button class="btn" onclick="download()"><b>Download</b></button>
