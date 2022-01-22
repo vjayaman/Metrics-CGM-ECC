@@ -19,7 +19,6 @@ option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
               help = "Time point 2 file name (TP2)"), 
-  make_option(c("-f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
@@ -37,12 +36,18 @@ params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
               "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
               "clustby", "lowcol", "midcol", "highcol"))
 
+save_to <- file.path("intermediate_data", params$int_type[2], "TPN", "dists", "/")
+dir.create(save_to,  recursive = TRUE, showWarnings = FALSE)
+
+outputMessages("Reading in metadata")
 hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
 tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
 m <- read_tsv(arg$metadata) %>% processedStrains()
-basedir <- "intermediate_data/TPN/"
+basedir <- file.path("intermediate_data", params$int_type[2], "TPN")
+# basedir <- "intermediate_data/TPN/"
 
 # Extremes, for scaling ----------------------------------------------------------------------
+outputMessages("Collecting the extremes (min and max values) for optional scaling later")
 ext_geo_dists <- m$assignments %>% select(Longitude, Latitude) %>% unique() %>% 
   rownames_to_column("id") %>% distMatrix(., "geo", c("Longitude", "Latitude"))
 ext_temp_dists <- m$assignments %>% select(Date) %>% unique() %>% 
@@ -50,19 +55,18 @@ ext_temp_dists <- m$assignments %>% select(Date) %>% unique() %>%
 
 extremes <- list(maxt = max(ext_temp_dists), mint = min(ext_temp_dists), 
                  maxg = max(ext_geo_dists), ming = min(ext_geo_dists))
-saveRDS(extremes, paste0(basedir, "extreme_dists.Rds"))
+saveRDS(extremes, file.path(basedir, "extreme_dists.Rds"))
 rm(ext_geo_dists); rm(ext_temp_dists); rm(extremes)
 
 # Pairwise distances within clusters at TPN --------------------------------------------------
+outputMessages("Collecting non-redundant pairwise distances (at last timepoint, when dataset is full)")
 metadata <- m$strain_data %>% as.data.table()
 
-clustersets <- readRDS(arg$intervalfile)
+clustersets <- file.path("intermediate_data", params$int_type[2], "clustersets.Rds") %>% readRDS(.)
 interval_list <- names(clustersets)
 rm(clustersets)
 
 k <- last(interval_list)
-save_to <- paste0("intermediate_data/TPN/dists/")
-dir.create(save_to,  recursive = TRUE, showWarnings = FALSE)
 
 if (params$int_type[2] == "multiset") {
   interval <- "Multiset"
@@ -86,18 +90,19 @@ rm(typing_data)
 
 parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>% 
   left_join(td, ., by = "Strain") %>% sectionClusters(.)
-saveRDS(parts, paste0("intermediate_data/TPN/parts.Rds"))
+saveRDS(parts, file.path("intermediate_data", params$int_type[2], "TPN", "parts.Rds"))
 
-outputMessages(paste0("Collecting and saving distances for cluster groups at TP", k, ":\n"))
+outputMessages(paste0("  Collecting and saving distances for cluster groups at TP", k, ":\n"))
 
 tpkstrains <- metadata[get(interval) <= k]$Strain
 collectDistances(parts$drs, parts$results, m$dr_matches, m$assignments, tpkstrains, save_to)
 rm(m); rm(parts)
 
-assert("Distances were collected and saved", file.exists(paste0(basedir, "extreme_dists.Rds")))
+assert("Distances were collected and saved", file.exists(file.path(basedir, "extreme_dists.Rds")))
 
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 timeTaken(pt = "distances collection", stopwatch) %>% outputDetails(., newcat = TRUE)
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), 
            " End of distances collection ", paste0(rep("-", 31), collapse = ""), "||\n"))
 closeAllConnections()
+Sys.sleep(3)

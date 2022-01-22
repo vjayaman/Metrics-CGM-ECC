@@ -13,7 +13,6 @@ y <- lapply(libs, require, character.only = TRUE); rm(libs); rm(y)
 # READING IN THE INPUTS ----------------------------------------------------------------------------------------
 # Change the default values to read in your own files, or feed through terminal arguments
 option_list <- list(
-  make_option(c("-f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"), 
   make_option(c("-n", "--tpn"), metavar = "file", 
@@ -37,7 +36,7 @@ params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
               "clustby", "lowcol", "midcol", "highcol"))
 
 heights <- strsplit(as.character(params$th[2]), split = ",") %>% unlist()
-clustersets <- readRDS(arg$intervalfile)
+clustersets <- file.path("intermediate_data", params$int_type[2], "clustersets.Rds") %>% readRDS(.)
 interval_list <- names(clustersets)
 
 if (params$int_type[2] == "multiset") {
@@ -48,7 +47,7 @@ if (params$int_type[2] == "multiset") {
   interval <- "Week"
 }
 
-save_to <- file.path("intermediate_data", tolower(params$int_type[2]), "cgms")
+save_to <- file.path("intermediate_data", params$int_type[2], "cgms")
 tpn <- readRDS(arg$tpn)$new_cols
 
 # rowx <- readRDS("results/rowx.Rds")
@@ -158,9 +157,9 @@ for (i in 1:(length(interval_list)-1)) {
 
 if (params$int_type[2] == "multiset") {
   res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
-    paste0("results/CGM-", params$int_type[2], "-", ., ".Rds")
+    paste0(file.path("results", params$int_type[2]), paste0("CGM-", ".Rds"))
 }else {
-  res_file <- paste0("results/CGM-", params$int_type[2], "-intervals.Rds")
+  res_file <- file.path("results", params$int_type[2], "CGM-intervals.Rds")
 }
 
 cgmfiles <- list.files(save_to, full.names = TRUE)
@@ -175,4 +174,5 @@ outputDetails(paste0("||", paste0(rep("-", 28), collapse = ""), " End of cluster
                      paste0(rep("-", 29), collapse = ""), "||\n"))
 
 closeAllConnections()
+Sys.sleep(3)
 # for 264052 strains, and 53 weeks, took 32 min and 10 sec to run the whole thing

@@ -25,7 +25,6 @@ option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
               help = "Time point 2 file name (TP2)"), 
-  make_option(c("-f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
@@ -81,10 +80,10 @@ if (params$int_type[2] == "multiset") {
   interval <- "Week"
 }
 
-clustersets <- readRDS(arg$intervalfile)
+clustersets <- file.path("intermediate_data", params$int_type[2], "clustersets.Rds") %>% readRDS(.)
 interval_list <- names(clustersets); rm(clustersets)
 basedir <- file.path("intermediate_data", params$int_type[2], "avgdists")
-parts <- readRDS("intermediate_data/TPN/parts.Rds")
+parts <- file.path("intermediate_data", params$int_type[2], "TPN", "parts.Rds") %>% readRDS()
 groups <- names(parts$results)
 
 tpnfiles <- lapply(names(parts$results), function(x) parts$results[[x]] %>% add_column(f = x) %>% 
@@ -122,9 +121,11 @@ for (tdx in names(typing_data)) {
     setTxtProgressBar(pb, i)
     # print(i)
     x_i <- groups[i]
-    dms <- paste0("group", x_i, ".Rds") %>% file.path("intermediate_data/TPN/dists", .) %>% readRDS()
+    dms <- paste0("group", x_i, ".Rds") %>% 
+      file.path("intermediate_data", params$int_type[2], "TPN", "dists", .) %>% readRDS()
     groupX <- pd2[f == x_i] %>% select(Hx, n) %>% unique()
-    
+
+    file.path()
     if (nrow(groupX) > 0) {
       temp_dists <- dms[["temp"]] %>% 
         groupXAvgDists(., groupX, assignments, strain_data, "Date", metadata) %>% 
@@ -187,9 +188,9 @@ all_avg_dists <- lapply(names(typing_data), function(tdx) {
 
 if (params$int_type[2] == "multiset") {
   res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
-    paste0("results/AVGS-", params$int_type[2], "-", ., ".Rds")
+    paste0(file.path("results", params$int_type[2]), paste0("AVGS-", ".Rds"))
 }else {
-  res_file <- paste0("results/AVGS-", params$int_type[2], "-intervals.Rds")
+  res_file <- file.path("results", params$int_type[2], "AVGS-intervals.Rds")
 }
 
 outputDetails(paste0("\nMerging average distance results and saving to '", res_file, "'"), newcat = TRUE)
@@ -201,3 +202,4 @@ stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 timeTaken(pt = "average distances collection", stopwatch) %>% outputDetails(., newcat = TRUE)
 cat(paste0("||", paste0(rep("-", 27), collapse = ""), " End of average distances collection ",
            paste0(rep("-", 27), collapse = ""), "||\n"))
+Sys.sleep(3)

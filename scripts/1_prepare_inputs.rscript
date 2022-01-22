@@ -154,12 +154,12 @@ if (as.logical(params$nsTP2[2])) {
 
 
 # INTERVAL TYPE ------------------------------------------------------------------------------------------------
-save_to <- file.path("intermediate_data", tolower(params$int_type[2]))
+save_to <- file.path("intermediate_data", params$int_type[2])
 dir.create(save_to, showWarnings = FALSE)
 dir.create(file.path(save_to, "cgms"), showWarnings = FALSE, recursive = TRUE)
 dir.create(file.path(save_to, "eccs"), showWarnings = FALSE, recursive = TRUE)
 dir.create(file.path(save_to, "avgdists"), showWarnings = FALSE, recursive = TRUE)
-
+dir.create(file.path("results", params$int_type[2]))
 
 # YearMonth:
 #   if a strain was added on or before the last day of the month, given that YearMonth designation
@@ -229,7 +229,7 @@ rm(sofar); rm(int_j); rm(interval_clusters); rm(interval_list)
 
 
 # SAVING RESULTS -----------------------------------------------------------------------------------------------
-saveRDS(clustersets, file.path("inputs", "processed", "clustersets.Rds")); rm(clustersets)
+saveRDS(clustersets, file.path(save_to, "clustersets.Rds")); rm(clustersets)
 writeData(metadata, file.path("inputs", "processed", "strain_info.txt")); rm(metadata)
 writeData(tp2_processed$new_cols, file.path("inputs", "processed", "tp2_clusters.txt"))
 saveRDS(tp2_processed, file.path("inputs", "processed", "allTP2.Rds")); 
@@ -238,3 +238,5 @@ outputDetails(paste0("\nFinished process at: ", Sys.time(), "\n||", paste0(rep("
                      " Saved formatted inputs to 'processed' in the ",
                      "inputs", " directory", paste0(rep("-", 15), collapse = ""), "||"), TRUE)
 closeAllConnections()
+
+Sys.sleep(3)

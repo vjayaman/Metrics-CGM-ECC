@@ -17,8 +17,6 @@ files <- c("scripts/ECC/classes_ecc.R",
            "scripts/ECC/dist_functions.R")
 invisible(sapply(files, source)); rm(files)
 
-assert("Distances were collected and saved", file.exists("intermediate_data/TPN/extreme_dists.Rds"))
-
 outputDetails(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ",
                      paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
 
@@ -26,7 +24,7 @@ option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
               help = "Time point 2 file name (TP2)"), 
-  make_option(c("-f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
+  # make_option(c("-f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
@@ -37,11 +35,14 @@ params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
               "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
               "clustby", "lowcol", "midcol", "highcol"))
 
+assert("Distances were collected and saved", 
+       file.exists(file.path("intermediate_data", params$int_type[2], "TPN", "extreme_dists.Rds")))
+
 hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
 tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
 m <- read_tsv(arg$metadata) %>% processedStrains()
 metadata <- m$strain_data %>% as.data.table()
-extremes <- readRDS("intermediate_data/TPN/extreme_dists.Rds")
+extremes <- file.path("intermediate_data", params$int_type[2], "TPN", "extreme_dists.Rds") %>% readRDS()
 
 if (params$int_type[2] == "multiset") {
   interval <- "Multiset"
@@ -51,7 +52,7 @@ if (params$int_type[2] == "multiset") {
   interval <- "Week"
 }
 
-clustersets <- readRDS(arg$intervalfile)
+clustersets <- file.path("intermediate_data", params$int_type[2], "clustersets.Rds") %>% readRDS(.)
 interval_list <- names(clustersets)
 rm(clustersets)
 
@@ -121,7 +122,8 @@ for (j in 1:length(fnames)) {
   f <- fnames[j]
   outputDetails(paste0("\n\nGroup of clusters ", f, ", ", j, " / ", length(fnames), " ... "))
   outputDetails(paste0("\n     TP             tau             gamma"))
-  dms <- readRDS(paste0("intermediate_data/TPN/dists/group", f, ".Rds"))
+  
+  dms <- file.path("intermediate_data", params$int_type[2], "TPN", "dists", paste0("group", f, ".Rds")) %>% readRDS()
   tr_dists <- collectTransforms2(dms, extremes)
   
   for (k_i in dates) {
@@ -163,9 +165,9 @@ eccs <- mergingResults("group", datafiles) %>%
 
 if (params$int_type[2] == "multiset") {
   res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
-    paste0("results/ECC-", params$int_type[2], "-", ., ".Rds")
+    paste0(file.path("results", params$int_type[2]), paste0("ECC-", ".Rds"))
 }else {
-  res_file <- paste0("results/ECC-", params$int_type[2], "-intervals.Rds")
+  res_file <- file.path("results", params$int_type[2], "ECC-intervals.Rds")
 }
 
 assert("No -Inf ECC results", !any(is.infinite(abs(pull(eccs[,4])))))
@@ -175,3 +177,6 @@ stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 timeTaken(pt = "ECC data collection", stopwatch) %>% outputDetails(., newcat = TRUE)
 cat(paste0("||", paste0(rep("-", 30), collapse = ""), " End of ECC metric generation ",
            paste0(rep("-", 31), collapse = ""), "||\n"))
+
+Sys.sleep(3)
+
