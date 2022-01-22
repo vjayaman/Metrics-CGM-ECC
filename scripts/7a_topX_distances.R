@@ -39,28 +39,25 @@ params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
               "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
               "clustby", "lowcol", "midcol", "highcol"))
 
-cluster_mapping <- readRDS(arg$clustermapping)
-
 fnames <- file.path("intermediate_data", params$int_type[2], "TPN/dists/") %>% 
   list.files(., full.names = TRUE)
 assert("Distances were collected, script '3_dist_matrices.R' was run correctly", length(fnames) >= 1)
 distfiles <- lapply(fnames, function(f) readRDS(f))
 
+cluster_mapping <- readRDS(arg$clustermapping)
 
 ext_file <- file.path("intermediate_data", params$int_type[2], "TPN/extreme_dists.Rds")
 assert("Max and min of distances collected", file.exists(ext_file))
 extremes <- readRDS(ext_file)
 
-
 dir.create(file.path("results", params$int_type[2], "epitables"), 
            showWarnings = FALSE, recursive = TRUE)
-
 
 # Reading in the threshold column (to get appropriate clusters)
 hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
 
 # Reading the CGM results (weekly/monthly/multiset)
-cgms <- list.files("results/multiset", full.names = TRUE) %>% 
+cgms <- list.files(file.path("results", params$int_type[2]), full.names = TRUE) %>% 
   grep("CGM", ., value = TRUE) %>% readRDS()
 
 num_cl <- as.numeric(params$numcl[2])
