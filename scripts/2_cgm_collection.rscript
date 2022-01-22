@@ -157,7 +157,8 @@ for (i in 1:(length(interval_list)-1)) {
 
 if (params$int_type[2] == "multiset") {
   res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
-    paste0(file.path("results", params$int_type[2]), paste0("CGM-", ".Rds"))
+    paste0("CGM-",.,  ".Rds") %>% 
+    file.path(file.path("results", params$int_type[2]), .)
 }else {
   res_file <- file.path("results", params$int_type[2], "CGM-intervals.Rds")
 }

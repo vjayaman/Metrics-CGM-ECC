@@ -28,8 +28,6 @@ option_list <- list(
 
 # Reading in required functions, checking for pre-processed results (e.g. distances) -------------------
 source("scripts/Misc/plotting_functions.R")
-basedir <- "report_specific/heatmaps/"
-dir.create(paste0(basedir, "clustering/"), showWarnings = FALSE, recursive = TRUE)
 
 arg <- parse_args(OptionParser(option_list=option_list))
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
@@ -37,28 +35,36 @@ params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
               "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
               "clustby", "lowcol", "midcol", "highcol"))
 
+basedir <- file.path("results", params$int_type[2])
+dir.create(file.path(basedir,"heatmaps"), showWarnings = FALSE, recursive = TRUE)
+dir.create(file.path(basedir,"heatmaps", "clustering"), showWarnings = FALSE, recursive = TRUE)
+dir.create(file.path(basedir,"densities"), showWarnings = FALSE, recursive = TRUE)
+dir.create(file.path(basedir,"frequencies"), showWarnings = FALSE, recursive = TRUE)
+
 # The number of clusters to generate heatmaps for:
 # Will collect the largest ones, looking at the full data set (last time point,
 # when all strains are present). Set in "Generate heatmaps" line in form_inputs.txt file
 num_cl <- as.integer(params$numcl[2])
 
-# the column to use for clustering information
-cluster_by <- params$clustby[2]
-# color scheme - should be user inputs
-heatcolor <- colorRampPalette(c(params$lowcol[2],params$midcol[2],params$highcol[2]))(512)
-col_dir <- c(params$lowcol[2], params$highcol[2]) #c("Low similarity", "High similarity")
-
 if (num_cl > 0) {
-  clustering_fname <- "intermediate_data/heatmap_cluster_labs.Rds"
+  # the column to use for clustering information
+  cluster_by <- params$clustby[2]
+  # color scheme - should be user inputs
+  heatcolor <- colorRampPalette(c(params$lowcol[2],params$midcol[2],params$highcol[2]))(512)
+  col_dir <- c(params$lowcol[2], params$highcol[2]) #c("Low similarity", "High similarity")
+  
+  
+  clustering_fname <- file.path("intermediate_data", params$int_type[2], "cluster_labs.Rds")
   assert("7a_topX_distances.R was run beforehand", file.exists(clustering_fname))
   clusters <- readRDS(clustering_fname) %>% arrange(TP2_cluster_size)
   
   metadata <- suppressMessages(read_tsv(arg$metadata)) %>% processedStrains()
   
   for (i in 1:nrow(clusters)) {
-    epitable <- readRDS(paste0("report_specific/epitables/", 
-                               clusters$chr[i], "-", clusters$original_cl[i], ".Rds")) %>% 
-      mutate(Temp_Geo.Dist = (Temp.Dist + Geog.Dist)/2)
+    
+    epitable <- file.path("results", params$int_type[2], "epitables", 
+                          paste0(clusters$chr[i], "-", clusters$original_cl[i], ".Rds")) %>% 
+      readRDS() %>% mutate(Temp_Geo.Dist = (Temp.Dist + Geog.Dist)/2)
     
     # euclidean distances, later using single linkage clustering (these should be user inputs)
     # Processing epitables into temporal distance matrices, one for each cluster
@@ -76,55 +82,67 @@ if (num_cl > 0) {
     temp_geo_mat <- temp_geo_mat[ordered_by_date,ordered_by_date]
     
     # Saving the temporal and geographical distance matrices as heatmaps
-    outputDetails(paste0("Saving (temporal, geographical and average of both) heatmaps for cluster ", 
-                         clusters$chr[i], " (", clusters$original_cl[i], ")", "..."), newcat = TRUE)
+    outputDetails(paste0("Saving plots for cluster ", clusters$chr[i], " (", 
+                         clusters$original_cl[i], ", size ", clusters$TP2_cluster_size[i], 
+                         ") - after last TP ..."), newcat = TRUE)
     
     if (clusters$TP2_cluster_size[i] > 1) {
-      cl_id <- paste0(clusters$chr[i], "-", clusters$original_cl[i], "-after_last_TP")
+      cl_id <- paste0(clusters$chr[i], "-", clusters$original_cl[i])
       
       clustering_mat <- switch(cluster_by, "temp" = temp_mat, "geo" = geo_mat, "temp_geo" = temp_geo_mat)
       hc_choice <- hclust(as.dist(clustering_mat), method="single")
       
       # TEMPORAL ---------------------------------------------------------------------------------------
-      outputDetails(paste0("   Generating heatmap for temporal data ..."), newcat = TRUE)
-      heatmapPlot(paste0(basedir, cl_id, "-temp.png"), temp_mat, heatcolor, hc_choice, col_dir)
+      outputDetails(paste0("   Generating heatmap, density plot, and frequency histogram for temporal data ..."), newcat = TRUE)
+      tname <- paste0(cl_id, "-temp.png")
       
-      outputDetails(paste0("   Generating density plot and frequency histogram ..."), newcat = TRUE)
-      densityPlot(paste0(basedir, cl_id, "-temp-density.png"), "Temporal", temp_mat)
-      frequencyPlot(paste0(basedir, cl_id, "-temp-frequencies.png"), "Temporal", temp_mat)
-
+      png(file.path(basedir, "heatmaps", tname))
+      heatmapPlot(temp_mat, heatcolor, hc_choice, col_dir); dev.off()
+      png(file.path(basedir, "densities", tname))
+      densityPlot(temp_mat, "Temporal"); dev.off()
+      png(file.path(basedir, "frequencies", tname))
+      frequencyPlot(temp_mat, "Temporal"); dev.off()
       
       # GEOGRAPHICAL -----------------------------------------------------------------------------------
-      outputDetails(paste0("   Generating heatmap for geographical data ..."), newcat = TRUE)
-      heatmapPlot(paste0(basedir, cl_id, "-geo.png"), geo_mat, heatcolor, hc_choice, col_dir)
+      outputDetails(paste0("   Generating heatmap, density plot, and frequency histogram for geographical data ..."), newcat = TRUE)
+      gname <- paste0(cl_id, "-geo.png")
       
-      outputDetails(paste0("   Generating density plot and frequency histogram ..."), newcat = TRUE)
-      densityPlot(paste0(basedir, cl_id, "-geo-density.png"), "Geographical", geo_mat)
-      frequencyPlot(paste0(basedir, cl_id, "-geo-frequencies.png"), "Geographical", geo_mat)
+      png(file.path(basedir, "heatmaps", gname))
+      heatmapPlot(geo_mat, heatcolor, hc_choice, col_dir); dev.off()
+      png(file.path(basedir, "densities", gname))
+      densityPlot(geo_mat, "Geographical"); dev.off()
+      png(file.path(basedir, "frequencies", gname))
+      frequencyPlot(geo_mat, "Geographical"); dev.off()
       
       
       # TEMP AND GEO -----------------------------------------------------------------------------------
-      outputDetails(paste0("   Generating heatmap for (temp+geo)/2 data ..."), newcat = TRUE)
-      heatmapPlot(paste0(basedir, cl_id, "-tempgeo.png"), temp_geo_mat, heatcolor, hc_choice, col_dir)
+      outputDetails(paste0("   Generating heatmap, density plot, and frequency histogram for (temp+geo)/2 data ..."), newcat = TRUE)
+      tgname <- paste0(cl_id, "-tempgeo.png")
       
-      outputDetails(paste0("   Generating density plot and frequency histogram ..."), newcat = TRUE)
-      densityPlot(paste0(basedir, cl_id, "-tempgeo-density.png"), "Temp and geo", temp_geo_mat)
-      frequencyPlot(paste0(basedir, cl_id, "-tempgeo-frequencies.png"), "Temp and geo", temp_geo_mat)
+      png(file.path(basedir, "heatmaps", tgname))
+      heatmapPlot(temp_geo_mat, heatcolor, hc_choice, col_dir); dev.off()
+      png(file.path(basedir, "densities", tgname))
+      densityPlot(temp_geo_mat, "Temp and geo"); dev.off()
+      png(file.path(basedir, "frequencies", tgname))
+      frequencyPlot(temp_geo_mat, "Temp and geo"); dev.off()
+      
       
       # Save clustering separately ---------------------------------------------------------------------
       # Used this method (https://stackoverflow.com/questions/18354501/how-to-get-member-of-clusters-from-rs-hclust-heatmap-2)
       # to extract the clustering from the heatmaps
       
       user_clustering <- cutree(hc_choice, 1:dim(clustering_mat)[1])
-      saveRDS(user_clustering, paste0(basedir, "clustering/", clusters$chr[i], "-", clusters$original_cl[i], ".Rds"))
+      file.path(basedir, "heatmaps", "clustering", paste0(cl_id, ".Rds")) %>% saveRDS(user_clustering, .)
+      
     }else {
       outputDetails(paste0("TP2 cluster ", clusters$chr[i], " has only one strain, no heatmap generated"))
     }
   }
   
-  outputDetails("\nHeatmaps saved to report_specific/heatmaps/", TRUE)
-  outputDetails("Epitables saved to report_specific/epitables/", TRUE)
-  outputDetails("Clustering done in the heatmaps saved to report_specific/heatmaps/clustering/", TRUE)
+  paste0("\nHeatmaps saved to ", file.path("results", params$int_type[2], "heatmaps")) %>% outputDetails(., TRUE)
+  paste0("\nEpitables saved to ", file.path("results", params$int_type[2], "epitables")) %>% outputDetails(., TRUE)
+  paste0("\nClustering done in the heatmaps saved to ", file.path("results", params$int_type[2], "heatmaps", "clustering")) %>% 
+    outputDetails(., TRUE)
 }
 
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Completed heatmap generation ", 

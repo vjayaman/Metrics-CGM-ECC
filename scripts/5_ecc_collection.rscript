@@ -24,7 +24,6 @@ option_list <- list(
   make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
   make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
               help = "Time point 2 file name (TP2)"), 
-  # make_option(c("-f", "--intervalfile"), metavar = "file", default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
@@ -165,7 +164,8 @@ eccs <- mergingResults("group", datafiles) %>%
 
 if (params$int_type[2] == "multiset") {
   res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
-    paste0(file.path("results", params$int_type[2]), paste0("ECC-", ".Rds"))
+    paste0("ECC-",.,  ".Rds") %>% 
+    file.path(file.path("results", params$int_type[2]), .)
 }else {
   res_file <- file.path("results", params$int_type[2], "ECC-intervals.Rds")
 }

@@ -97,25 +97,20 @@ prepEpiMatrix <- function(epitable, cname) {
   return(mat)
 }
 
-densityPlot <- function(save_to, plot_type, mat) {
-  png(save_to)
+densityPlot <- function(mat, plot_type) {
   d <- density(mat, adjust = 0.25)
   plot(d, main = paste0(plot_type, " distances density"), xlab = paste0(plot_type, " pairwise distances"))
-  dev.off()        
 }
 
 # type <- switch(plot_type, "temp" = "Temporal", "geo" = "Geographical", "tempgeo" = "Temp and geo")
-frequencyPlot <- function(save_to, plot_type, mat) {
-  png(save_to)
+frequencyPlot <- function(mat, plot_type) {
   half_size <- mat
   half_size[upper.tri(half_size)] <- 0
   hist(as.vector(half_size), freq = TRUE, main = paste0(plot_type, " distances counts"), 
        xlab = paste0(plot_type, " pairwise distances"))
-  dev.off()
 }
 
-heatmapPlot <- function(save_to, mat, heatcolor, hc_choice, col_dir) {
-  png(save_to)
+heatmapPlot <- function(mat, heatcolor, hc_choice, col_dir) {
   heatplot <- heatmap3(
     mat, col=rev(heatcolor), labRow = NA, labCol = NA, 
     Rowv=as.dendrogram(hc_choice), Colv=as.dendrogram(hc_choice), revC = T, scale = 'none', 
@@ -123,7 +118,7 @@ heatmapPlot <- function(save_to, mat, heatcolor, hc_choice, col_dir) {
     # main = paste0("Pairwise distances for geographical data"), 
     legendfun = function() showLegend(legend=c("Low similarity", "High similarity"), col = col_dir))
   heatplot
-  dev.off()  
+  
 }
 
 
