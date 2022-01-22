@@ -46,7 +46,10 @@ dir.create(file.path(basedir,"frequencies"), showWarnings = FALSE, recursive = T
 # when all strains are present). Set in "Generate heatmaps" line in form_inputs.txt file
 num_cl <- as.integer(params$numcl[2])
 
-if (num_cl > 0) {
+if (num_cl == 0) {
+  cat(paste0("No data generated for heatmaps; user input gave ", 
+             "'Generate heatmaps for top 0 largest clusters'"))
+}else {
   # the column to use for clustering information
   cluster_by <- params$clustby[2]
   # color scheme - should be user inputs
