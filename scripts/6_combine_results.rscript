@@ -8,8 +8,6 @@ option_list <- list(
               default = "inputs/processed/strain_info.txt", help = "Metadata file"),
   make_option(c("-b", "--tpn"), metavar = "file", 
               default = "inputs/processed/allTP2.Rds", help = "TP2 data"), 
-  # make_option(c("-f", "--intervalfile"), metavar = "file", 
-  #             default = "inputs/processed/clustersets.Rds"), 
   make_option(c("-d", "--details"), metavar = "file", 
               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
 
