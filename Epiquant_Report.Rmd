@@ -44,7 +44,7 @@ pacman::p_load(
 
 ### <span style="color:blue">Section I: Overview of data analysis</span> {#top-link -} 
 #### <span style="color:blue">1. Basic Information</span>
- *	Name of analyst: Guangzh, Vansena, Ed, Samantha 
+ *	Name of analyst: Guangzhi, Vasena, Ed, Samantha 
  *  Date of analysis: 2022-01-13
  *	Data source: [GISAID](https://www.gisaid.org)
  
