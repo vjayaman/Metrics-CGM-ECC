@@ -1,0 +1,18 @@
+Region of interest: All
+Country of interest: All
+Has defined lineage information: true
+Has defined date information (day, month, and year): true
+Has province-level data: false
+Province of interest: none
+Threshold of interest: 0
+Is in a non-singleton cluster (at TP2): false
+Filtering by date: [,]
+Column names: Source,Country,Province,City
+Interval type: multiset
+Dividers: 2020-11-15
+Source-temporal-geographic coefficents: 0-1-0,0-0-1
+Generate heatmaps for top __ largest clusters: 0
+Cluster by: temp
+Low value color: white
+Mid-range value color: yellowgreen
+High value color: darkgreen

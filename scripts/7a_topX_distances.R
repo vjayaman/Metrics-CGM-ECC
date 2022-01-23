@@ -196,7 +196,7 @@ if (num_cl == 0) {
     pw_strains <- pw_strains %>% select(Strain.1, Strain.2, Temp.Dist, Geog.Dist)
     
     outputDetails("saving ...", TRUE)
-    file.path("results/multiset/epitables", 
+    file.path("results", params$int_type[2], "epitables", 
               paste0(clusters$chr[j], "-", clusters$original_cl[j], ".Rds")) %>% 
       saveRDS(pw_strains, file = .)
   }
