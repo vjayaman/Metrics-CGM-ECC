@@ -52,7 +52,15 @@ cat("\n\n\n")
 source("scripts/7b_topY_heatmaps.rscript")
 cat("\n\n\n")
 
-cat("Press [enter] to close the window: ");
-a <- readLines("stdin",n=1);
-cat( "\n" )
+# -------------------------------------------------------------------------------------------------------------
+
+if (interactive()) {
+  a <- readline("Press [enter] to close the window: ")
+  cat("\n")
+}else {
+  cat("Press [enter] to close the window: ");
+  a <- readLines("stdin",n=1);
+  cat( "\n" )
+}
+
 
