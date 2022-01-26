@@ -2,11 +2,7 @@
 
 # This should be run first, to make sure the required packages are installed
 
-dir_log <- "log_directory_structure.txt"
-log_not_moved <- file.exists(dir_log)
-if (log_not_moved) {
-  invisible(file.rename(from = dir_log, to = paste0("logs/", dir_log)))
-}
+dir.create("logs", showWarnings = FALSE)
 
 msg <- file("logs/environment_setup.txt", open="wt")
 sink(msg, type="message")
@@ -26,6 +22,14 @@ install.packages(not_installed, quiet = TRUE)
 # Testing packages were installed correctly:
 x <- lapply(required_packages, require, character.only = TRUE)
 names(x) <- required_packages
+
+dir.create("inputs/processed", showWarnings = FALSE)
+dir.create("results", showWarnings = FALSE)
+dir.create("report_specific/epitables", showWarnings = FALSE)
+dir.create("report_specific/clustering", showWarnings = FALSE)
+dir.create("report_specific/heatmaps", showWarnings = FALSE)
+dir.create("report_specific/densityplots", showWarnings = FALSE)
+dir.create("report_specific/frequencies", showWarnings = FALSE)
 
 # cat(paste0(msg, "\n"))
 # message(msg)
