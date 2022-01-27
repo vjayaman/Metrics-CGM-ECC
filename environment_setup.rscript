@@ -25,11 +25,6 @@ names(x) <- required_packages
 
 dir.create("inputs/processed", showWarnings = FALSE)
 dir.create("results", showWarnings = FALSE)
-dir.create("report_specific/epitables", showWarnings = FALSE)
-dir.create("report_specific/clustering", showWarnings = FALSE)
-dir.create("report_specific/heatmaps", showWarnings = FALSE)
-dir.create("report_specific/densityplots", showWarnings = FALSE)
-dir.create("report_specific/frequencies", showWarnings = FALSE)
 
 # cat(paste0(msg, "\n"))
 # message(msg)

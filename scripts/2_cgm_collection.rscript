@@ -44,7 +44,7 @@ if (params$int_type[2] == "multiset") {
 }else if (params$int_type[2] == "monthly") {
   interval <- "YearMonth"
 }else if (params$int_type[2] == "weekly") {
-  interval <- "Week"
+  interval <- "YearWeek" #"Week"
 }
 
 save_to <- file.path("intermediate_data", params$int_type[2], "cgms")
@@ -77,7 +77,7 @@ for (i in 1:(length(interval_list)-1)) {
   ph <- max(nchar(colnames(tpx1)[-1]), nchar(colnames(tpx2)[-1]))
   pc <- tpx2 %>% select(-isolate) %>% max(., tpx2 %>% select(-isolate)) %>% nchar()
   
-  if (interval == "Week") {msg1 <- "week "}else {msg1 <- ""}
+  if (interval == "YearWeek") {msg1 <- "week "}else {msg1 <- ""}
   
   msgtexts <- c(
     paste0("  Constructing ", msg1, n1, " data object, ", nrow(tpx1), " (", i, " / ", length(interval_list), "):\n"), 

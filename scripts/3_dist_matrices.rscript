@@ -73,7 +73,7 @@ if (params$int_type[2] == "multiset") {
 }else if (params$int_type[2] == "monthly") {
   interval <- "YearMonth"
 }else if (params$int_type[2] == "weekly") {
-  interval <- "Week"
+  interval <- "YearWeek" #"Week"
 }
 
 typing_data <- lapply(1:length(interval_list), function(i) {

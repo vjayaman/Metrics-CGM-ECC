@@ -31,7 +31,7 @@ arg <- parse_args(OptionParser(option_list=option_list))
 # Reading in required functions, checking for pre-processed results (e.g. distances) -------------------
 source("scripts/ECC/classes_ecc.R")
 source("scripts/ECC/dist_functions.R")
-source("scripts/ECC/ecc_functions.R")
+source("scripts/ECC/ecc_functions.R") # transformData2() is here
 source("report_specific/epi-helper-no-source.R")
 
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
@@ -112,7 +112,7 @@ if (num_cl == 0) {
     full_join(., top_x, by = c("chr" = "first_tp2_flag")) %>% 
     arrange(-TP2_cluster_size)
   
-  file.path("intermediate_data", params$int_type[2], "cluster_labs.Rds") %>% saveRDS(clusters, .)
+  file.path("results", params$int_type[2], "cluster_labs.Rds") %>% saveRDS(clusters, .)
   
   outputDetails(paste0("Collecting pairwise distances (from non-redundant set), ", 
                        "for each of the \n     ", nrow(clusters)-1, " clusters ", 
@@ -147,7 +147,7 @@ if (num_cl == 0) {
   
   for (j in 1:nrow(clusters)) {
     clx <- clusters$new_cl[j]
-    outputDetails(paste0("Cluster ", gsub("TP2", "TPN", clusters$new_id[j]), " = ", 
+    outputDetails(paste0("(", j, "/", nrow(clusters), ") Cluster ", gsub("TP2", "TPN", clusters$new_id[j]), " = ", 
                          clusters$original_cl[j], " (of size ", clusters$TP2_cluster_size[j], "), "))
     
     rawdists <- lapply(1:length(distfiles), function(i) {
@@ -165,13 +165,14 @@ if (num_cl == 0) {
         ctdm <- tdm_subset %>% 
           # COMMENT OUT THIS PART IF YOU DO NOT WANT TRANSFORMED (SCALED) DATA
           # This is done using a function from scripts/ECC/ecc_functions.R
-          transformData2(., "temp", extremes$mint, extremes$maxt) %>%
+          # DEFAULT: NOT TRANSFORMED - ADD TO THE FORM INPUTS FILE
+          # transformData2(., "temp", extremes$mint, extremes$maxt) %>%
           formatData(., c("dr1","dr2","Temp.Dist"))
         
         cgdm <- gdm_subset %>% 
           # COMMENT OUT THIS PART IF YOU DO NOT WANT TRANSFORMED (SCALED) DATA
           # This is done using a function from scripts/ECC/ecc_functions.R
-          transformData2(., "geo", extremes$ming, extremes$maxg) %>%
+          # transformData2(., "geo", extremes$ming, extremes$maxg) %>%
           formatData(., c("dr1","dr2","Geog.Dist"))
         
         merge.data.table(ctdm, cgdm)

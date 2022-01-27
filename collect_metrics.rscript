@@ -58,8 +58,8 @@ if (interactive()) {
   a <- readline("Press [enter] to close the window: ")
   cat("\n")
 }else {
-  cat("Press [enter] to close the window: ");
-  a <- readLines("stdin",n=1);
+  cat("Press [enter] to close the window: ")
+  a <- readLines("stdin", n=1)
   cat( "\n" )
 }
 

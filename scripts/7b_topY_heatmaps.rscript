@@ -57,7 +57,9 @@ if (num_cl == 0) {
   col_dir <- c(params$lowcol[2], params$highcol[2]) #c("Low similarity", "High similarity")
   
   
-  clustering_fname <- file.path("intermediate_data", params$int_type[2], "cluster_labs.Rds")
+  # clustering_fname <- file.path("intermediate_data", params$int_type[2], "cluster_labs.Rds")
+  clustering_fname <- file.path("results", params$int_type[2], "cluster_labs.Rds")
+  
   assert("7a_topX_distances.R was run beforehand", file.exists(clustering_fname))
   clusters <- readRDS(clustering_fname) %>% arrange(TP2_cluster_size)
   
@@ -85,7 +87,7 @@ if (num_cl == 0) {
     temp_geo_mat <- temp_geo_mat[ordered_by_date,ordered_by_date]
     
     # Saving the temporal and geographical distance matrices as heatmaps
-    outputDetails(paste0("Saving plots for cluster ", clusters$chr[i], " (", 
+    outputDetails(paste0("(", i, "/", nrow(clusters), ") Saving plots for cluster ", clusters$chr[i], " (", 
                          clusters$original_cl[i], ", size ", clusters$TP2_cluster_size[i], 
                          ") - after last TP ..."), newcat = TRUE)
     
@@ -95,9 +97,11 @@ if (num_cl == 0) {
       clustering_mat <- switch(cluster_by, "temp" = temp_mat, "geo" = geo_mat, "temp_geo" = temp_geo_mat)
       hc_choice <- hclust(as.dist(clustering_mat), method="single")
       
+      outputDetails(paste0("   Generating heatmap, density plot, and frequency histogram for: "), newcat = TRUE)
       # TEMPORAL ---------------------------------------------------------------------------------------
-      outputDetails(paste0("   Generating heatmap, density plot, and frequency histogram for temporal data ..."), newcat = TRUE)
+      outputDetails(paste0("      - temporal data"), newcat = TRUE)
       tname <- paste0(cl_id, "-temp.png")
+      
       
       png(file.path(basedir, "heatmaps", tname))
       heatmapPlot(temp_mat, heatcolor, hc_choice, col_dir); dev.off()
@@ -107,7 +111,7 @@ if (num_cl == 0) {
       frequencyPlot(temp_mat, "Temporal"); dev.off()
       
       # GEOGRAPHICAL -----------------------------------------------------------------------------------
-      outputDetails(paste0("   Generating heatmap, density plot, and frequency histogram for geographical data ..."), newcat = TRUE)
+      outputDetails(paste0("      - geographical data"), newcat = TRUE)
       gname <- paste0(cl_id, "-geo.png")
       
       png(file.path(basedir, "heatmaps", gname))
@@ -119,7 +123,7 @@ if (num_cl == 0) {
       
       
       # TEMP AND GEO -----------------------------------------------------------------------------------
-      outputDetails(paste0("   Generating heatmap, density plot, and frequency histogram for (temp+geo)/2 data ..."), newcat = TRUE)
+      outputDetails(paste0("      - (temp+geo)/2 data"), newcat = TRUE)
       tgname <- paste0(cl_id, "-tempgeo.png")
       
       png(file.path(basedir, "heatmaps", tgname))

@@ -172,7 +172,7 @@ f2 <- tp2_processed$new_cols %>% as.data.table() %>% select(Strain, all_of(param
   rename(isolate = Strain) %>% arrange(isolate)
 
 if (params$int_type[2] == "weekly") {
-  interval <- "Week"
+  interval <- "YearWeek"
   interval_list <- metadata$Week %>% unique() %>% sort()
   
   interval_clusters <- metadata %>% select(c(Strain, all_of(interval), Date)) %>% 
