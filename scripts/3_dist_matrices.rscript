@@ -32,9 +32,9 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 outputMessages(paste0("\nCollecting and saving distances for groups at TPN"))
 
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
-  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov", 
+  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
               "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
-              "clustby", "lowcol", "midcol", "highcol"))
+              "clustby", "trheatmaps", "lowcol", "midcol", "highcol"))
 
 save_to <- file.path("intermediate_data", params$int_type[2], "TPN", "dists", "/")
 dir.create(save_to,  recursive = TRUE, showWarnings = FALSE)

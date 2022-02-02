@@ -35,9 +35,9 @@ source("scripts/ECC/ecc_functions.R") # transformData2() is here
 source("report_specific/epi-helper-no-source.R")
 
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
-  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov", 
+  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
               "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
-              "clustby", "lowcol", "midcol", "highcol"))
+              "clustby", "trheatmaps", "lowcol", "midcol", "highcol"))
 
 fnames <- file.path("intermediate_data", params$int_type[2], "TPN/dists/") %>% 
   list.files(., full.names = TRUE)
@@ -81,8 +81,10 @@ if (num_cl == 0) {
   
   top_x_by_size <- cols_to_consider %>% arrange(-tp2_cl_size) %>% slice(1:num_cl) %>% 
     mutate(by_size = 1) %>% select(first_tp2_flag, tp2_cl_size, by_size)
+  
   top_x_by_gr <- cols_to_consider %>% arrange(-actual_growth_rate) %>% slice(1:num_cl) %>% 
     mutate(by_gr = 1) %>% select(first_tp2_flag, tp2_cl_size, by_gr)
+  
   top_x_by_nr <- cols_to_consider %>% arrange(-new_growth) %>% slice(1:num_cl) %>% 
     mutate(by_nr = 1) %>% select(first_tp2_flag, tp2_cl_size, by_nr)
   
@@ -116,8 +118,8 @@ if (num_cl == 0) {
   
   outputDetails(paste0("Collecting pairwise distances (from non-redundant set), ", 
                        "for each of the \n     ", nrow(clusters)-1, " clusters ", 
-                       "from user input (top 5 by size and top 5 by rate (potential overlap)) ", 
-                       "\n          ", "Top ", num_cl, " by size: ", 
+                       "from user input (top ", num_cl, " by size and top ", num_cl, 
+                       " by rate (potential overlap)) \n          ", "Top ", num_cl, " by size: ", 
                        paste0(clusters[!is.na(by_size)]$chr, collapse = ", "), 
                        "\n          ", "Top ", num_cl, " by rate: ", 
                        paste0(clusters[!is.na(by_gr)]$chr, collapse = ", "), 
@@ -162,18 +164,21 @@ if (num_cl == 0) {
       if (length(tdm_subset) == 0 & length(gdm_subset) == 0) {
         data.table("dr1" = NA, "dr2" = NA, "Temp.Dist" = NA, "Geog.Dist" = NA) 
       }else {
-        ctdm <- tdm_subset %>% 
-          # COMMENT OUT THIS PART IF YOU DO NOT WANT TRANSFORMED (SCALED) DATA
-          # This is done using a function from scripts/ECC/ecc_functions.R
+        if (as.logical(params$trheatmaps[2])) {
+          ctdm <- tdm_subset %>% 
+            # This is done using a function from scripts/ECC/ecc_functions.R
+            transformData2(., "temp", extremes$mint, extremes$maxt) %>%
+            formatData(., c("dr1","dr2","Temp.Dist"))
+          
+          cgdm <- gdm_subset %>% 
+            # This is done using a function from scripts/ECC/ecc_functions.R
+            transformData2(., "geo", extremes$ming, extremes$maxg) %>%
+            formatData(., c("dr1","dr2","Geog.Dist"))
+        }else {
           # DEFAULT: NOT TRANSFORMED - ADD TO THE FORM INPUTS FILE
-          # transformData2(., "temp", extremes$mint, extremes$maxt) %>%
-          formatData(., c("dr1","dr2","Temp.Dist"))
-        
-        cgdm <- gdm_subset %>% 
-          # COMMENT OUT THIS PART IF YOU DO NOT WANT TRANSFORMED (SCALED) DATA
-          # This is done using a function from scripts/ECC/ecc_functions.R
-          # transformData2(., "geo", extremes$ming, extremes$maxg) %>%
-          formatData(., c("dr1","dr2","Geog.Dist"))
+          ctdm <- tdm_subset %>% formatData(., c("dr1","dr2","Temp.Dist"))
+          cgdm <- gdm_subset %>% formatData(., c("dr1","dr2","Geog.Dist"))
+        }
         
         merge.data.table(ctdm, cgdm)
       }

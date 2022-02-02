@@ -63,9 +63,9 @@ groupXAvgDists <- function(dm, groupX, assignments, strain_data, cnames, metadat
 outputDetails("Processing input data, formatting ...", newcat = TRUE)
 
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
-  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov", 
+  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
               "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
-              "clustby", "lowcol", "midcol", "highcol"))
+              "clustby", "trheatmaps", "lowcol", "midcol", "highcol"))
 
 hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
 tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
@@ -77,7 +77,7 @@ if (params$int_type[2] == "multiset") {
 }else if (params$int_type[2] == "monthly") {
   interval <- "YearMonth"
 }else if (params$int_type[2] == "weekly") {
-  interval <- "Week"
+  interval <- "YearWeek"
 }
 
 clustersets <- file.path("intermediate_data", params$int_type[2], "clustersets.Rds") %>% readRDS(.)

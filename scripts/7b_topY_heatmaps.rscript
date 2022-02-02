@@ -31,9 +31,9 @@ source("scripts/Misc/plotting_functions.R")
 
 arg <- parse_args(OptionParser(option_list=option_list))
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
-  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov", 
+  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
               "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
-              "clustby", "lowcol", "midcol", "highcol"))
+              "clustby", "trheatmaps", "lowcol", "midcol", "highcol"))
 
 basedir <- file.path("results", params$int_type[2])
 dir.create(file.path(basedir,"heatmaps"), showWarnings = FALSE, recursive = TRUE)

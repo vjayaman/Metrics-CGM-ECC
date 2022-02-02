@@ -36,8 +36,8 @@ test_params <- c("Region of interest", "Country of interest", "Has defined linea
                  "Province of interest", "Threshold of interest",
                  "Is in a non-singleton cluster (at TP2)", "Filtering by date", "Column names",
                  "Interval type", "Dividers", "Source-temporal-geographic coefficents",
-                 "Generate heatmaps for top __ largest clusters", 
-                 "Cluster by", "Low value color", "Mid-range value color", "High value color")
+                 "Generate heatmaps for top __ largest clusters", "Cluster by", 
+                 "Transform heatmap data", "Low value color", "Mid-range value color", "High value color")
 
 assert("Input parameters are correctly labelled", identical(sapply(params, '[[', 1), test_params))
 rm(test_params)
@@ -45,7 +45,7 @@ rm(test_params)
 
 params %<>% set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
                         "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
-                        "clustby", "lowcol", "midcol", "highcol"))
+                        "clustby", "trheatmaps", "lowcol", "midcol", "highcol"))
 
 a1 <- readData(arg$metadata, FALSE)
 a2 <- suppressWarnings(readData(arg$metadata, check_enc = TRUE))
@@ -159,21 +159,25 @@ dir.create(save_to, showWarnings = FALSE)
 dir.create(file.path(save_to, "cgms"), showWarnings = FALSE, recursive = TRUE)
 dir.create(file.path(save_to, "eccs"), showWarnings = FALSE, recursive = TRUE)
 dir.create(file.path(save_to, "avgdists"), showWarnings = FALSE, recursive = TRUE)
-dir.create(file.path("results", params$int_type[2]))
+dir.create(file.path("results", params$int_type[2]), showWarnings = FALSE)
 
 # YearMonth:
 #   if a strain was added on or before the last day of the month, given that YearMonth designation
-metadata <- strain_data %>% mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
-  mutate(YearMonth = format(Date, "%Y-%m")) %>% mutate(Week = strftime(Date, format = "%V")) %>% 
-  arrange(Week) %>% as.data.table()
-rm(strain_data)
+metadata <- strain_data %>% 
+  mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
+  mutate(YearMonth = format(Date, "%Y-%m")) %>% 
+  mutate(YearWeek = paste0(Year, "-", format(as.Date(Date), "%W"))) %>% 
+  # mutate(Week = strftime(Date, format = "%V")) %>% arrange(Week) %>% 
+  arrange(YearWeek) %>% 
+  as.data.table()
+# rm(strain_data)
 
 f2 <- tp2_processed$new_cols %>% as.data.table() %>% select(Strain, all_of(params$th[2])) %>% 
   rename(isolate = Strain) %>% arrange(isolate)
 
 if (params$int_type[2] == "weekly") {
   interval <- "YearWeek"
-  interval_list <- metadata$Week %>% unique() %>% sort()
+  interval_list <- metadata$YearWeek %>% unique() %>% sort()
   
   interval_clusters <- metadata %>% select(c(Strain, all_of(interval), Date)) %>% 
     inner_join(., f2, by = c("Strain" = "isolate")) %>% 

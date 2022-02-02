@@ -48,6 +48,7 @@
 		var gamma2=window.document.myform.gamma2.value;
 		var numclusters=window.document.myform.num_cl.value;
 		var clusterby=window.document.myform.cluster_by.value;
+		var trheatmap=window.document.myform.transform_hm.checked;
 		var lowcol=window.document.myform.low_color.value;
 		var midcol=window.document.myform.mid_color.value;
 		var highcol=window.document.myform.high_color.value;
@@ -96,6 +97,7 @@
 			"-" + encodeURIComponent(gamma2) + "\n" + 
 			"Generate heatmaps for top __ largest clusters: " + encodeURIComponent(numclusters) + "\n" + 
 			"Cluster by: " + encodeURIComponent(clusterby) + "\n" + 
+			"Transform heatmap data: " + encodeURIComponent(trheatmap) + "\n" + 
 			"Low value color: " + encodeURIComponent(lowcol) + "\n" + 
 			"Mid-range value color: " + encodeURIComponent(midcol) + "\n" + 
 			"High value color: " + encodeURIComponent(highcol) + "\n"
@@ -258,6 +260,12 @@
 				<option value="geo">Geo</option>
 				<option value="temp_geo">Temp and geo</option>
 			</select>
+			<br>
+			<label class="switch">
+				<input id="transform_hm" type="checkbox">
+				Transform heatmap data (log10 and normalized)
+				<span class="slider round"></span>
+			</label>
 			<br>
 			<label >Heatmap colors:</label>
 			<br>

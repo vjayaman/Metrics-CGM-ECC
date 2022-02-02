@@ -30,9 +30,9 @@ option_list <- list(
 arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
-  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov", 
+  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
               "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
-              "clustby", "lowcol", "midcol", "highcol"))
+              "clustby", "trheatmaps", "lowcol", "midcol", "highcol"))
 
 assert("Distances were collected and saved", 
        file.exists(file.path("intermediate_data", params$int_type[2], "TPN", "extreme_dists.Rds")))
@@ -48,7 +48,7 @@ if (params$int_type[2] == "multiset") {
 }else if (params$int_type[2] == "monthly") {
   interval <- "YearMonth"
 }else if (params$int_type[2] == "weekly") {
-  interval <- "Week"
+  interval <- "YearWeek"
 }
 
 clustersets <- file.path("intermediate_data", params$int_type[2], "clustersets.Rds") %>% readRDS(.)
