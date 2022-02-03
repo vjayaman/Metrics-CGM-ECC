@@ -3,27 +3,13 @@
 libs <- c("optparse","magrittr","tibble", "dplyr", "readr", "testit", "data.table", "R6")
 y <- suppressMessages(lapply(libs, require, character.only = TRUE))
 
-option_list <- list(
-  make_option(c("-m", "--metadata"), metavar = "file", 
-              default = "inputs/processed/strain_info.txt", help = "Metadata file"),
-  make_option(c("-b", "--tpn"), metavar = "file", 
-              default = "inputs/processed/allTP2.Rds", help = "TP2 data"), 
-  make_option(c("-d", "--details"), metavar = "file", 
-              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
-
-arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
-
+source("scripts/arguments.R")
 source("scripts/Misc/type_handling.R"); source("scripts/ECC/classes_ecc.R")
 
 cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Merging CGM and ECC results ", 
            paste0(rep("-", 31), collapse = ""), "||\n"))
 
 # INPUT PREP -------------------------------------------------------------------------------------------------
-params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
-  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-              "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
-              "clustby", "trheatmaps", "lowcol", "midcol", "highcol"))
-
 hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
 
 if (params$int_type[2] == "multiset") {
@@ -322,6 +308,7 @@ strains <- metadata$strain_data %>%
 # }
 
 cat(paste0("Saving strain files to ", file.path(res_dir, "Merged_strain_results"), " ... \n"))
+
 ivls <- all_intervals
 for (i in 2:length(ivls)) {
   
@@ -332,6 +319,10 @@ for (i in 2:length(ivls)) {
     inner_join(step8, ., by = c("TP2 cluster" = "heightx", "interval")) %>% 
     inner_join(., strains, by = "Strain") %>% 
     select(interval, colnames(strains), colnames(step8))
+  
+  if ("pango_clusters" %in% names(timeN)) {
+    step10 <- left_join(step10, timeN$strain_pango, by = "Strain")
+  }
   
   writeData(fp = file.path(res_dir, "Merged_strain_results", paste0(ivl_i, ".tsv")), df = step10)
   rm(step10)

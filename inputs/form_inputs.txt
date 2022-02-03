@@ -12,7 +12,8 @@ Interval type: monthly
 Dividers: none
 Source-temporal-geographic coefficents: 0-1-0,0-0-1
 Generate heatmaps for top __ largest clusters: 5
-Cluster by: temp_geo
+Cluster by: temp
+Transform heatmap data: false
 Low value color: white
 Mid-range value color: yellowgreen
 High value color: darkgreen

@@ -32,17 +32,18 @@ Timepoint <- R6Class(
   "Timepoint", lock_objects = FALSE, 
   public = list(
     filepath = NULL, name = NULL, filedata = NULL, proc = NULL, height_list = NULL, 
-    initialize = function(fpath, name) {
+    initialize = function(fpath, name, fdata) {
       self$filepath <- fpath
       self$name <- toupper(name)
-      self$readTyping()
+      # self$readTyping()
+      self$filedata <- fdata
       invisible(self)
     }, 
-    readTyping = function() {
-      self$filedata <- read.table(self$filepath, header = TRUE, sep = "\t", row.names = 1, 
-                                  check.names = FALSE, quote = "", stringsAsFactors = FALSE, 
-                                  fileEncoding = checkEncoding(self$filepath))
-    }, 
+    # readTyping = function() {
+    #   self$filedata <- read.table(self$filepath, header = TRUE, sep = "\t", row.names = 1, 
+    #                               check.names = FALSE, quote = "", stringsAsFactors = FALSE, 
+    #                               fileEncoding = checkEncoding(self$filepath))
+    # }, 
     Process = function(hx) {
       self$proc <- self$filedata %>% 
         select(hx$h) %>% 

@@ -20,25 +20,16 @@ invisible(sapply(files, source)); rm(files)
 outputDetails(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ",
                      paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
 
-option_list <- list(
-  make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
-  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
-              help = "Time point 2 file name (TP2)"), 
-  make_option(c("-d", "--details"), metavar = "file", 
-              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
-
-arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
-
-params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
-  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-              "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
-              "clustby", "trheatmaps", "lowcol", "midcol", "highcol"))
+source("scripts/arguments.R")
 
 assert("Distances were collected and saved", 
        file.exists(file.path("intermediate_data", params$int_type[2], "TPN", "extreme_dists.Rds")))
 
 hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
-tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
+
+fdata <- readRDS(arg$tpn)$new_cols %>% column_to_rownames("Strain")
+tp2 <- Timepoint$new(arg$tpn, "tp2", fdata)$Process(hx)$listHeights(hx)
+
 m <- read_tsv(arg$metadata) %>% processedStrains()
 metadata <- m$strain_data %>% as.data.table()
 extremes <- file.path("intermediate_data", params$int_type[2], "TPN", "extreme_dists.Rds") %>% readRDS()

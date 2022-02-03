@@ -16,17 +16,7 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 
 # Adjust input parameters here: ------------------------------------------------------------------------
 # This section collects user-specified inputs
-option_list <- list(
-  make_option(c("-m", "--metadata"), metavar = "file", 
-              default = "inputs/processed/strain_info.txt", help = "Metadata file"),
-  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
-              help = "TP2 cluster assignments"), 
-  make_option(c("-d", "--details"), metavar = "file", 
-              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"), 
-  make_option(c("-c", "--clustermapping"), metavar = "file", 
-              default = "inputs/processed/allTP2.Rds", help = "TP2 mapping"))
-
-arg <- parse_args(OptionParser(option_list=option_list))
+source("scripts/arguments.R")
 
 # Reading in required functions, checking for pre-processed results (e.g. distances) -------------------
 source("scripts/ECC/classes_ecc.R")
@@ -34,17 +24,12 @@ source("scripts/ECC/dist_functions.R")
 source("scripts/ECC/ecc_functions.R") # transformData2() is here
 source("report_specific/epi-helper-no-source.R")
 
-params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
-  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-              "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
-              "clustby", "trheatmaps", "lowcol", "midcol", "highcol"))
-
 fnames <- file.path("intermediate_data", params$int_type[2], "TPN/dists/") %>% 
   list.files(., full.names = TRUE)
 assert("Distances were collected, script '3_dist_matrices.R' was run correctly", length(fnames) >= 1)
 distfiles <- lapply(fnames, function(f) readRDS(f))
 
-cluster_mapping <- readRDS(arg$clustermapping)
+cluster_mapping <- readRDS(arg$tpn)
 
 ext_file <- file.path("intermediate_data", params$int_type[2], "TPN/extreme_dists.Rds")
 assert("Max and min of distances collected", file.exists(ext_file))
@@ -128,7 +113,11 @@ if (num_cl == 0) {
   
   # Reading in the last timepoint data, as well as the strain metadata and the 
   # data representative assignments - used for processing distance files from intermediate_data/
-  tpn <- tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
+  
+  fdata <- cluster_mapping$new_cols %>% column_to_rownames("Strain")
+  tpn <- tp2 <- Timepoint$new(arg$tpn, "tp2", fdata)$Process(hx)$listHeights(hx)
+
+  
   typing_data <- list(tp2$height_list)
   
   m <- suppressMessages(read_tsv(arg$metadata)) %>% processedStrains()
@@ -147,10 +136,13 @@ if (num_cl == 0) {
   #       || Strain.1 | Strain.2 | Temp.Dist | Geog.Dist ||
   #       ||---------------------------------------------||
   
-  for (j in 1:nrow(clusters)) {
+  # for (j in 1:nrow(clusters)) {
+  for (j in 2:nrow(clusters)) {
     clx <- clusters$new_cl[j]
-    outputDetails(paste0("(", j, "/", nrow(clusters), ") Cluster ", gsub("TP2", "TPN", clusters$new_id[j]), " = ", 
-                         clusters$original_cl[j], " (of size ", clusters$TP2_cluster_size[j], "), "))
+    outputDetails(paste0("(", j, "/", nrow(clusters), ") Cluster ", 
+                         gsub("TP2", "TPN", clusters$new_cl[j]), " (new) = ", 
+                         clusters$original_cl[j], " (original), (of size ", 
+                         clusters$TP2_cluster_size[j], "), "))
     
     rawdists <- lapply(1:length(distfiles), function(i) {
       drs <- cl_drs[[as.character(clx)]]

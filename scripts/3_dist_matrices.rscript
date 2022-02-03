@@ -15,13 +15,7 @@ files <- paste0(c("scripts/ECC/classes_ecc.R", "scripts/ECC/ecc_functions.R",
                   "scripts/ECC/dist_functions.R"))
 invisible(sapply(files, source)); rm(files)
 
-option_list <- list(
-  make_option(c("-m", "--metadata"), metavar = "file", default = "inputs/processed/strain_info.txt", help = "Strain data"),
-  make_option(c("-b", "--tp2"), metavar = "file", default = "inputs/processed/tp2_clusters.txt", 
-              help = "Time point 2 file name (TP2)"), 
-  make_option(c("-d", "--details"), metavar = "file", 
-              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
-arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
+source("scripts/arguments.R")
 
 cat(paste0("\n||", paste0(rep("-", 23), collapse = ""), 
            " Generating non-redundant pairwise distances ", 
@@ -31,17 +25,16 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 # COLLECT dist matrices using TPN clusters ---------------------------------------------------------
 outputMessages(paste0("\nCollecting and saving distances for groups at TPN"))
 
-params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
-  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-              "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
-              "clustby", "trheatmaps", "lowcol", "midcol", "highcol"))
-
 save_to <- file.path("intermediate_data", params$int_type[2], "TPN", "dists", "/")
 dir.create(save_to,  recursive = TRUE, showWarnings = FALSE)
 
 outputMessages("Reading in metadata")
+
 hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
-tp2 <- Timepoint$new(arg$tp2, "tp2")$Process(hx)$listHeights(hx)
+
+fdata <- readRDS(arg$tpn)$new_cols %>% column_to_rownames("Strain")
+tp2 <- Timepoint$new(arg$tpn, "tp2", fdata)$Process(hx)$listHeights(hx)
+
 m <- read_tsv(arg$metadata) %>% processedStrains()
 basedir <- file.path("intermediate_data", params$int_type[2], "TPN")
 # basedir <- "intermediate_data/TPN/"

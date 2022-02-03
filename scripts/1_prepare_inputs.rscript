@@ -4,17 +4,19 @@
 msg <- file(paste0("logs/prepare_inputs.txt"), open="wt")
 sink(msg, type="message")
 
-
 libs <- c("optparse", "magrittr", "readr", "dplyr", "testit", "data.table", "tibble")
 y <- lapply(libs, require, character.only = TRUE); rm(y); rm(libs)
 
 option_list <- list(
-  make_option(c("-m", "--metadata"), metavar = "file", 
+  make_option(c("-m", "--metadata"), metavar = "file",
               default = "inputs/strain_info.txt", help = "Metadata file"),
-  make_option(c("-b", "--tp2"), metavar = "file", 
-              default = "inputs/tp2_clusters_init.txt", help = "TP2 cluster assignments"), 
-  make_option(c("-d", "--details"), metavar = "file", 
-              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"))
+  make_option(c("-b", "--tp2"), metavar = "file",
+              default = "inputs/tp2_clusters_init.txt", help = "TP2 cluster assignments"),
+  make_option(c("-d", "--details"), metavar = "file",
+              default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"),
+  make_option(c("-p", "--pangolineages"), metavar = "file",
+              default = "inputs/GISAID Lineages (770000 isolates).csv",
+              help = "File with Strain column and Pango_lineage column"))
 
 arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
@@ -55,7 +57,6 @@ rm(a1); rm(a2)
 
 time2 <- suppressWarnings(readData(arg$tp2, check_enc = TRUE))
 if (!exists("time2")) {time2 <- readData(arg$tp2, FALSE)}
-rm(arg)
 
 # Check that coefficient sets each add up to 1 -----------------------------------------------------------------
 coeffset <- params$coeffs[2] %>% strsplit(",") %>% unlist()
@@ -152,6 +153,21 @@ if (as.logical(params$nsTP2[2])) {
   strain_data %<>% filter(!(Strain %in% remove_strains))
 }
 
+if (!is.na(arg$pangolineages)) {
+  if (file.exists(arg$pangolineages)) {
+    tp2_processed$strain_pango <- read.csv(arg$pangolineages) %>% 
+      as.data.table() %>% select(Strain, Pango_lineage)
+    
+    tp2_processed$pango_clusters <- tp2_processed$new_cols %>% 
+      melt.data.table(id.vars = "Strain", variable.factor = FALSE) %>% 
+      set_colnames(c("Strain", "new_h", "new_cl")) %>% 
+      mutate(across(new_h, as.integer)) %>% 
+      left_join(., tp2_processed$strain_pango, by = "Strain") %>% 
+      left_join(., tp2_processed$lookup_table, by = c("new_h", "new_cl")) %>% 
+      select(Strain, Pango_lineage, old_h, old_cl, new_h, new_cl)
+  }
+}
+
 
 # INTERVAL TYPE ------------------------------------------------------------------------------------------------
 save_to <- file.path("intermediate_data", params$int_type[2])
@@ -235,8 +251,8 @@ rm(sofar); rm(int_j); rm(interval_clusters); rm(interval_list)
 # SAVING RESULTS -----------------------------------------------------------------------------------------------
 saveRDS(clustersets, file.path(save_to, "clustersets.Rds")); rm(clustersets)
 writeData(metadata, file.path("inputs", "processed", "strain_info.txt")); rm(metadata)
-writeData(tp2_processed$new_cols, file.path("inputs", "processed", "tp2_clusters.txt"))
-saveRDS(tp2_processed, file.path("inputs", "processed", "allTP2.Rds")); 
+# writeData(tp2_processed$new_cols, file.path("inputs", "processed", "tp2_clusters.txt"))
+saveRDS(tp2_processed, file.path("inputs", "processed", "allTP2.Rds"))
 
 outputDetails(paste0("\nFinished process at: ", Sys.time(), "\n||", paste0(rep("-", 14), collapse = ""), 
                      " Saved formatted inputs to 'processed' in the ",
