@@ -53,7 +53,7 @@ source("scripts/7b_topY_heatmaps.rscript")
 cat("\n\n\n")
 
 # -------------------------------------------------------------------------------------------------------------
-
+# should be able to run this script through an R console (in RStudio too), through a terminal window, or by double-clicking
 if (interactive()) {
   a <- readline("Press [enter] to close the window: ")
   cat("\n")

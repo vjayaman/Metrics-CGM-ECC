@@ -1,7 +1,7 @@
 #! /usr/bin/env Rscript
 
 # This should be run first, to make sure the required packages are installed
-
+# also for creating minimal required directories
 dir.create("logs", showWarnings = FALSE)
 
 msg <- file("logs/environment_setup.txt", open="wt")
