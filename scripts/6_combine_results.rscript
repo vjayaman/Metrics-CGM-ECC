@@ -239,6 +239,7 @@ step7 <- step6 %>% add_column(novel_only_ECCs = 0) %>%
   select(interval, actual_tp1_cl, tp1_cl, TP1_Size, all_of(tp1eccs), 
          actual_tp2_cl, tp2_cl, TP2_Size, all_of(tp2eccs),
          grep("delta_ECC", colnames(step6), value = TRUE), novel_only_ECCs,
+         grep("Novels_only", colnames(step6), value = TRUE), 
          TP1_Avg.Date, TP1_Temp.Avg.Dist, TP1_Avg.Latitude, TP1_Avg.Longitude, TP1_Geo.Avg.Dist, 
          TP2_Avg.Date, TP2_Temp.Avg.Dist, TP2_Avg.Latitude, TP2_Avg.Longitude, TP2_Geo.Avg.Dist,
          first_tp1_flag, last_tp1_flag, first_tp2_flag, last_tp2_flag, tp1_cl_size,
