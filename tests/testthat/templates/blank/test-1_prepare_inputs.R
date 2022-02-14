@@ -1,14 +1,28 @@
-libs <- c("optparse", "magrittr", "readr", "dplyr", "testit")
+libs <- c("optparse", "magrittr", "readr", "dplyr", "testit", "data.table", "tibble")
 library(testthat)
 y <- suppressPackageStartupMessages(lapply(libs, require, character.only = TRUE))
 assert("All packages loaded correctly", all(unlist(y)))
 
-source("scripts/formatprep.R")
+source("scripts/Misc/formatprep.R")
 
 test_results <- vector(length = 12) %>% 
   setNames(c("Part 1", "Part 2", "Part 3", "Part 4", "Part 5", "Part 6", 
              "Part 7", "Part 8", "Part 9", "Part 10", "Part 11", "Part 12", "Part 13"))
 
+# option_list <- list(
+#   make_option(c("-m", "--metadata"), metavar = "file",
+#               default = "inputs/strain_info.txt", help = "Metadata file"),
+#   make_option(c("-b", "--tp2"), metavar = "file",
+#               default = "inputs/tp2_clusters_init.txt", help = "TP2 cluster assignments"),
+#   make_option(c("-d", "--details"), metavar = "file",
+#               default = "inputs/form_inputs.txt", help = "Analysis inputs (details)"),
+#   make_option(c("-p", "--pangolineages"), metavar = "file",
+#               default = "inputs/GISAID Lineages (770000 isolates).csv",
+#               help = "File with Strain column and Pango_lineage column"))
+# 
+# arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
+
+# FUNCTIONS ----------------------------------------------------------------------------------------------------
 
 # Part 1
 # params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>% 
