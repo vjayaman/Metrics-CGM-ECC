@@ -156,7 +156,7 @@ if (as.logical(params$nsTP2[2])) {
 if (!is.na(arg$pangolineages)) {
   if (file.exists(arg$pangolineages)) {
     tp2_processed$strain_pango <- read.csv(arg$pangolineages) %>% 
-      as.data.table() %>% select(Strain, Pango_lineage)
+      as.data.table() %>% select(Strain, T0.original, Pango_lineage)
     
     tp2_processed$pango_clusters <- tp2_processed$new_cols %>% 
       melt.data.table(id.vars = "Strain", variable.factor = FALSE) %>% 
@@ -164,7 +164,7 @@ if (!is.na(arg$pangolineages)) {
       mutate(across(new_h, as.integer)) %>% 
       left_join(., tp2_processed$strain_pango, by = "Strain") %>% 
       left_join(., tp2_processed$lookup_table, by = c("new_h", "new_cl")) %>% 
-      select(Strain, Pango_lineage, old_h, old_cl, new_h, new_cl)
+      select(Strain, T0.original, Pango_lineage, old_h, old_cl, new_h, new_cl)
   }
 }
 
@@ -182,11 +182,10 @@ dir.create(file.path("results", params$int_type[2]), showWarnings = FALSE)
 metadata <- strain_data %>% 
   mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
   mutate(YearMonth = format(Date, "%Y-%m")) %>% 
-  mutate(YearWeek = paste0(Year, "-", format(as.Date(Date), "%W"))) %>% 
-  # mutate(Week = strftime(Date, format = "%V")) %>% arrange(Week) %>% 
+  # mutate(YearWeek = paste0(Year, "-", format(as.Date(Date), "%W"))) %>% 
+  mutate(YearWeek = strftime(as.Date(Date), format = "%Y-%V")) %>% 
   arrange(YearWeek) %>% 
   as.data.table()
-# rm(strain_data)
 
 f2 <- tp2_processed$new_cols %>% as.data.table() %>% select(Strain, all_of(params$th[2])) %>% 
   rename(isolate = Strain) %>% arrange(isolate)
