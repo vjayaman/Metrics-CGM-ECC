@@ -143,6 +143,9 @@ test_that("Part 4e", {
   
 })
 
+# IMPORTANT!
+# Still need to check column by column of the processed data
+
 # strain_pango
 # pango_clusters
 
