@@ -51,12 +51,16 @@ if (num_cl == 0) {
   clusters <- readRDS(clustering_fname) %>% arrange(TP2_cluster_size)
   
   metadata <- suppressMessages(read_tsv(arg$metadata)) %>% processedStrains()
+  cfile_path <- file.path("results", params$int_type[2], "epitables")
+  cfiles <- list.files(path = cfile_path, full.names = TRUE)
   
   for (i in 1:nrow(clusters)) {
+  
+    cname <- paste0(clusters$chr[i], "-", clusters$original_cl[i])
+    x1 <- file.path(cfile_path, paste0(cname, ".Rds"))
+    assert(paste0("Cluster ", cname, "found in results/", params$int_type[2], "/epitables"), x1 %in% cfiles)
     
-    epitable <- file.path("results", params$int_type[2], "epitables", 
-                          paste0(clusters$chr[i], "-", clusters$original_cl[i], ".Rds")) %>% 
-      readRDS() %>% mutate(Temp_Geo.Dist = (Temp.Dist + Geog.Dist)/2)
+    epitable <- readRDS(x1) %>% mutate(Temp_Geo.Dist = (Temp.Dist + Geog.Dist)/2)
     
     # euclidean distances, later using single linkage clustering (these should be user inputs)
     # Processing epitables into temporal distance matrices, one for each cluster

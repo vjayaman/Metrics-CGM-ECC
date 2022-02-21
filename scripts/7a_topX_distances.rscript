@@ -135,14 +135,18 @@ if (num_cl == 0) {
   #       ||---------------------------------------------||
   #       || Strain.1 | Strain.2 | Temp.Dist | Geog.Dist ||
   #       ||---------------------------------------------||
-  
-  # for (j in 1:nrow(clusters)) {
-  for (j in 2:nrow(clusters)) {
+  clusters <- clusters[5:7,]
+  for (j in 1:nrow(clusters)) {
+  # for (j in 2:nrow(clusters)) {
     clx <- clusters$new_cl[j]
     outputDetails(paste0("(", j, "/", nrow(clusters), ") Cluster ", 
                          gsub("TP2", "TPN", clusters$new_cl[j]), " (new) = ", 
                          clusters$original_cl[j], " (original), (of size ", 
                          clusters$TP2_cluster_size[j], "), "))
+    
+    if (length(cl_drs[[as.character(clx)]]) == 1) {
+      outputDetails("This cluster is a singleton") 
+    }
     
     rawdists <- lapply(1:length(distfiles), function(i) {
       drs <- cl_drs[[as.character(clx)]]
