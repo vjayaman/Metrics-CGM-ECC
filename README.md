@@ -13,11 +13,11 @@ Imported to GitLab - cscscience setup. Will synchronize updates here with the Gi
 Metrics-CGM-ECC
 ================
 
-## Method 1 (Latest version, ready for beta testing):
+## Method 1 (Latest version, WIP):
 
-Updated: Nov 3, 2021
+Updated: Feb 21, 2022
 
-1. Download version [v4.2.4](https://github.com/vjayaman/Metrics-CGM-ECC/releases/tag/4.2.4)
+1. Download latest version (will include more details when it is refined enough to be tagged and released)
 
 2. Move the input files you want to use (a strain metadata file and one cluster assignment file - last time point, after all strains have been added) into *Metrics-CGM-ECC/inputs/*, then rename to match the examples in the *inputs/* directory.
  
