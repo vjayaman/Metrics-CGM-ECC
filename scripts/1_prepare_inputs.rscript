@@ -38,7 +38,8 @@ test_params <- c("Region of interest", "Country of interest", "Has defined linea
                  "Province of interest", "Threshold of interest",
                  "Is in a non-singleton cluster (at TP2)", "Filtering by date", "Column names",
                  "Interval type", "Dividers", "Source-temporal-geographic coefficents",
-                 "Generate heatmaps for top __ largest clusters", "Cluster by", 
+                 "Generate heatmaps for top __ largest clusters", 
+                 "Min cluster size to consider for largest growth (for heatmaps)", "Cluster by", 
                  "Transform heatmap data", "Low value color", "Mid-range value color", "High value color")
 
 assert("Input parameters are correctly labelled", identical(sapply(params, '[[', 1), test_params))
@@ -46,7 +47,7 @@ rm(test_params)
 
 
 params %<>% set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-                        "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
+                        "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", "mincl",
                         "clustby", "trheatmaps", "lowcol", "midcol", "highcol"))
 
 a1 <- readData(arg$metadata, FALSE)

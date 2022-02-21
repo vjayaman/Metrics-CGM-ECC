@@ -8,7 +8,7 @@ WIP - under development
 
 
 
-Imported to GitLab - cscscience setup. Will update here as well with each major change. 
+Imported to GitLab - cscscience setup. Will synchronize updates here with the GitLab repository with each major change. 
 
 Metrics-CGM-ECC
 ================
@@ -19,30 +19,47 @@ Updated: Nov 3, 2021
 
 1. Download version [v4.2.4](https://github.com/vjayaman/Metrics-CGM-ECC/releases/tag/4.2.4)
 
-2. Move the input files you want to use (a strain metadata file and one cluster assignment file - one for each time point) into *Metrics-CGM-ECC/inputs/*, then rename to match the examples in the *inputs/* directory.
+2. Move the input files you want to use (a strain metadata file and one cluster assignment file - last time point, after all strains have been added) into *Metrics-CGM-ECC/inputs/*, then rename to match the examples in the *inputs/* directory.
  
 3. Open **Metrics-CGM-ECC/form.html** in a browser, then fill out the form (arguments should correspond to your input file data)
 	* Download the resulting text file, and move it to the *inputs/* directory
 
-4. Navigate to the *Metrics-CGM-ECC/* directory in a terminal window. Alternatively, the scripts can be run individually in RStudio.
+4. The next section can be run in one of three ways
 
-5. Run **environment_setup.R**, to install the required R packages and check that they can be loaded.
+### Method 1a
 
-        .../Metrics-CGM-ECC/$ Rscript environment_setup.R
+5. Navigate to the *Metrics-CGM-ECC/* directory in a terminal window. 
 
-6. Give the script *run_process.sh* executable permission
+6. Run **environment_setup.rscript**, to install the required R packages and check that they can be loaded.
 
-        .../Metrics-CGM-ECC/$ chmod u+x run_process.sh
+        .../Metrics-CGM-ECC/$ Rscript environment_setup.rscript
 
-7. Run the script *run_process.sh* in a terminal
+7. Give the script *collect_metrics.rscript* executable permission
 
-        .../Metrics-CGM-ECC/$ bash run_process.sh
-	or
-	`.../Metrics-CGM-ECC/$ ./run_process.sh`
+        .../Metrics-CGM-ECC/$ chmod u+x collect_metrics.rscript
+
+8. Run the script *collect_metrics.rscript* in a terminal window 
+
+        .../Metrics-CGM-ECC/$ Rscript collect_metrics.rscript
 	
+### Method 1b
+
+5. The scripts can be run individually in RStudio. Open up RStudio and use *setwd()* to navigate to the Metrics-CGM-ECC/ directory.
+
+6. Use *source('environment_setup.rscript')* in the console or use Code > Source after opening *environment_setup.rscript*
+
+7. Use the same idea as in 6. for all numbered files in Metrics-CGM-ECC/scripts/, from 1\_prepare\_inputs.rscript to 7b\_topY\_heatmaps.rscript
+
+### Method 1c
+
+5. Open up the Metrics-CGM-ECC/ directory using something like a file manager. 
+
+6. Double-click on *environment_setup.rscript* - you may be prompted by a security window to give the script run permissions. Please do so (you can open the file using notepad or RStudio, for example, to verify that nothing risky is being done)
+
+7. After the new directory structure is settled (you can see a logs/ folder, for example), double-click on *collect_metrics.rscript*
+
 The CGM data, ECC metrics, and merged files (for strains and clusters) will be saved to a newly created *results/* directory.
 
-**Note:** See the steps in `run_process.sh` for details on how to run each step individually, with arguments. I will add detailed steps here as well shortly.
 
 ## Method 2 (Stable, verified version):
 

@@ -49,6 +49,7 @@
 		var numclusters=window.document.myform.num_cl.value;
 		var clusterby=window.document.myform.cluster_by.value;
 		var trheatmap=window.document.myform.transform_hm.checked;
+		var min_cl=window.document.myform.min_cl.value;
 		var lowcol=window.document.myform.low_color.value;
 		var midcol=window.document.myform.mid_color.value;
 		var highcol=window.document.myform.high_color.value;
@@ -77,6 +78,7 @@
 		  var divider="none" + "\n";
 		}
 		
+		
 		var pom=document.createElement('a');
 		pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + 
 			"Region of interest: " + encodeURIComponent(reg) + "\n" + 
@@ -96,6 +98,7 @@
 			"-" + encodeURIComponent(gamma1) + ",0-" + encodeURIComponent(tau2) + 
 			"-" + encodeURIComponent(gamma2) + "\n" + 
 			"Generate heatmaps for top __ largest clusters: " + encodeURIComponent(numclusters) + "\n" + 
+			"Min cluster size to consider for largest growth (for heatmaps): " + encodeURIComponent(min_cl) + "\n" + 
 			"Cluster by: " + encodeURIComponent(clusterby) + "\n" + 
 			"Transform heatmap data: " + encodeURIComponent(trheatmap) + "\n" + 
 			"Low value color: " + encodeURIComponent(lowcol) + "\n" + 
@@ -130,6 +133,16 @@
 			end_date.display="none";
 		}
 	}
+
+  function generateHeatmaps() {
+    var numclusters=window.document.myform.num_cl.value;
+    var heatmap_params=document.getElementById("heatmap_params").style;
+    if (numclusters > 0) {
+      heatmap_params.display="inline";
+    }else {
+      heatmap_params.display="none";
+    }
+  }
 
   function dateSet() {
     var radButton=document.getElementById("multiset");
@@ -251,34 +264,33 @@
 			The "source" coefficient is frozen at 0 (for now).
 			<br>
 			<label for="quantity">Generate heatmaps for top __ clusters (by size and then by growth rate):</label>
-			<input id="num_cl" type="number" min="0" step="1" value="0"/>
+			<input id="num_cl" type="number" min="0" step="1" value="0" onchange="generateHeatmaps()"/>
 			<br>
 
-			<label for="cluster_select">Cluster by ____ in heatmaps:</label>
-			<select name="clustering_by" id="cluster_by">
-				<option value="temp">Temp</option>
-				<option value="geo">Geo</option>
-				<option value="temp_geo">Temp and geo</option>
-			</select>
-			<br>
-			<label class="switch">
-				<input id="transform_hm" type="checkbox">
-				Transform heatmap data (log10 and normalized)
-				<span class="slider round"></span>
-			</label>
-			<br>
-			<label >Heatmap colors:</label>
-			<br>
-
-			Low values:
-			<input type="text" id="low_color" value="white"/>
-
-			Mid-range values:
-			<input type="text" id="mid_color" value="yellowgreen"/>
-
-			High values:
-			<input type="text" id="high_color" value="darkgreen"/>
-
+      <p id="heatmap_params" style="display:none">
+        <label for="cluster_select">Cluster by ____ in heatmaps:</label>
+  			<select name="clustering_by" id="cluster_by">
+  				<option value="temp">Temp</option>
+  				<option value="geo">Geo</option>
+  				<option value="temp_geo">Temp and geo</option>
+  			</select>
+  			<br>
+  			<label class="switch">
+  				<input id="transform_hm" type="checkbox">
+  				Transform heatmap data (log10 and normalized)
+  				<span class="slider round"></span>
+  			</label>
+  			<br>
+  			<label for="quantity">Growth rate heatmap clusters must have min size __ (note, no singletons):</label>
+  			<input id="min_cl" type="number" min="2" step="1" value="2"/>
+  			<br>
+  			<label >Heatmap colors:</label>
+  			<br>
+  			Low values: <input type="text" id="low_color" value="white"/>
+  			Mid-range values: <input type="text" id="mid_color" value="yellowgreen"/>
+  			High values: <input type="text" id="high_color" value="darkgreen"/>
+      </p>
+			
 			<fieldset>
 				<legend><b>Expected column names of metadata</b></legend>
 				Required: <em>Strain, Latitude, Longitude, Day, Month, Year</em>

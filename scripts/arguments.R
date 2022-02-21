@@ -11,6 +11,6 @@ option_list <- list(
 arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ") %>%
-  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-              "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", 
+  set_names(c("reg","cou","has_lin", "has_date","has_prov","prov","th","nsTP2", 
+              "temp_win","cnames","int_type","divs","coeffs", "numcl", "mincl",
               "clustby", "trheatmaps", "lowcol", "midcol", "highcol"))

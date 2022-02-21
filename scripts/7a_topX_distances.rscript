@@ -6,6 +6,7 @@ sink(msg, type="message")
 
 libs <- c("optparse", "magrittr", "fossil", "tidyr", "plyr", "dplyr", "readr", 
           "testit", "tibble", "reshape2", "RColorBrewer", "gplots", "data.table", "R6")
+# library(beepr)
 y <- suppressWarnings(
   suppressPackageStartupMessages(lapply(libs, require, character.only = TRUE)))
 
@@ -61,8 +62,9 @@ if (num_cl == 0) {
   # "Novel growth = (TP2 size) / (TP2 size - number of novels)" = new_growth
   
   cols_to_consider <- cgms[interval == last_ivl] %>% 
-    select(first_tp2_flag, tp2_cl_size, actual_growth_rate, new_growth) %>% unique()
-  
+    select(first_tp2_flag, tp2_cl_size, actual_growth_rate, new_growth) %>% unique() %>% 
+    filter(tp2_cl_size >= (as.integer(params$mincl[2]) + 1)) 
+  # we add 1 now because we used cluster size + 1 for the cgm columns
   
   top_x_by_size <- cols_to_consider %>% arrange(-tp2_cl_size) %>% slice(1:num_cl) %>% 
     mutate(by_size = 1) %>% select(first_tp2_flag, tp2_cl_size, by_size)
@@ -81,12 +83,15 @@ if (num_cl == 0) {
   top_x <- top_x_by_size %>% 
     merge.data.table(., top_x_by_gr, all.x = TRUE, all.y = TRUE) %>% 
     merge.data.table(., top_x_by_nr, all.x = TRUE, all.y = TRUE) %>% 
-    bind_rows(manual_check)
-  colnames(top_x)[which(colnames(top_x) == "tp2_cl_size")] <- "TP2_cluster_size"
+    bind_rows(manual_check) %>% select(-tp2_cl_size)
   
   x_clusters <- top_x %>% pull(first_tp2_flag)
   
-  # Matching these clusters to their original cluster names, for saving purposes
+  raw_sizes <- cluster_mapping$pango_clusters %>% select(Strain, old_h, old_cl, new_h, new_cl) %>% 
+    group_by(old_h, old_cl, new_h, new_cl) %>% count() %>% ungroup() %>% as.data.table()
+  colnames(raw_sizes)[colnames(raw_sizes) == "n"] <- "TP2_cluster_size"
+  
+  # Matching these clusters to their old cluster names, for saving purposes
   clusters <- data.table(
     chr = x_clusters,
     new_h = x_clusters %>% strsplit(., split = "_") %>% sapply(., '[[', 2) %>% 
@@ -94,9 +99,10 @@ if (num_cl == 0) {
     new_cl = x_clusters %>% strsplit(., split = "_") %>% sapply(., '[[', 3) %>% 
       gsub("c", "", .) %>% as.integer()
   ) %>% inner_join(cluster_mapping$lookup_table, ., by = c("new_h", "new_cl")) %>% 
-    select(chr, new_cl, old_h, old_cl) %>%
-    set_colnames(c("chr", "new_cl", "original_h", "original_cl")) %>% 
+    select(chr, new_h, new_cl, old_h, old_cl) %>%
+    set_colnames(c("chr", "new_h", "new_cl", "old_h", "old_cl")) %>% 
     full_join(., top_x, by = c("chr" = "first_tp2_flag")) %>% 
+    merge.data.table(., raw_sizes, by = c("old_h", "old_cl", "new_h", "new_cl")) %>% 
     arrange(-TP2_cluster_size)
   
   file.path("results", params$int_type[2], "cluster_labs.Rds") %>% saveRDS(clusters, .)
@@ -135,13 +141,12 @@ if (num_cl == 0) {
   #       ||---------------------------------------------||
   #       || Strain.1 | Strain.2 | Temp.Dist | Geog.Dist ||
   #       ||---------------------------------------------||
-  clusters <- clusters[5:7,]
+
   for (j in 1:nrow(clusters)) {
-  # for (j in 2:nrow(clusters)) {
     clx <- clusters$new_cl[j]
     outputDetails(paste0("(", j, "/", nrow(clusters), ") Cluster ", 
                          gsub("TP2", "TPN", clusters$new_cl[j]), " (new) = ", 
-                         clusters$original_cl[j], " (original), (of size ", 
+                         clusters$old_cl[j], " (old), (of size ", 
                          clusters$TP2_cluster_size[j], "), "))
     
     if (length(cl_drs[[as.character(clx)]]) == 1) {
@@ -199,10 +204,11 @@ if (num_cl == 0) {
     
     outputDetails("saving ...", TRUE)
     file.path("results", params$int_type[2], "epitables", 
-              paste0(clusters$chr[j], "-", clusters$original_cl[j], ".Rds")) %>% 
+              paste0(clusters$chr[j], "-", clusters$old_cl[j], ".Rds")) %>% 
       saveRDS(pw_strains, file = .)
   }
 }
+# beep(3)
 
 stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
 timeTaken(pt = "pairwise distances collection", stopwatch) %>% outputDetails(., newcat = TRUE)

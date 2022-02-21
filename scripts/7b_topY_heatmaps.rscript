@@ -9,6 +9,7 @@ sink(msg, type="message")
 
 libs <- c("optparse", "magrittr", "fossil", "tidyr", "plyr", "dplyr", "readr", "heatmap3",
           "testit", "tibble", "reshape2", "RColorBrewer", "gplots", "data.table", "R6")
+# library(beepr)
 y <- suppressWarnings(
   suppressPackageStartupMessages(
     lapply(libs, require, character.only = TRUE)))
@@ -18,6 +19,8 @@ cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Starting heatmap gener
 
 # This section collects user-specified inputs ----------------------------------------------------------
 source("scripts/arguments.R")
+
+cluster_mapping <- readRDS(arg$tpn)
 
 # Reading in required functions, checking for pre-processed results (e.g. distances) -------------------
 source("scripts/Misc/plotting_functions.R")
@@ -43,8 +46,6 @@ if (num_cl == 0) {
   heatcolor <- colorRampPalette(c(params$lowcol[2],params$midcol[2],params$highcol[2]))(512)
   col_dir <- c(params$lowcol[2], params$highcol[2]) #c("Low similarity", "High similarity")
   
-  
-  # clustering_fname <- file.path("intermediate_data", params$int_type[2], "cluster_labs.Rds")
   clustering_fname <- file.path("results", params$int_type[2], "cluster_labs.Rds")
   
   assert("7a_topX_distances.R was run beforehand", file.exists(clustering_fname))
@@ -56,7 +57,7 @@ if (num_cl == 0) {
   
   for (i in 1:nrow(clusters)) {
   
-    cname <- paste0(clusters$chr[i], "-", clusters$original_cl[i])
+    cname <- paste0(clusters$chr[i], "-", clusters$old_cl[i])
     x1 <- file.path(cfile_path, paste0(cname, ".Rds"))
     assert(paste0("Cluster ", cname, "found in results/", params$int_type[2], "/epitables"), x1 %in% cfiles)
     
@@ -79,11 +80,17 @@ if (num_cl == 0) {
     
     # Saving the temporal and geographical distance matrices as heatmaps
     outputDetails(paste0("(", i, "/", nrow(clusters), ") Saving plots for cluster ", clusters$chr[i], " (", 
-                         clusters$original_cl[i], ", size ", clusters$TP2_cluster_size[i], 
+                         clusters$old_cl[i], ", size ", clusters$TP2_cluster_size[i], 
                          ") - after last TP ..."), newcat = TRUE)
     
     if (clusters$TP2_cluster_size[i] > 1) {
-      cl_id <- paste0(clusters$chr[i], "-", clusters$original_cl[i])
+      
+      original_cluster <- cluster_mapping$pango_clusters %>% 
+        left_join(clusters[i,], ., by = c("old_h", "old_cl", "new_h", "new_cl")) %>% 
+        pull(T0.original) %>% unique()
+      assert("Only one T0.original label for this cluster", length(original_cluster) == 1)
+      
+      cl_id <- paste0(clusters$chr[i], "-", original_cluster)
       
       clustering_mat <- switch(cluster_by, "temp" = temp_mat, "geo" = geo_mat, "temp_geo" = temp_geo_mat)
       hc_choice <- hclust(as.dist(clustering_mat), method="single")

@@ -12,6 +12,7 @@ Interval type: weekly
 Dividers: none
 Source-temporal-geographic coefficents: 0-1-0,0-0-1
 Generate heatmaps for top __ largest clusters: 3
+Min cluster size to consider for largest growth (for heatmaps): 3
 Cluster by: temp_geo
 Transform heatmap data: false
 Low value color: white
