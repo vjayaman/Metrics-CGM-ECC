@@ -8,4 +8,106 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r eval=FALSE}
+#! /usr/bin/env Rscript
+
+# Current working directory should be Metrics-CGM-ECC/
+
+msg <- file(paste0("logs/dist_matrices.txt"), open="wt")
+sink(msg, type="message")
+
+libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
+          "reshape2","fossil","tidyr","purrr", "data.table")
+y <- lapply(libs, require, character.only = TRUE)
+assert("All packages loaded correctly", all(unlist(y))); rm(y); rm(libs)
+
+# Current working directory should be Metrics-CGM-ECC/
+files <- paste0(c("scripts/ECC/classes_ecc.R", "scripts/ECC/ecc_functions.R", 
+                  "scripts/ECC/dist_functions.R"))
+invisible(sapply(files, source)); rm(files)
+
+source("scripts/arguments.R")
+
+cat(paste0("\n||", paste0(rep("-", 23), collapse = ""), 
+           " Generating non-redundant pairwise distances ", 
+           paste0(rep("-", 23), collapse = ""), "||\nStarted process at: ", Sys.time()))
+stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
+
+# COLLECT dist matrices using TPN clusters ---------------------------------------------------------
+outputMessages(paste0("\nCollecting and saving distances for groups at TPN"))
+
+save_to <- file.path("intermediate_data", params$int_type[2], "TPN", "dists", "/")
+dir.create(save_to,  recursive = TRUE, showWarnings = FALSE)
+
+outputMessages("Reading in metadata")
+
+hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
+
+fdata <- readRDS(arg$tpn)$new_cols %>% column_to_rownames("Strain")
+tp2 <- Timepoint$new(arg$tpn, "tp2", fdata)$Process(hx)$listHeights(hx)
+
+m <- read_tsv(arg$metadata) %>% processedStrains()
+basedir <- file.path("intermediate_data", params$int_type[2], "TPN")
+# basedir <- "intermediate_data/TPN/"
+
+# Extremes, for scaling ----------------------------------------------------------------------
+outputMessages("Collecting the extremes (min and max values) for optional scaling later")
+ext_geo_dists <- m$assignments %>% select(Longitude, Latitude) %>% unique() %>% 
+  rownames_to_column("id") %>% distMatrix(., "geo", c("Longitude", "Latitude"))
+ext_temp_dists <- m$assignments %>% select(Date) %>% unique() %>% 
+  rownames_to_column("id") %>% distMatrix(., "temp", "Date")
+
+extremes <- list(maxt = max(ext_temp_dists), mint = min(ext_temp_dists), 
+                 maxg = max(ext_geo_dists), ming = min(ext_geo_dists))
+saveRDS(extremes, file.path(basedir, "extreme_dists.Rds"))
+rm(ext_geo_dists); rm(ext_temp_dists); rm(extremes)
+
+# Pairwise distances within clusters at TPN --------------------------------------------------
+outputMessages("Collecting non-redundant pairwise distances (at last timepoint, when dataset is full)")
+metadata <- m$strain_data %>% as.data.table()
+
+clustersets <- file.path("intermediate_data", params$int_type[2], "clustersets.Rds") %>% readRDS(.)
+interval_list <- names(clustersets)
+rm(clustersets)
+
+k <- last(interval_list)
+
+if (params$int_type[2] == "multiset") {
+  interval <- "Multiset"
+}else if (params$int_type[2] == "monthly") {
+  interval <- "YearMonth"
+}else if (params$int_type[2] == "weekly") {
+  interval <- "YearWeek" #"Week"
+}
+
+typing_data <- lapply(1:length(interval_list), function(i) {
+  n1 <- as.character(interval_list[i])
+  tpkstrains <- metadata[get(interval) <= n1]$Strain
+  dfz <- tp2$filedata %>% rownames_to_column("isolate") %>%
+    select(isolate, all_of(hx$h)) %>%
+    filter(isolate %in% tpkstrains) %>% column_to_rownames("isolate")
+  dfz[,hx$h[1],drop=FALSE] %>% set_colnames(hx$th[1])
+}) %>% set_names(as.character(interval_list))
+
+td <- typing_data[[length(typing_data)]] %>% rownames_to_column("Strain") %>% as.data.table()
+rm(typing_data)
+
+parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>% 
+  left_join(td, ., by = "Strain") %>% sectionClusters(.)
+saveRDS(parts, file.path("intermediate_data", params$int_type[2], "TPN", "parts.Rds"))
+
+outputMessages(paste0("  Collecting and saving distances for cluster groups at TP", k, ":\n"))
+
+tpkstrains <- metadata[get(interval) <= k]$Strain
+collectDistances(parts$drs, parts$results, m$dr_matches, m$assignments, tpkstrains, save_to)
+rm(m); rm(parts)
+
+assert("Distances were collected and saved", file.exists(file.path(basedir, "extreme_dists.Rds")))
+
+stopwatch[["end_time"]] <- as.character.POSIXt(Sys.time())
+timeTaken(pt = "distances collection", stopwatch) %>% outputDetails(., newcat = TRUE)
+cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), 
+           " End of distances collection ", paste0(rep("-", 31), collapse = ""), "||\n"))
+closeAllConnections()
+Sys.sleep(3)
+
 ```
