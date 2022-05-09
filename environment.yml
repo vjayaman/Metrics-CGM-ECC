@@ -1,4 +1,4 @@
-name: docs_env
+name: nb_env
 channels:
  - conda-forge
 dependencies:

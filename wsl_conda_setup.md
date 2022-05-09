@@ -14,7 +14,7 @@ In a WSL terminal:
 	
 	conda update -n base -c defaults conda
 	conda env create -f environment.yml
-	conda activate docs_env
+	conda activate nb_env
 
 In an R environment, run: 
 
