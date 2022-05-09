@@ -42,6 +42,7 @@
 		var nsTP2=window.document.myform.non_singletonTP2.checked;
 		var tempwindow=window.document.myform.temp_win.checked;
 		var intype=window.document.querySelector('input[name="intervaltype"]:checked').id;
+		var wklbl=window.document.myform.wk_lbl.checked;
 		var tau1=window.document.myform.tau1.value;
 		var gamma1=window.document.myform.gamma1.value;
 		var tau2=window.document.myform.tau2.value;
@@ -94,6 +95,7 @@
 			"Column names: " + cnames + "\n" + 
 			"Interval type: " + intype + "\n" + 
 			"Dividers: " + divider + 
+			"Week labeling: " + encodeURIComponent(wklbl) + "\n" + 
 			"Source-temporal-geographic coefficents: " + "0-" + encodeURIComponent(tau1) + 
 			"-" + encodeURIComponent(gamma1) + ",0-" + encodeURIComponent(tau2) + 
 			"-" + encodeURIComponent(gamma2) + "\n" + 
@@ -247,6 +249,16 @@
 			  <input type="text" id="date_set" value=""/>
 			</p>
 			<br>
+			<div title="Suppose year y follows year x. 
+If overlapping and last week of x is week x-52, 
+days of y until next Monday will be x-52. 
+If not overlapping, will be labeled y-01.">
+				<label class="chk_container">
+					Start week labels at first day of each year (do not overlap)
+					<input type="checkbox" id="wk_lbl" checked="checked"/>
+					<span class="cbox"></span>
+				</label>
+			</div>
 			<label >Parameter set 1: </label>
 			<label for="quantity">temporal (tau) </label>
 			<input id="tau1" type="number" min="0" max="1" step="0.01" value = "1" onchange="paramSet1()"/>

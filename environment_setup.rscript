@@ -14,7 +14,7 @@ cat(paste0(
 
 required_packages <- c("R6", "testit", "optparse", "magrittr", "dplyr", "tibble", "readr", "reshape2", 
                        "fossil", "tidyr", "purrr", "progress", "reader", "data.table", "testthat", 
-                       "Rcpp", "RcppArmadillo", "heatmap3")
+                       "Rcpp", "RcppArmadillo", "heatmap3", "tsibble", "dint")
 
 not_installed <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
 install.packages(not_installed, quiet = TRUE)
@@ -39,7 +39,8 @@ if (all(unlist(x))) {
   #   message("   $ sudo apt-get install libssl-dev\n")
   #   message("Then run env_setup.R again.")
   # }
-  cat(paste0("\nNot all packages were installed successfully. Please see environment_setup.txt for details.\n"))
+  cat(paste0("\nNot all packages were installed successfully.\n", 
+             "Please run again/see environment_setup.txt for details.\n"))
 }
 
 cat(paste0(

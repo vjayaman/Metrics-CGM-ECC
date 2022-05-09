@@ -4,7 +4,8 @@
 msg <- file(paste0("logs/prepare_inputs.txt"), open="wt")
 sink(msg, type="message")
 
-libs <- c("optparse", "magrittr", "readr", "dplyr", "testit", "data.table", "tibble")
+libs <- c("optparse", "magrittr", "readr", "dplyr", 
+          "testit", "data.table", "tibble", "tsibble", "dint")
 y <- lapply(libs, require, character.only = TRUE); rm(y); rm(libs)
 
 option_list <- list(
@@ -33,11 +34,17 @@ outputDetails(paste0("\nWill save formatted inputs to 'processed' directory in i
 # Results of "Form for analysis inputs" ------------------------------------------------------------------------
 params <- readLines(arg$details, warn = FALSE) %>% strsplit(., split = ": ")
 
-test_params <- c("Region of interest", "Country of interest", "Has defined lineage information",
-                 "Has defined date information (day, month, and year)", "Has province-level data",
-                 "Province of interest", "Threshold of interest",
-                 "Is in a non-singleton cluster (at TP2)", "Filtering by date", "Column names",
-                 "Interval type", "Dividers", "Source-temporal-geographic coefficents",
+test_params <- c("Region of interest", "Country of interest", 
+                 "Has defined lineage information",
+                 "Has defined date information (day, month, and year)", 
+                 "Has province-level data",
+                 "Province of interest", 
+                 "Threshold of interest",
+                 "Is in a non-singleton cluster (at TP2)", 
+                 "Filtering by date", "Column names",
+                 "Interval type", "Dividers", 
+                 "Week labeling", 
+                 "Source-temporal-geographic coefficents",
                  "Generate heatmaps for top __ largest clusters", 
                  "Min cluster size to consider for largest growth (for heatmaps)", "Cluster by", 
                  "Transform heatmap data", "Low value color", "Mid-range value color", "High value color")
@@ -47,7 +54,8 @@ rm(test_params)
 
 
 params %<>% set_names(c("reg","cou","has_lin", "has_date","has_prov","prov",
-                        "th","nsTP2", "temp_win","cnames","int_type","divs","coeffs", "numcl", "mincl",
+                        "th","nsTP2", "temp_win","cnames","int_type","divs", "wklbl",
+                        "coeffs", "numcl", "mincl",
                         "clustby", "trheatmaps", "lowcol", "midcol", "highcol"))
 
 a1 <- readData(arg$metadata, FALSE)
@@ -180,13 +188,35 @@ dir.create(file.path("results", params$int_type[2]), showWarnings = FALSE)
 
 # YearMonth:
 #   if a strain was added on or before the last day of the month, given that YearMonth designation
+# metadata <- strain_data %>% 
+#   mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
+#   mutate(YearMonth = format(Date, "%Y-%m")) %>% 
+#   mutate(YearWeek = strftime(as.Date(Date), format = "%Y-%V")) %>% 
+#   arrange(YearWeek) %>% as.data.table()
 metadata <- strain_data %>% 
   mutate(Date = as.Date(paste(Year, Month, Day, sep = "-"))) %>% 
-  mutate(YearMonth = format(Date, "%Y-%m")) %>% 
-  # mutate(YearWeek = paste0(Year, "-", format(as.Date(Date), "%W"))) %>% 
-  mutate(YearWeek = strftime(as.Date(Date), format = "%Y-%V")) %>% 
-  arrange(YearWeek) %>% 
-  as.data.table()
+  mutate(YearMonth = format(Date, "%Y-%m")) %>% as.data.table() %>% 
+  mutate(YearWeek = gsub(" W", "-", yearweek(Date))) %>% 
+  arrange(YearWeek) %>% as.data.table()
+
+overlap_weeks <- as.logical(params$wklbl[2])
+if (!overlap_weeks) {
+  # start Date to YearWeek conversions at first day of each new year 
+  # i.e. don't label first week of new year with the label of the last week of 
+  # current year (i.e. if last week of 2020 is week 53, don't label the first 
+  # few days of 2021 with week 53, instead use 01)
+  for (Yr_i in sort(unique(metadata$Year))[-1]) {
+    Yr <- Yr_i %>% as.character() %>% as.Date("%Y")
+    yr_start = wday(dint::first_of_year(Yr))
+    metadata[Year == Yr_i] <- metadata[Year == Yr_i] %>% 
+      mutate(YearWeek = gsub(" W", "-", yearweek(Date, week_start = yr_start-1)))
+  }
+}
+
+# To confirm: 
+# metadata[Year == "2020"] %>% arrange(YearWeek, Month, Day)
+# metadata[Year == "2021"] %>% arrange(YearWeek, Month, Day)
+
 
 f2 <- tp2_processed$new_cols %>% as.data.table() %>% select(Strain, all_of(params$th[2])) %>% 
   rename(isolate = Strain) %>% arrange(isolate)
