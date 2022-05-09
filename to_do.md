@@ -38,4 +38,6 @@
 * line 919 – pairwise geo and temp distance for top 20 clusters need to calculate the actual physical pairwise distance, then we have to change the distance calculation in step 4
 * modular heatmaps – big task
 * should make the heatmap generation as independent of the cgm-ecc-metrics generation as possible
-
+* add options for YearWeek labeling (years x, y, where x is the year before y) in the case of overlapping between last week of x and first week of y - suppose last week of x is week x-52: 
+    * first week of y is labeled x-52
+    * first week of y is labeled y-01
