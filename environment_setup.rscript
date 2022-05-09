@@ -40,7 +40,7 @@ if (all(unlist(x))) {
   #   message("Then run env_setup.R again.")
   # }
   cat(paste0("\nNot all packages were installed successfully.\n", 
-             "Please run again/see environment_setup.txt for details.\n"))
+             "Please run again/see logs/environment_setup.txt for details.\n"))
 }
 
 cat(paste0(
