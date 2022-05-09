@@ -12,8 +12,9 @@ cat(paste0(
   paste0(rep("-", 36), collapse = ""), "||"
 ))
 
-required_packages <- c("R6", "testit", "optparse", "magrittr", "dplyr", "tibble", "readr", "reshape2", 
-                       "fossil", "tidyr", "purrr", "progress", "reader", "data.table", "testthat", 
+# tidyverse contains: dplyr, tidyr, ggplot2, readr, purrr, tibble, stringr
+required_packages <- c("R6", "testit", "optparse", "magrittr", "reshape2", 
+                       "fossil", "progress", "reader", "data.table", "testthat", 
                        "Rcpp", "RcppArmadillo", "heatmap3", "tsibble", "dint")
 
 not_installed <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
