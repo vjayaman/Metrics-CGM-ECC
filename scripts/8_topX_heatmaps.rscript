@@ -14,8 +14,8 @@ y <- suppressWarnings(
   suppressPackageStartupMessages(
     lapply(libs, require, character.only = TRUE)))
 
-cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Starting heatmap generation ", 
-           paste0(rep("-", 31), collapse = ""), "||\n"))
+cat(paste0("\n||", paste0(rep("-", 28), collapse = ""), " (8/8) Starting heatmap generation ", 
+           paste0(rep("-", 28), collapse = ""), "||\n"))
 
 # This section collects user-specified inputs ----------------------------------------------------------
 source("scripts/arguments.R")

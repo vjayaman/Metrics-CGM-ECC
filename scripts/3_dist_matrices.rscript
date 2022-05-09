@@ -17,9 +17,9 @@ invisible(sapply(files, source)); rm(files)
 
 source("scripts/arguments.R")
 
-cat(paste0("\n||", paste0(rep("-", 23), collapse = ""), 
-           " Generating non-redundant pairwise distances ", 
-           paste0(rep("-", 23), collapse = ""), "||\nStarted process at: ", Sys.time()))
+cat(paste0("\n||", paste0(rep("-", 20), collapse = ""), 
+           " (3/8) Generating non-redundant pairwise distances ", 
+           paste0(rep("-", 20), collapse = ""), "||\nStarted process at: ", Sys.time()))
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 
 # COLLECT dist matrices using TPN clusters ---------------------------------------------------------

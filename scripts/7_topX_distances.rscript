@@ -10,7 +10,8 @@ libs <- c("optparse", "magrittr", "fossil", "tidyr", "plyr", "dplyr", "readr",
 y <- suppressWarnings(
   suppressPackageStartupMessages(lapply(libs, require, character.only = TRUE)))
 
-cat(paste0("\n||", paste0(rep("-", 21), collapse = ""), " Starting pairwise (strain) distance collection ", 
+cat(paste0("\n||", paste0(rep("-", 21), collapse = ""), 
+           " Starting pairwise (strain) distance collection ", 
            paste0(rep("-", 22), collapse = ""), "||\n"))
 
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)

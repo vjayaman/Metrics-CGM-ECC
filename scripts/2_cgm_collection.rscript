@@ -18,8 +18,8 @@ files <- list.files("scripts/CGM", full.names = TRUE)
 invisible(sapply(files, source)); rm(files)
 
 # BASIC STARTUP MESSAGES ---------------------------------------------------------------------------------------
-outputDetails(paste0("\n||", paste0(rep("-", 32), collapse = ""), " Cluster metric generation ", 
-                     paste0(rep("-", 32), collapse = ""), "||\nStarted process at: ", Sys.time()))
+outputDetails(paste0("\n||", paste0(rep("-", 29), collapse = ""), " (2/8) Cluster metric generation ", 
+                     paste0(rep("-", 29), collapse = ""), "||\nStarted process at: ", Sys.time()))
 cat(paste0("\nIf at any point the process cuts off with no success message, please see the log file.\n\n"))
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 

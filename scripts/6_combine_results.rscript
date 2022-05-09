@@ -6,8 +6,8 @@ y <- suppressMessages(lapply(libs, require, character.only = TRUE))
 source("scripts/arguments.R")
 source("scripts/Misc/type_handling.R"); source("scripts/ECC/classes_ecc.R")
 
-cat(paste0("\n||", paste0(rep("-", 31), collapse = ""), " Merging CGM and ECC results ", 
-           paste0(rep("-", 31), collapse = ""), "||\n"))
+cat(paste0("\n||", paste0(rep("-", 28), collapse = ""), " (6/8) Merging CGM and ECC results ", 
+           paste0(rep("-", 28), collapse = ""), "||\n"))
 
 # INPUT PREP -------------------------------------------------------------------------------------------------
 hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))

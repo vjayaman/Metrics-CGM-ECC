@@ -8,8 +8,8 @@ libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
 y <- lapply(libs, require, character.only = TRUE)
 assert("All packages loaded correctly", all(unlist(y))); rm(libs); rm(y)
 
-cat(paste0("\n||", paste0(rep("-", 30), collapse = ""), " Average distances collection ",
-           paste0(rep("-", 31), collapse = ""), "||\nStarted process at: ", Sys.time(), "\n"))
+cat(paste0("\n||", paste0(rep("-", 27), collapse = ""), " (4/8) Average distances collection ",
+           paste0(rep("-", 28), collapse = ""), "||\nStarted process at: ", Sys.time(), "\n"))
 
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
 

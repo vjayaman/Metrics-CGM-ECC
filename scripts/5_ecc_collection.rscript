@@ -17,8 +17,8 @@ files <- c("scripts/ECC/classes_ecc.R",
            "scripts/ECC/dist_functions.R")
 invisible(sapply(files, source)); rm(files)
 
-outputDetails(paste0("\n||", paste0(rep("-", 34), collapse = ""), " ECC metric generation ",
-                     paste0(rep("-", 34), collapse = ""), "||\nStarted process at: ", Sys.time()))
+outputDetails(paste0("\n||", paste0(rep("-", 31), collapse = ""), " (5/8) ECC metric generation ",
+                     paste0(rep("-", 31), collapse = ""), "||\nStarted process at: ", Sys.time()))
 
 source("scripts/arguments.R")
 
