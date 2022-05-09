@@ -39,5 +39,5 @@
 * top growth clusters not the same as GZ’s results
 * line 919 – pairwise geo and temp distance for top 20 clusters need to calculate the actual physical pairwise distance, then we have to change the distance calculation in step 4
 * modular heatmaps – big task
-* should make the heatmap generation as independent of the cgm-ecc-metrics generation as possible
+    * should make the heatmap generation as independent of the cgm-ecc-metrics generation as possible
 * heatmap debugging - write up in a jupyter notebook / Rmarkdown file - so it's easy for others to verify steps
