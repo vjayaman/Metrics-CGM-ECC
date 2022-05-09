@@ -35,8 +35,7 @@
     * first make sure you have the updated version
 * whisker plots – too much data?
 * documents describing the analysis – figure out which components need this (of my part)
-* documents describing the analysis – organize how to do this
-* update readme
+    * organize this process
 * top growth clusters not the same as GZ’s results
 * line 919 – pairwise geo and temp distance for top 20 clusters need to calculate the actual physical pairwise distance, then we have to change the distance calculation in step 4
 * modular heatmaps – big task
