@@ -1,9 +1,9 @@
 
 ## To do
 
-# Last checked: May 9, 2022
+### Last checked: May 9, 2022
 
-# Done
+#### Done
 
 * change date formatting so Excel doesn’t convert weeks (force as characters) – uses YearWeek instead of just Week
 * output a table of || TP2 cluster | Pango lineage | Size ||
@@ -23,7 +23,7 @@
     * add as option in form_inputs
 * novel_only ECC columns not found
 
-# Not done
+#### Not done
 
 * plot color scheme – form dropdown – so you can view palettes
 * upload file section in forms?
