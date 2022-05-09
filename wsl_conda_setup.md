@@ -3,7 +3,7 @@ https://docs.microsoft.com/en-us/windows/wsl/install
 
 Set up miniconda: 
 Go to https://docs.conda.io/en/latest/miniconda.html#linux-installers and hover over 
-appropriate Linux installer link. Copy the link address <miniconda linux installer>
+appropriate Linux installer link. Copy the link address `<miniconda linux installer>`
 	
 	$ wget <miniconda linux installer>
 	$ bash Miniconda[YOUR VERSION].sh
