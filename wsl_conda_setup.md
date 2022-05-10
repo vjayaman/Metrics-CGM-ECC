@@ -27,3 +27,4 @@ If going through the jupyter notebook documentation, run through the following i
 	jupyter notebook --no-browser
 
 
+Note that the whole process may take some time. 
