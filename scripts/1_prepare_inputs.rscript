@@ -23,7 +23,6 @@ arg <- parse_args(OptionParser(option_list=option_list)); rm(option_list)
 
 # FUNCTIONS ----------------------------------------------------------------------------------------------------
 source("scripts/Misc/formatprep.R")
-# FUNCTIONS ----------------------------------------------------------------------------------------------------
 
 outputDetails(paste0("\n||", paste0(rep("-", 23), collapse = ""), " (1/8) Prepping inputs for metric generation ",
                      paste0(rep("-", 23), collapse = ""), "||\nStarted process at: ", Sys.time()), TRUE)

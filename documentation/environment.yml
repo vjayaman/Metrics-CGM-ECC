@@ -2,6 +2,7 @@ name: nb_env
 channels:
  - conda-forge
 dependencies:
+ - jupyter
  - r-base=4.1
  - r-tidyverse
  - r-R6
@@ -18,3 +19,4 @@ dependencies:
  - r-testthat
  - r-rcpp
  - r-rcpparmadillo
+ - r-irkernel

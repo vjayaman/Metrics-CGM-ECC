@@ -1,4 +1,4 @@
-source("scripts/ECC/epicohesionversions.R")
+source("ECC/epicohesionversions.R")
 
 # -----------------------------------------------------------------------------------------------------
 

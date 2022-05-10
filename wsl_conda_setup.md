@@ -3,7 +3,7 @@ https://docs.microsoft.com/en-us/windows/wsl/install
 
 Set up miniconda: 
 Go to https://docs.conda.io/en/latest/miniconda.html#linux-installers and hover over 
-appropriate Linux installer link. Copy the link address `<miniconda linux installer>`
+appropriate Linux installer link. Copy the link address `<miniconda linux installer>`int a Windows PowerShell terminal
 	
 	$ wget <miniconda linux installer>
 	$ bash Miniconda[YOUR VERSION].sh
@@ -30,8 +30,6 @@ In an R environment, run:
 
 If going through the jupyter notebook documentation, run through the following in a WSL terminal:
 
-	conda install jupyter
-	conda install -c r r-irkernel
 	jupyter notebook --no-browser
 
 
