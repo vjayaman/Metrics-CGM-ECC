@@ -1,5 +1,6 @@
 WIP - under development
 
+Under *documentation/*, we have jupyter notebook scripts for running the analysis (see wsl_conda_setup.md for details on setting up Jupyter with a Windows environment - using conda). Parts 1 through 4 are up and running, but I will finish up the rest and add lots of explanation of the steps shortly.
 
 
 
