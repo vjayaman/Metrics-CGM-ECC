@@ -41,4 +41,5 @@
 * modular heatmaps – big task
     * should make the heatmap generation as independent of the CGM-ECC-metrics generation as possible
 * heatmap generation - write up in a jupyter notebook / Rmarkdown file - so it's easy for others to verify steps
+    * partially done
 * make sure the notes for clusters with figures are clear
