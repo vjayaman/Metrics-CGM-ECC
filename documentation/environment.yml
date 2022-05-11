@@ -4,6 +4,7 @@ channels:
 dependencies:
  - jupyter
  - r-base=4.1
+ - r-essentials
  - r-tidyverse
  - r-R6
  - r-testit
