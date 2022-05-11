@@ -106,8 +106,15 @@ densityPlot <- function(mat, plot_type) {
 frequencyPlot <- function(mat, plot_type) {
   half_size <- mat
   half_size[upper.tri(half_size)] <- 0
-  hist(as.vector(half_size), freq = TRUE, main = paste0(plot_type, " distances counts"), 
-       xlab = paste0(plot_type, " pairwise distances"))
+  # hist(as.vector(half_size), freq = TRUE, main = paste0(plot_type, " distances counts"), 
+  #      xlab = paste0(plot_type, " pairwise distances"))
+  df <- data.frame(dists = as.vector(half_size))
+  p <- ggplot(df, aes(x = dists)) + 
+    geom_histogram(binwidth = 10) + 
+    labs(x = paste0(plot_type, " pairwise distances"), 
+         y = "Frequency", 
+         title = paste0(plot_type, " distances counts"))
+  return(p)
 }
 
 heatmapPlot <- function(mat, heatcolor, hc_choice, col_dir) {

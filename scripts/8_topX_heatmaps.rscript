@@ -7,8 +7,9 @@
 msg <- file("logs/heatmaps.txt", open="wt")
 sink(msg, type="message")
 
-libs <- c("optparse", "magrittr", "fossil", "tidyr", "plyr", "dplyr", "readr", "heatmap3",
-          "testit", "tibble", "reshape2", "RColorBrewer", "gplots", "data.table", "R6")
+libs <- c("optparse", "magrittr", "fossil", "tidyr", "plyr", "dplyr", 
+          "readr", "heatmap3", "testit", "tibble", "reshape2", "RColorBrewer", 
+          "gplots", "data.table", "R6", "ggplot2")
 # library(beepr)
 y <- suppressWarnings(
   suppressPackageStartupMessages(
@@ -83,7 +84,7 @@ if (num_cl == 0) {
                          clusters$old_cl[i], ", size ", clusters$TP2_cluster_size[i], 
                          ") - after last TP ..."), newcat = TRUE)
     
-    if (clusters$TP2_cluster_size[i] > 1) {
+    if (clusters$TP2_cluster_size[i] > as.double(params$mincl[2])) {
       
       original_cluster <- cluster_mapping$pango_clusters %>% 
         left_join(clusters[i,], ., by = c("old_h", "old_cl", "new_h", "new_cl")) %>% 
@@ -105,8 +106,9 @@ if (num_cl == 0) {
       heatmapPlot(temp_mat, heatcolor, hc_choice, col_dir); dev.off()
       png(file.path(basedir, "densities", tname))
       densityPlot(temp_mat, "Temporal"); dev.off()
-      png(file.path(basedir, "frequencies", tname))
-      frequencyPlot(temp_mat, "Temporal"); dev.off()
+      # png(file.path(basedir, "frequencies", tname)); frequencyPlot(temp_mat, "Temporal"); dev.off()
+      p_t <- frequencyPlot(temp_mat, "Temporal")
+      ggsave(file.path(basedir, "frequencies", tname), plot = p_t)
       
       # GEOGRAPHICAL -----------------------------------------------------------------------------------
       outputDetails(paste0("      - geographical data"), newcat = TRUE)
@@ -116,8 +118,9 @@ if (num_cl == 0) {
       heatmapPlot(geo_mat, heatcolor, hc_choice, col_dir); dev.off()
       png(file.path(basedir, "densities", gname))
       densityPlot(geo_mat, "Geographical"); dev.off()
-      png(file.path(basedir, "frequencies", gname))
-      frequencyPlot(geo_mat, "Geographical"); dev.off()
+      # png(file.path(basedir, "frequencies", gname)); frequencyPlot(geo_mat, "Geographical"); dev.off()
+      p_g <- frequencyPlot(geo_mat, "Geographical")
+      ggsave(file.path(basedir, "frequencies", gname), plot = p_g)
       
       
       # TEMP AND GEO -----------------------------------------------------------------------------------
@@ -128,8 +131,9 @@ if (num_cl == 0) {
       heatmapPlot(temp_geo_mat, heatcolor, hc_choice, col_dir); dev.off()
       png(file.path(basedir, "densities", tgname))
       densityPlot(temp_geo_mat, "Temp and geo"); dev.off()
-      png(file.path(basedir, "frequencies", tgname))
-      frequencyPlot(temp_geo_mat, "Temp and geo"); dev.off()
+      # png(file.path(basedir, "frequencies", tgname)); frequencyPlot(temp_geo_mat, "Temp and geo"); dev.off()
+      p_tg <- frequencyPlot(temp_geo_mat, "Temp and geo")
+      ggsave(file.path(basedir, "frequencies", tgname), plot = p_tg)
       
       
       # Save clustering separately ---------------------------------------------------------------------
