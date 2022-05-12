@@ -4,12 +4,12 @@
 # also for creating minimal required directories
 dir.create("logs", showWarnings = FALSE)
 
-msg <- file("logs/environment_setup.txt", open="wt")
-sink(msg, type="message")
+#msg <- file("logs/environment_setup.txt", open="wt")
+#sink(msg, type="message")
 
 cat(paste0(
   "\n||", paste0(rep("-", 36), collapse = ""), " Environment setup ", 
-  paste0(rep("-", 36), collapse = ""), "||"
+  paste0(rep("-", 36), collapse = ""), "||\n"
 ))
 
 # tidyverse contains: dplyr, tidyr, ggplot2, readr, purrr, tibble, stringr
@@ -18,7 +18,7 @@ required_packages <- c("R6", "testit", "optparse", "magrittr", "reshape2",
                        "Rcpp", "RcppArmadillo", "heatmap3", "tsibble", "dint")
 
 not_installed <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
-install.packages(not_installed, quiet = TRUE)
+install.packages(not_installed, quiet = FALSE, dependencies = TRUE)
 
 # Testing packages were installed correctly:
 x <- lapply(required_packages, require, character.only = TRUE)

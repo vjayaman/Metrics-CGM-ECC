@@ -24,13 +24,7 @@ Then set up the environment *nb_env* using the YAML file in the documentation di
 	conda env create -f documentation/environment.yml
 	conda activate nb_env
 
-Run the following statement(s) (so we can use the `Rcpp` package)
-
-        conda install -c conda-forge gxx
-
-In an R environment, run: 
-
-	install.packages("dint")
+Use `sudo R` to start an R environment with administrative privileges (after installing R if not already found), then run `source("environment_setup.rscript")` and follow the output instructions for package installation, etc. Note that we use `sudo R` to get package installation permissions. 
 
 If going through the jupyter notebook documentation, run through the following in a WSL terminal:
 
