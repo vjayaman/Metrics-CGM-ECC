@@ -9,7 +9,7 @@ y <- lapply(libs, require, character.only = TRUE)
 assert("All packages loaded correctly", all(unlist(y))); rm(libs); rm(y)
 
 stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = NULL)
-# sourceCpp("scripts/epicohversions.cpp")
+sourceCpp("scripts/epicohversions.cpp")
 
 # Current working directory should be Metrics-CGM-ECC/
 files <- c("scripts/ECC/classes_ecc.R", 
