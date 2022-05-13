@@ -28,6 +28,8 @@
 * paired histograms – should be able to shade these
     * see scripts/Misc/plotting_functions.R and the frequencyPlots() function for how it's plotted
 * documents describing the analysis – figure out which components need this (of my part)
+* make sure the notes for clusters with figures are clear
+    * see *results/<interval type>/cluster_labs.txt* after running script 7 to get details on which clusters have figures
 
 #### Not done
 
@@ -42,4 +44,3 @@
     * should make the heatmap generation as independent of the CGM-ECC-metrics generation as possible
 * heatmap generation - write up in a jupyter notebook / Rmarkdown file - so it's easy for others to verify steps
     * partially done
-* make sure the notes for clusters with figures are clear
