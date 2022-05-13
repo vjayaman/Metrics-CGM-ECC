@@ -1,3 +1,5 @@
+**WIP**
+
 Set up wsl (windows subsystem for linux): 
 https://docs.microsoft.com/en-us/windows/wsl/install
 
@@ -25,6 +27,12 @@ Then set up the environment *nb_env* using the YAML file in the documentation di
 	conda activate nb_env
 
 Use `sudo R` to start an R environment with administrative privileges (after installing R if not already found), then run `source("environment_setup.rscript")` and follow the output instructions for package installation, etc. Note that we use `sudo R` to get package installation permissions. 
+
+Run 
+
+	conda install -c conda-forge r-rcpparmadillo
+
+and replace `r-rcpparmadillo` with any of the R packages that need to be installed.
 
 If going through the jupyter notebook documentation, run through the following in a WSL terminal:
 
