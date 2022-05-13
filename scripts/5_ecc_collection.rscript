@@ -22,8 +22,9 @@ outputDetails(paste0("\n||", paste0(rep("-", 31), collapse = ""), " (5/8) ECC me
 
 source("scripts/arguments.R")
 
+ivl <- params$int_type[2]
 assert("Distances were collected and saved", 
-       file.exists(file.path("intermediate_data", params$int_type[2], "TPN", "extreme_dists.Rds")))
+       file.exists(file.path("intermediate_data", ivl, "TPN", "extreme_dists.Rds")))
 
 hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
 
@@ -32,21 +33,13 @@ tp2 <- Timepoint$new(arg$tpn, "tp2", fdata)$Process(hx)$listHeights(hx)
 
 m <- read_tsv(arg$metadata) %>% processedStrains()
 metadata <- m$strain_data %>% as.data.table()
-extremes <- file.path("intermediate_data", params$int_type[2], "TPN", "extreme_dists.Rds") %>% readRDS()
+extremes <- file.path("intermediate_data", ivl, "TPN", "extreme_dists.Rds") %>% readRDS()
 
-if (params$int_type[2] == "multiset") {
-  interval <- "Multiset"
-}else if (params$int_type[2] == "monthly") {
-  interval <- "YearMonth"
-}else if (params$int_type[2] == "weekly") {
-  interval <- "YearWeek"
-}
-
-clustersets <- file.path("intermediate_data", params$int_type[2], "clustersets.Rds") %>% readRDS(.)
+clustersets <- file.path("intermediate_data", ivl, "clustersets.Rds") %>% readRDS(.)
 interval_list <- names(clustersets)
 rm(clustersets)
 
-basedir <- file.path("intermediate_data", params$int_type[2], "eccs")
+basedir <- file.path("intermediate_data", ivl, "eccs")
 for (xj in interval_list) {
   file.path(basedir, paste0("TP", xj)) %>% 
     dir.create(., showWarnings = FALSE, recursive = TRUE)
@@ -54,7 +47,7 @@ for (xj in interval_list) {
 
 typing_data <- lapply(1:length(interval_list), function(i) {
   n1 <- as.character(interval_list[i])
-  tpkstrains <- metadata[get(interval) <= n1]$Strain
+  tpkstrains <- metadata[get(ivl) <= n1]$Strain
   dfz <- tp2$filedata %>% rownames_to_column("isolate") %>%
     select(isolate, all_of(hx$h)) %>%
     filter(isolate %in% tpkstrains) %>% column_to_rownames("isolate")
@@ -72,7 +65,7 @@ matched_params <- params$coeffs[2] %>% strsplit(., ",") %>% unlist() %>%
   expand.grid(x = ., k = interval_list) %>% as.data.frame() %>% as.data.table()
 
 k <- last(interval_list)
-tpkstrains <- metadata[get(interval) <= k]$Strain
+tpkstrains <- metadata[get(ivl) <= k]$Strain
 key_cls <- parts$drs[Strain %in% tpkstrains] %>% select(-Strain, -dr) %>% pull() %>% unique()
 y <- lapply(parts$results, function(x) any(key_cls %in% pull(x, 1))) %>% unlist()
 fnames <- names(y[y]) # groups of clusters, the pairwise distances for each group
@@ -83,9 +76,9 @@ dates <- as.character(unique(matched_params$k))
 
 preProcForECC <- function(novel_only = FALSE, k_i, metadata, parts, m, matched_params, tr_dists) {
   if (novel_only) {
-    tpkstrains <- metadata[get(interval) == k_i]$Strain
+    tpkstrains <- metadata[get(ivl) == k_i]$Strain
   }else {
-    tpkstrains <- metadata[get(interval) <= k_i]$Strain
+    tpkstrains <- metadata[get(ivl) <= k_i]$Strain
   }
   
   cx <- setdiff(colnames(parts$drs), c("Strain", "dr"))
@@ -113,7 +106,7 @@ for (j in 1:length(fnames)) {
   outputDetails(paste0("\n\nGroup of clusters ", f, ", ", j, " / ", length(fnames), " ... "))
   outputDetails(paste0("\n     TP             tau             gamma"))
   
-  dms <- file.path("intermediate_data", params$int_type[2], "TPN", "dists", paste0("group", f, ".Rds")) %>% readRDS()
+  dms <- file.path("intermediate_data", ivl, "TPN", "dists", paste0("group", f, ".Rds")) %>% readRDS()
   tr_dists <- collectTransforms2(dms, extremes)
   
   for (k_i in dates) {
@@ -153,12 +146,12 @@ datafiles <- lapply(interval_list, function(tp) {
 eccs <- mergingResults("group", datafiles) %>% 
   left_join(., mergingResults("novels", datafiles))
 
-if (params$int_type[2] == "multiset") {
+if (ivl == "Multiset") {
   res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
     paste0("ECC-",.,  ".Rds") %>% 
-    file.path(file.path("results", params$int_type[2]), .)
+    file.path(file.path("results", ivl), .)
 }else {
-  res_file <- file.path("results", params$int_type[2], "ECC-intervals.Rds")
+  res_file <- file.path("results", ivl, "ECC-intervals.Rds")
 }
 
 assert("No -Inf ECC results", !any(is.infinite(abs(pull(eccs[,4])))))

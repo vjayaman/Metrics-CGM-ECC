@@ -41,7 +41,7 @@
 		var threshold=window.document.myform.threshold.value;
 		var nsTP2=window.document.myform.non_singletonTP2.checked;
 		var tempwindow=window.document.myform.temp_win.checked;
-		var intype=window.document.querySelector('input[name="intervaltype"]:checked').id;
+		var intype=window.document.querySelector('input[name="intervaltype"]:checked').value;
 		var wklbl=window.document.myform.wk_lbl.checked;
 		var tau1=window.document.myform.tau1.value;
 		var gamma1=window.document.myform.gamma1.value;
@@ -73,7 +73,7 @@
 			var prov_results="none";
 		}
 		
-		if (intype == "multiset") {
+		if (intype == "Multiset") {
 		  var divider=encodeURIComponent(window.document.myform.date_set.value) + "\n";
 		}else {
 		  var divider="none" + "\n";
@@ -238,11 +238,11 @@
 			</label>
 			<br>
 			Type of intervals you would like the analysis to run for *:<br>
-			<input type="radio" id="monthly" name="intervaltype" value = "monthly" onclick="dateSet()">
+			<input type="radio" id="monthly" name="intervaltype" value = "YearMonth" onclick="dateSet()">
 			<label for="monthly">Monthly</label><br>
-			<input type="radio" id="weekly" name="intervaltype" value = "weekly" onclick="dateSet()">
+			<input type="radio" id="weekly" name="intervaltype" value = "YearWeek" onclick="dateSet()">
 			<label for="weekly">Weekly</label><br>
-			<input type="radio" id="multiset" name="intervaltype" value = "multiset" onclick="dateSet()">
+			<input type="radio" id="multiset" name="intervaltype" value = "Multiset" onclick="dateSet()">
 			<label for="multiset">Multi-set</label>
 			<p id="multidates" style="display:none; padding-left: 25px; width:100px;">
 			  <label for="date_set">e.g. "yyyy-mm-dd,yyyy-mm-dd"</label>
@@ -294,7 +294,7 @@ If not overlapping, will be labeled y-01.">
   			</label>
   			<br>
   			<label for="quantity">Growth rate heatmap clusters must have min size __ (note, no singletons):</label>
-  			<input id="min_cl" type="number" min="2" step="1" value="2"/>
+  			<input id="min_cl" type="number" min="2" step="1" value="10"/>
   			<br>
   			<label >Heatmap colors:</label>
   			<br>

@@ -219,23 +219,22 @@ if (!overlap_weeks) {
 f2 <- tp2_processed$new_cols %>% as.data.table() %>% select(Strain, all_of(params$th[2])) %>% 
   rename(isolate = Strain) %>% arrange(isolate)
 
-if (params$int_type[2] == "weekly") {
-  interval <- "YearWeek"
+interval <- params$int_type[2]
+if (interval == "YearWeek") {
   interval_list <- metadata$YearWeek %>% unique() %>% sort()
   
   interval_clusters <- metadata %>% select(c(Strain, all_of(interval), Date)) %>% 
     inner_join(., f2, by = c("Strain" = "isolate")) %>% 
     set_colnames(c("isolate", "ivl", "Date", "heightx"))
   
-}else if (params$int_type[2] == "monthly") {
-  interval <- "YearMonth"
+}else if (interval == "YearMonth") {
   interval_list <- metadata %>% pull(interval) %>% unique() %>% sort()
   
   interval_clusters <- metadata %>% select(c(Strain, all_of(interval), Date)) %>% 
     inner_join(., f2, by = c("Strain" = "isolate")) %>% 
     set_colnames(c("isolate", "ivl", "Date", "heightx"))
   
-}else if (params$int_type[2] == "multiset") {
+}else if (interval == "Multiset") {
   setdivider <- strsplit(params$divs[2], split = ",") %>% unlist() %>% as.Date(., format = "%Y-%m-%d")
   
   assertion1 <- lapply(setdivider, function(x) nchar(as.character(x)) == 10) %>% unlist()
@@ -255,7 +254,6 @@ if (params$int_type[2] == "weekly") {
   metadata[metadata$Date == fdivs$end[i]]$Multiset <- fdivs$ivl[i]
   rm(fdivs)
   
-  interval <- "Multiset"
   interval_list <- metadata %>% pull(interval) %>% unique() %>% sort()
   
   interval_clusters <- metadata %>% select(c(Strain, Multiset)) %>%
@@ -278,8 +276,7 @@ rm(sofar); rm(int_j); rm(interval_clusters); rm(interval_list)
 
 # SAVING RESULTS -----------------------------------------------------------------------------------------------
 saveRDS(clustersets, file.path(save_to, "clustersets.Rds")); rm(clustersets)
-writeData(metadata, file.path("inputs", "processed", "strain_info.txt")); rm(metadata)
-# writeData(tp2_processed$new_cols, file.path("inputs", "processed", "tp2_clusters.txt"))
+writeData(metadata, file.path("inputs", "processed", "strain_info.txt"))
 saveRDS(tp2_processed, file.path("inputs", "processed", "allTP2.Rds"))
 
 outputDetails(paste0("\nFinished process at: ", Sys.time(), "\n||", paste0(rep("-", 14), collapse = ""), 

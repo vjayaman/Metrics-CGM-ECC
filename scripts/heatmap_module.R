@@ -1,12 +1,11 @@
 #! /usr/bin/env Rscript
 
 # General setup - calling libraries, etc. --------------------------------------------------------------
-msg <- file("logs/pairwise_strain_distances.txt", open="wt")
-sink(msg, type="message")
+# msg <- file("logs/pairwise_strain_distances.txt", open="wt")
+# sink(msg, type="message")
 
 libs <- c("optparse", "magrittr", "fossil", "tidyr", "plyr", "dplyr", "readr", 
           "testit", "tibble", "reshape2", "RColorBrewer", "gplots", "data.table", "R6")
-# library(beepr)
 y <- suppressWarnings(
   suppressPackageStartupMessages(lapply(libs, require, character.only = TRUE)))
 
@@ -25,28 +24,92 @@ source("scripts/ECC/classes_ecc.R")
 source("scripts/ECC/dist_functions.R")
 source("scripts/ECC/ecc_functions.R") # transformData2() is here
 source("report_specific/epi-helper-no-source.R")
-source("scripts/Misc/type_handling.R")
 
-invl <- params$int_type[2]
-fnames <- file.path("intermediate_data", invl, "TPN/dists/") %>% 
-  list.files(., full.names = TRUE)
-assert("Distances were collected, script '3_dist_matrices.R' was run correctly", length(fnames) >= 1)
-distfiles <- lapply(fnames, function(f) readRDS(f))
+# --------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
+# COLLECTING DISTANCES 
+# save_to <- file.path("intermediate_data", params$int_type[2], "TPN", "dists", "/")
+# dir.create(save_to,  recursive = TRUE, showWarnings = FALSE)
+
+hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
+
+fdata <- readRDS(arg$tpn)$new_cols %>% column_to_rownames("Strain")
+tp2 <- Timepoint$new(arg$tpn, "tp2", fdata)$Process(hx)$listHeights(hx)
+
+m <- read_tsv(arg$metadata) %>% processedStrains()
+# basedir <- file.path("intermediate_data", params$int_type[2], "TPN")
+
+
+# Extremes, for scaling ----------------------------------------------------------------------
+ext_geo_dists <- m$assignments %>% select(Longitude, Latitude) %>% unique() %>% 
+  rownames_to_column("id") %>% distMatrix(., "geo", c("Longitude", "Latitude"))
+ext_temp_dists <- m$assignments %>% select(Date) %>% unique() %>% 
+  rownames_to_column("id") %>% distMatrix(., "temp", "Date")
+
+extremes <- list(maxt = max(ext_temp_dists), mint = min(ext_temp_dists), 
+                 maxg = max(ext_geo_dists), ming = min(ext_geo_dists))
+# saveRDS(extremes, file.path(basedir, "extreme_dists.Rds"))
+# rm(ext_geo_dists); rm(ext_temp_dists); rm(extremes)
+
+# Pairwise distances within clusters at TPN --------------------------------------------------
+outputMessages("Collecting non-redundant pairwise distances (at last timepoint, when dataset is full)")
+metadata <- m$strain_data %>% as.data.table()
+
+clustersets <- file.path("intermediate_data", params$int_type[2], "clustersets.Rds") %>% readRDS(.)
+interval_list <- names(clustersets)
+rm(clustersets)
+
+k <- last(interval_list)
+
+if (params$int_type[2] == "multiset") {
+  interval <- "Multiset"
+}else if (params$int_type[2] == "monthly") {
+  interval <- "YearMonth"
+}else if (params$int_type[2] == "weekly") {
+  interval <- "YearWeek"
+}
+
+typing_data <- lapply(1:length(interval_list), function(i) {
+  n1 <- as.character(interval_list[i])
+  tpkstrains <- metadata[get(interval) <= n1]$Strain
+  dfz <- tp2$filedata %>% rownames_to_column("isolate") %>%
+    select(isolate, all_of(hx$h)) %>%
+    filter(isolate %in% tpkstrains) %>% column_to_rownames("isolate")
+  dfz[,hx$h[1],drop=FALSE] %>% set_colnames(hx$th[1])
+}) %>% set_names(as.character(interval_list))
+
+td <- typing_data[[length(typing_data)]] %>% rownames_to_column("Strain") %>% as.data.table()
+rm(typing_data)
+
+parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>% 
+  left_join(td, ., by = "Strain") %>% sectionClusters(.)
+saveRDS(parts, file.path("intermediate_data", params$int_type[2], "TPN", "parts.Rds"))
+
+outputMessages(paste0("  Collecting and saving distances for cluster groups at TP", k, ":\n"))
+
+tpkstrains <- metadata[get(interval) <= k]$Strain
+collectDistances(parts$drs, parts$results, m$dr_matches, m$assignments, tpkstrains, save_to)
+
+# --------------------------------------------------------------------------------------------
+# fnames <- file.path("intermediate_data", params$int_type[2], "TPN/dists/") %>%
+#   list.files(., full.names = TRUE)
+# assert("Distances were collected, script '3_dist_matrices.R' was run correctly", length(fnames) >= 1)
+# distfiles <- lapply(fnames, function(f) readRDS(f))
 
 cluster_mapping <- readRDS(arg$tpn)
 
-ext_file <- file.path("intermediate_data", invl, "TPN/extreme_dists.Rds")
+ext_file <- file.path("intermediate_data", params$int_type[2], "TPN/extreme_dists.Rds")
 assert("Max and min of distances collected", file.exists(ext_file))
 extremes <- readRDS(ext_file)
 
-dir.create(file.path("results", invl, "epitables"), 
+dir.create(file.path("results", params$int_type[2], "epitables"), 
            showWarnings = FALSE, recursive = TRUE)
 
 # Reading in the threshold column (to get appropriate clusters)
 hx <- strsplit(as.character(params$th[2]), split = ",") %>% unlist() %>% tibble(h = ., th = paste0("T", .))
 
 # Reading the CGM results (weekly/monthly/multiset)
-cgms <- list.files(file.path("results", invl), full.names = TRUE) %>% 
+cgms <- list.files(file.path("results", params$int_type[2]), full.names = TRUE) %>% 
   grep("CGM", ., value = TRUE) %>% readRDS()
 
 num_cl <- as.numeric(params$numcl[2])
@@ -108,7 +171,7 @@ if (num_cl == 0) {
     merge.data.table(., raw_sizes, by = c("old_h", "old_cl", "new_h", "new_cl")) %>% 
     arrange(-TP2_cluster_size)
   
-  file.path("results", invl, "cluster_labs.txt") %>% writeData(., clusters)
+  file.path("results", params$int_type[2], "cluster_labs.Rds") %>% saveRDS(clusters, .)
   
   outputDetails(paste0("Collecting pairwise distances (from non-redundant set), ", 
                        "for each of the \n     ", nrow(clusters)-1, " clusters ", 
@@ -125,7 +188,7 @@ if (num_cl == 0) {
   
   fdata <- cluster_mapping$new_cols %>% column_to_rownames("Strain")
   tpn <- tp2 <- Timepoint$new(arg$tpn, "tp2", fdata)$Process(hx)$listHeights(hx)
-
+  
   
   typing_data <- list(tp2$height_list)
   
@@ -144,7 +207,7 @@ if (num_cl == 0) {
   #       ||---------------------------------------------||
   #       || Strain.1 | Strain.2 | Temp.Dist | Geog.Dist ||
   #       ||---------------------------------------------||
-
+  
   for (j in 1:nrow(clusters)) {
     clx <- clusters$new_cl[j]
     outputDetails(paste0("(", j, "/", nrow(clusters), ") Cluster ", 
@@ -206,7 +269,7 @@ if (num_cl == 0) {
     pw_strains <- pw_strains %>% select(Strain.1, Strain.2, Temp.Dist, Geog.Dist)
     
     outputDetails("saving ...", TRUE)
-    file.path("results", invl, "epitables", 
+    file.path("results", params$int_type[2], "epitables", 
               paste0(clusters$chr[j], "-", clusters$old_cl[j], ".Rds")) %>% 
       saveRDS(pw_strains, file = .)
   }

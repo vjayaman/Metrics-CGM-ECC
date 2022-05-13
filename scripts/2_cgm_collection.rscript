@@ -25,22 +25,21 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 
 # TP DATA PREPARATION ------------------------------------------------------------------------------------------
 
+ivl <- params$int_type[2]
 heights <- strsplit(as.character(params$th[2]), split = ",") %>% unlist()
-clustersets <- file.path("intermediate_data", params$int_type[2], "clustersets.Rds") %>% readRDS(.)
+clustersets <- file.path("intermediate_data", ivl, "clustersets.Rds") %>% readRDS(.)
 interval_list <- names(clustersets)
 
-if (params$int_type[2] == "multiset") {
-  interval <- "Multiset"
-  msg1 <- ""
-}else if (params$int_type[2] == "monthly") {
-  interval <- "YearMonth"
-  msg1 <- ""
-}else if (params$int_type[2] == "weekly") {
-  interval <- "YearWeek" #"Week"
+ivl <- params$int_type[2]
+if (ivl == "YearWeek") {
   msg1 <- "week "
+}else if (ivl == "YearMonth") {
+  msg1 <- "month "
+}else {
+  msg1 <- ""
 }
 
-save_to <- file.path("intermediate_data", params$int_type[2], "cgms")
+save_to <- file.path("intermediate_data", ivl, "cgms")
 tpn <- readRDS(arg$tpn)$new_cols
 
 # rowx <- readRDS("results/rowx.Rds")
@@ -57,15 +56,6 @@ for (i in 1:(length(interval_list)-1)) {
   tpx2 <- tpn %>% rename("isolate" = "Strain") %>% 
     left_join(tpx2a, ., by = intersect(colnames(tpx2a), colnames(.)))
   rm(tpx2a)
-  
-  # if (i > 1) {
-  #   fullset <- clustersets[[n1]]$sofar
-  #   ivl_i <- clustersets[[n1]]$ivl
-  #   unchanged_clusters <- setdiff(fullset, ivl_i) %>% pull(heightx) %>% unique()
-  #   strains <- fullset[heightx %in% unchanged_clusters] %>% pull(isolate)
-  #   rm(fullset); rm(unchanged_clusters); rm(ivl_i)
-  #   unchanged_data <- tmp %>% filter(Strain %in% strains)
-  # }
   
   ph <- max(nchar(colnames(tpx1)[-1]), nchar(colnames(tpx2)[-1]))
   pc <- tpx2 %>% select(-isolate) %>% max(., tpx2 %>% select(-isolate)) %>% nchar()
@@ -146,12 +136,12 @@ for (i in 1:(length(interval_list)-1)) {
   saveRDS(cgm_results, file.path(save_to, paste0("TP", n2, ".Rds")))
 }
 
-if (params$int_type[2] == "multiset") {
+if (ivl == "Multiset") {
   res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
     paste0("CGM-",.,  ".Rds") %>% 
-    file.path(file.path("results", params$int_type[2]), .)
+    file.path(file.path("results", ivl), .)
 }else {
-  res_file <- file.path("results", params$int_type[2], "CGM-intervals.Rds")
+  res_file <- file.path("results", ivl, "CGM-intervals.Rds")
 }
 
 cgmfiles <- list.files(save_to, full.names = TRUE)

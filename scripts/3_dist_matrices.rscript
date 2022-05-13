@@ -25,7 +25,8 @@ stopwatch <- list("start_time" = as.character.POSIXt(Sys.time()), "end_time" = N
 # COLLECT dist matrices using TPN clusters ---------------------------------------------------------
 outputMessages(paste0("\nCollecting and saving distances for groups at TPN"))
 
-save_to <- file.path("intermediate_data", params$int_type[2], "TPN", "dists", "/")
+ivl <- params$int_type[2]
+save_to <- file.path("intermediate_data", ivl, "TPN", "dists", "/")
 dir.create(save_to,  recursive = TRUE, showWarnings = FALSE)
 
 outputMessages("Reading in metadata")
@@ -36,7 +37,7 @@ fdata <- readRDS(arg$tpn)$new_cols %>% column_to_rownames("Strain")
 tp2 <- Timepoint$new(arg$tpn, "tp2", fdata)$Process(hx)$listHeights(hx)
 
 m <- read_tsv(arg$metadata) %>% processedStrains()
-basedir <- file.path("intermediate_data", params$int_type[2], "TPN")
+basedir <- file.path("intermediate_data", ivl, "TPN")
 # basedir <- "intermediate_data/TPN/"
 
 # Extremes, for scaling ----------------------------------------------------------------------
@@ -55,23 +56,15 @@ rm(ext_geo_dists); rm(ext_temp_dists); rm(extremes)
 outputMessages("Collecting non-redundant pairwise distances (at last timepoint, when dataset is full)")
 metadata <- m$strain_data %>% as.data.table()
 
-clustersets <- file.path("intermediate_data", params$int_type[2], "clustersets.Rds") %>% readRDS(.)
+clustersets <- file.path("intermediate_data", ivl, "clustersets.Rds") %>% readRDS(.)
 interval_list <- names(clustersets)
 rm(clustersets)
 
 k <- last(interval_list)
 
-if (params$int_type[2] == "multiset") {
-  interval <- "Multiset"
-}else if (params$int_type[2] == "monthly") {
-  interval <- "YearMonth"
-}else if (params$int_type[2] == "weekly") {
-  interval <- "YearWeek" #"Week"
-}
-
 typing_data <- lapply(1:length(interval_list), function(i) {
   n1 <- as.character(interval_list[i])
-  tpkstrains <- metadata[get(interval) <= n1]$Strain
+  tpkstrains <- metadata[get(ivl) <= n1]$Strain
   dfz <- tp2$filedata %>% rownames_to_column("isolate") %>%
     select(isolate, all_of(hx$h)) %>%
     filter(isolate %in% tpkstrains) %>% column_to_rownames("isolate")
@@ -83,11 +76,11 @@ rm(typing_data)
 
 parts <- m$dr_matches %>% filter(Strain %in% td$Strain) %>% 
   left_join(td, ., by = "Strain") %>% sectionClusters(.)
-saveRDS(parts, file.path("intermediate_data", params$int_type[2], "TPN", "parts.Rds"))
+saveRDS(parts, file.path("intermediate_data", ivl, "TPN", "parts.Rds"))
 
 outputMessages(paste0("  Collecting and saving distances for cluster groups at TP", k, ":\n"))
 
-tpkstrains <- metadata[get(interval) <= k]$Strain
+tpkstrains <- metadata[get(ivl) <= k]$Strain
 collectDistances(parts$drs, parts$results, m$dr_matches, m$assignments, tpkstrains, save_to)
 rm(m); rm(parts)
 

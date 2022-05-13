@@ -8,12 +8,12 @@ Threshold of interest: 0
 Is in a non-singleton cluster (at TP2): false
 Filtering by date: [,]
 Column names: Source,Country,Province,City
-Interval type: weekly
+Interval type: YearWeek
 Dividers: none
-Week labeling: false
+Week labeling: true
 Source-temporal-geographic coefficents: 0-1-0,0-0-1
 Generate heatmaps for top __ largest clusters: 3
-Min cluster size to consider for largest growth (for heatmaps): 2
+Min cluster size to consider for largest growth (for heatmaps): 10
 Cluster by: temp_geo
 Transform heatmap data: false
 Low value color: white

@@ -63,18 +63,12 @@ tp2 <- Timepoint$new(arg$tpn, "tp2", fdata)$Process(hx)$listHeights(hx)
 m <- read_tsv(arg$metadata) %>% processedStrains()
 metadata <- m$strain_data %>% as.data.table()
 
-if (params$int_type[2] == "multiset") {
-  interval <- "Multiset"
-}else if (params$int_type[2] == "monthly") {
-  interval <- "YearMonth"
-}else if (params$int_type[2] == "weekly") {
-  interval <- "YearWeek"
-}
+ivl <- params$int_type[2]
 
-clustersets <- file.path("intermediate_data", params$int_type[2], "clustersets.Rds") %>% readRDS(.)
+clustersets <- file.path("intermediate_data", ivl, "clustersets.Rds") %>% readRDS(.)
 interval_list <- names(clustersets); rm(clustersets)
-basedir <- file.path("intermediate_data", params$int_type[2], "avgdists")
-parts <- file.path("intermediate_data", params$int_type[2], "TPN", "parts.Rds") %>% readRDS()
+basedir <- file.path("intermediate_data", ivl, "avgdists")
+parts <- file.path("intermediate_data", ivl, "TPN", "parts.Rds") %>% readRDS()
 groups <- names(parts$results)
 
 tpnfiles <- lapply(names(parts$results), function(x) parts$results[[x]] %>% add_column(f = x) %>% 
@@ -84,7 +78,7 @@ strain_data <- as.data.table(m$strain_data)
 
 typing_data <- lapply(1:length(interval_list), function(i) {
   n1 <- as.character(interval_list[i])
-  tpkstrains <- metadata[get(interval) <= n1]$Strain
+  tpkstrains <- metadata[get(ivl) <= n1]$Strain
   dfz <- tp2$filedata %>% rownames_to_column("isolate") %>%
     select(isolate, all_of(hx$h)) %>%
     filter(isolate %in% tpkstrains) %>% column_to_rownames("isolate")
@@ -113,7 +107,7 @@ for (tdx in names(typing_data)) {
     # print(i)
     x_i <- groups[i]
     dms <- paste0("group", x_i, ".Rds") %>% 
-      file.path("intermediate_data", params$int_type[2], "TPN", "dists", .) %>% readRDS()
+      file.path("intermediate_data", ivl, "TPN", "dists", .) %>% readRDS()
     groupX <- pd2[f == x_i] %>% select(Hx, n) %>% unique()
 
     file.path()
@@ -177,12 +171,12 @@ all_avg_dists <- lapply(names(typing_data), function(tdx) {
 }) %>% set_names(names(typing_data)) %>% bind_rows()
 
 
-if (params$int_type[2] == "multiset") {
+if (ivl == "Multiset") {
   res_file <- gsub("-", "", params$divs[2]) %>% gsub(",", "-", .) %>% 
     paste0("AVGS-",.,  ".Rds") %>% 
-    file.path(file.path("results", params$int_type[2]), .)
+    file.path(file.path("results", ivl), .)
 }else {
-  res_file <- file.path("results", params$int_type[2], "AVGS-intervals.Rds")
+  res_file <- file.path("results", ivl, "AVGS-intervals.Rds")
 }
 
 outputDetails(paste0("\nMerging average distance results and saving to '", res_file, "'"), newcat = TRUE)
