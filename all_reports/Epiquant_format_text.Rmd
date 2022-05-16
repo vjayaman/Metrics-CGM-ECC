@@ -1,0 +1,2014 @@
+---
+title: "SARS_CoV2 EpiQuant Analysis Report" 
+output:   
+  bookdown::html_document2:
+    number_sections: FALSE
+
+---
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE,message = FALSE,warning = FALSE,eval=TRUE)
+
+```
+
+
+```{r load-packages,warning = FALSE}
+library(openxlsx)
+library(reshape2)
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(grid)
+library(gridExtra)
+library(ggplot2)
+library(RColorBrewer)
+library(gplots)
+library(readr)
+library(scatterplot3d)
+library(heatmap3)
+library(devtools)
+library(knitr) 
+library(devtools)
+library(ggpubr)
+library(ggrepel)
+library(stringr)
+library(magrittr)
+library(tibble)
+library(purrr)
+library(summarytools)
+library(lubridate)
+library(tinytex)
+library(ggplot2)
+library(png)
+library(patchwork)
+library(tidyverse)
+library(ggridges)
+library(bookdown)
+library(foreign)
+library(data.table)
+library(forcats)
+library(plotly)
+## for tables
+pacman::p_load(
+  rio,          # File import
+  here,         # File locator
+  skimr,        # get overview of data
+  tidyverse,    # data management + ggplot2 graphics 
+  gtsummary,    # summary statistics and tests
+  rstatix,      # summary statistics and statistical tests
+  janitor,      # adding totals and percents to tables
+  scales,       # easily convert proportions to percents  
+  flextable,    # converting tables to pretty images
+  kableExtra)
+```
+
+### <span style="color:blue">Section I: Outline of data analysis</span> {#top-link -} 
+#### <span style="color:blue">1. Basic Information</span>
+ *	Name of analyst: Guangzh, Vansena, Ed, Samantha 
+ *  Date of analysis: 2022-01-13
+ *	Data source: [GISAID](https://www.gisaid.org)
+ 
+#### <span style="color:blue">2. Analytical Parameters</span>
+1.	Geographical area of interest
+    +	Region/Countries/Provinces: 
+2.	Period of interest
+    +	TP0: 2020-07-01
+    +	TP1: 2020-11-15
+    +	TP2: 2022-03-01
+3.	Subsampling information
+    +	Maximum cluster size= 10000
+4.	Variants of interest
+    +	VOCs/Prevalent lineages/Mutations of interest
+
+### <span style="color:blue">Section II: Data analysis</span> {.unnumbered}
+
+
+#### <span style="color:blue">1. Overview of cases</span>  {#plot-link1 -}    
+1.	Cases in (Europe) between (2020-07-01) and (2022-03-01); random sample (30000) out of (112900) genomes<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a.	Cases (see [Figure 1.1.A](#Fig.1.1.A-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b.	Lineages (see [Figure 1.1.B](##Fig.1.1.B-link))
+     
+#### <span style="color:blue">2. Epidemiological cluster cohesion (ECC) analysis</span> {#plot-link2 -}  
+1. ECC histogram and contour plots<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. Geospatial and temporal ECC histogram (TP1 and TP2) (see [Figure 2.1.A](#Fig.2.1.A-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b. Geospatial and temporal ECC 3D surface density (see [Figure 2.1.B](#Fig.2.1.B-link))<br>
+2.	ECC Change vector directionality analysis<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. Bubble plots with directionality vectors (see [Figure 2.2.A](#Fig.2.2.A-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b. Summary of directionality vectors by TP1 cluster size  (see [Figure 2.2.B](#Fig.2.2.B-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c. Summary of directionality vectors by Cluster growth rate  (see [Figure 2.2.C](#Fig.2.2.C-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;d. Summary of directionality vectors by ECC and Delta ECC level (see [Figure 2.2.D](#Fig.2.2.D-link)) <br>
+3.	Cluster Growth and Centroids<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. Top 20 growth clusters (by size) (see [Figure 2.3.A](#Fig.2.3.A-link)) <br> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b. Top 20 growth clusters (by growth rate) (see [Figure 2.3.B](#Fig.2.3.B-link))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c. Average geographic and temporal pairwise distance for top 20 clusters (by size)  (see [Figure 2.3.C](#Fig.2.3.C-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;d. Average geographic and temporal pairwise distance for top 20 clusters (by growth rate) (see [Figure 2.3.D](#Fig.2.3.D-link))<br>
+4.	Monthly ECC trend analysis<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. Monthly Geo and Temp ECC (average) (see [Figure 2.4.A](#Fig.2.4.A-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b. Top 10 clusters (by size) Geo ECC, Geo-Temp ECC,Temp ECC (see [Figure 2.4.B](#Fig.2.4.B-link)) <br> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c. Top 10 clusters (by growth rate) Geo ECC,Geo-Temp ECC,Temp ECC (see [Figure 2.4.C](#Fig.2.4.C-link)) <br>
+5.	Weekly ECC trend analysis<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. Weekly Geo and Temp ECC (average) (see [Figure 2.5.A](#Fig.2.5.A-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b. Top 10 clusters (by size) Geo ECC, Geo-Temp ECC, Geo ECC,Temp ECC (see [Figure 2.5.B](#Fig.2.5.B-link)) <br> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c. Top 10 clusters (by growth rate) Geo ECC, Geo-Temp ECC,Temp ECC (see [Figure 2.5.C](#Fig.2.5.C-link)) <br>
+
+#### <span style="color:blue">3. Geospatial and temporal heterogeneity within top clusters</span> {#plot-link3 -} 
+1. Heatmaps and frequency histograms for Top 5 clusters (by size) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. GEO + 50-50 + TEMP heatmaps for top 5 cluster (see [Figure 3.1.A](#Fig.3.1.A-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b. GEO + 50-50 + TEMP heatmaps for top 4 cluster (see [Figure 3.1.B](#Fig.3.1.B-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c. GEO + 50-50 + TEMP heatmaps for top 3 cluster (see [Figure 3.1.C](#Fig.3.1.C-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;d. GEO + 50-50 + TEMP heatmaps for top 2 cluster (see [Figure 3.1.D](#Fig.3.1.D-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e. GEO + 50-50 + TEMP heatmaps for top 1 cluster (see [Figure 3.1.E](#Fig.3.1.E-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;f. GEO + 50-50 + TEMP frequency histograms for top 5 cluster (see [Figure 3.1.F](#Fig.3.1.F-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;g. GEO + 50-50 + TEMP frequency histograms for top 4 cluster (see [Figure 3.1.G](#Fig.3.1.G-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;h. GEO + 50-50 + TEMP frequency histograms for top 3 cluster (see [Figure 3.1.H](#Fig.3.1.H-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;i. GEO + 50-50 + TEMP frequency histograms for top 2 cluster (see [Figure 3.1.I](#Fig.3.1.I-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;j. GEO + 50-50 + TEMP frequency histograms for top 1 cluster (see [Figure 3.1.J](#Fig.3.1.J-link)) <br>
+2. Heatmaps and frequency histogram for Top 5 clusters (by growth rate) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. GEO + 50-50 + TEMP heatmaps for top 5 cluster (see [Figure 3.2.A](#Fig.3.2.A-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b. GEO + 50-50 + TEMP heatmaps for top 4 cluster (see [Figure 3.2.B](#Fig.3.2.B-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c. GEO + 50-50 + TEMP heatmaps for top 3 cluster (see [Figure 3.2.C](#Fig.3.2.C-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;d. GEO + 50-50 + TEMP heatmaps for top 2 cluster ( see [Figure 3.2.D](#Fig.3.2.D-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;e. GEO + 50-50 + TEMP heatmaps for top 1 cluster (see [Figure 3.2.E](#Fig.3.2.E-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;f. GEO + 50-50 + TEMP frequency histograms for top 5 cluster (see [Figure 3.2.F](#Fig.3.2.F-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;g. GEO + 50-50 + TEMP frequency histograms for top 4 cluster (see [Figure 3.2.G](#Fig.3.2.G-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;h. GEO + 50-50 + TEMP frequency histograms for top 3 cluster (see [Figure 3.2.H](#Fig.3.2.H-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;i. GEO + 50-50 + TEMP frequency histograms for top 2 cluster (see [Figure 3.2.I](#Fig.3.2.I-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;j. GEO + 50-50 + TEMP frequency histograms for top 1 cluster (see [Figure 3.2.J](#Fig.3.2.J-link)) <br>
+3. Pairwise distance for Top 20 clusters (by size) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. Pairwise geospatial distance for top20 clusters (by size) (see [Figure 3.3.A](#Fig.3.3.A-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b. Pairwise temporal distance for top20 clusters (by size) (see [Figure 3.3.B](#Fig.3.3.B-link)) <br>
+
+#### <span style="color:blue">4. Data summary tables</span> {#plot-link4 -} 
+1.	Summary of SARS-Cov2 genomes by geography and time<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. by country and TP/month by time (week, month, TP) (see [Table 4.1.a](#Tab.4.1.a-link))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b. by country and week (see [Table 4.1.b](#Tab.4.1.b-link))<br>
+2.	Summary of SARS-Cov2 genomes by PANGO lineages <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. by PANGO lineages and country (see [Table 4.2.a](#Tab.4.2.a-link))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b. by PANGO lineages and Timepoint/Month (see [Table 4.2.b](#Tab.4.2.b-link))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c. by PANGO lineages and week(see [Table 4.2.c](#Tab.4.2.c-link))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;d. Summary table for change vector directionality (see [Table 4.2.d](#Tab.4.2.d-link))<br>
+
+#### <span style="color:blue">5. Supplementary figures</span> {#plot-link5 -} 
+1.	Genome counts over time <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. By Country<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;i. TP1 vs TP2 genome counts (see [Figure 5.1.A.I](#Fig.5.1.A.I-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ii. Cumulative genome counts by month, faceted by country (see [Figure 5.1.A.II](#Fig.5.1.A.II-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iii. Genome counts, faceted by month (see [Figure 5.1.A.III](#Fig.5.1.A.III-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iv. Cumulative genome counts by week, faceted by country (see [Figure 5.1.A.IV](#Fig.5.1.A.IV-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;v. Genome counts, faceted by week (see [Figure 5.1.A.V](#Fig.5.1.A.V-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b. By Province<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;i. TP1 vs TP2 genome counts (see [Figure 5.1.B.I](#Fig.5.1.B.I-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ii. Cumulative genome counts by month, faceted by province (see [Figure 5.1.B.II](#Fig.5.1.B.II-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iii. Genome counts, faceted by month (see [Figure 5.1.B.III](#Fig.5.1.B.III-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iv. Cumulative genome counts by week, faceted by province (see [Figure 5.1.B.IV](#Fig.5.1.B.IV-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;v. Genome counts, faceted by week (see [Figure 5.1.B.V](#Fig.5.1.B.V-link)) <br>
+2.	Lineage prevalence over time <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. By Month<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;i. Cumulative genome counts for most prevalent lineages, by country (see [Figure 5.2.A.I](#Fig.5.2.A.I-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b.By Week<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ii. Cumulative genome counts for most prevalent lineages, by country (see [Figure 5.2.B.I](#Fig.5.2.B.I-link)) <br>
+3. Lineage spread by geographical area<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a. By Country<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;i. TP1 vs TP2  of countries detected (see [Figure 5.3.A.I](#Fig.5.3.A.I-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ii. Countries detected: most prevalent lineages, by month (see [Figure 5.3.A.II](#Fig.5.3.A.II-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iii. Countries detected: most prevalent lineages, by week (see [Figure 5.3.A.III](#Fig.5.3.A.III-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b.	By Province<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;i. TP1 vs TP2 of	Provinces detected:(see [Figure 5.3.B.I](#Fig.5.3.B.I-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ii.	Provinces detected: most prevalent lineages, by month (see [Figure 5.3.B.II](#Fig.5.3.B.II-link)) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;iii. Provinces detected: most prevalent lineages, by week (see [Figure 5.3.B.III](#Fig.5.3.B.III-link)) <br>
+4. ECC direction classes vs compass rose (see [Figure 5.4](#Fig.5.4-link))
+
+```{r }
+## loading data 
+data_path <- "C:/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/results_TP/Merged_strain_results"
+ECC_files <- dir(data_path, pattern = "*.tsv")
+ECC_long <- ECC_files%>%map(~ read_tsv(file.path(data_path, .))) %>% reduce(rbind)
+
+
+# Add Lineage information
+#Lineages <-read_csv("input/GISAID Lineages (770000 isolates).csv")%>%filter (T0 != "#N/A")%>%select("T0", "T0.original","Pango_lineage")%>%distinct()
+Lineages <-read_csv("input/GISAID Lineages (770000 isolates).csv")%>%filter (T0 != "#N/A")%>%select("Strain", "T0.original","Pango_lineage")
+
+ECC_long <-merge(x = ECC_long, y = Lineages, by = "Strain", all.x=TRUE)
+
+# create new varibles Timepoints, Multistrains, Week and Running day
+
+ECC_long<-ECC_long%>%mutate(Week= week(Date))
+ECC_long$"Year_Week" <-strftime(ECC_long$Date, format = "%G-%V")
+ECC_long$"Year_Month" <-strftime(ECC_long$Date, format = "%Y-%m")
+
+ECC_long$Running_Day = difftime(ECC_long$Date, min(ECC_long$Date), units = "days")
+
+ECC_long <- ECC_long%>%mutate(Multistrain_Cluster = ifelse(ECC_long$`TP2 cluster size (1)` > 2,"Multistrain","Singleton" ),Timepoint = ifelse(ECC_long$interval == "set0-set1","TP1","TP2" ), Cluster_Size = ECC_long$`TP2 cluster size (1)`,  Geo_ECC = ECC_long$TP2_ECC.0.0.1,Temp_ECC=ECC_long$TP2_ECC.0.1.0,Delta_Geo_ECC = ECC_long$delta_ECC_0.0.1,Delta_Temp_ECC=ECC_long$delta_ECC_0.1.0, Cluster_Size1 = ECC_long$`TP1 cluster size + 1 (2)`,Geo_ECC1 = ECC_long$TP1_ECC.0.0.1,Temp_ECC1 = ECC_long$TP1_ECC.0.1.0, "Cluster growth by size"=ECC_long$`Actual cluster growth (TP2 size - TP1 size)`, "Cluster growth by rate"=ECC_long$`Novel growth = (TP2 size) / (TP2 size - number of novels)`)
+Top20_clusters <- ECC_long%>%group_by(Timepoint, T0.original)%>%dplyr::summarise(n=n())%>%top_n(20)
+ECC_long<-ECC_long%>% mutate(PANGO_lineage = ifelse (T0.original%in%Top20_clusters$T0.original,T0.original,"Others"))%>%mutate_if(is.numeric, ~ round(., digit = 2))
+
+## loading monthly data 
+data_path <- "C:/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/results_Monthly/Merged_strain_results"
+ECC_files <- dir(data_path, pattern = "*.tsv")
+
+ECC_Month <- ECC_files%>%map(~ read_tsv(file.path(data_path, .))) %>% reduce(rbind)
+
+### need to replace '2020-07' with a varible
+ECC_Month$interval <- gsub('set0', '2020-07', ECC_Month$interval)
+ECC_Month<- ECC_Month %>% separate(interval, into = c('Month_1', 'Month_2'), sep = 8)
+
+# Add Lineage information
+
+ECC_Month <-merge(x = ECC_Month, y = Lineages, by = "Strain", all.x=TRUE)
+
+# create new varibles Timepoints, Multistrains, Week and Running day
+
+ECC_Month <- ECC_Month%>%mutate(Multistrain_Cluster = ifelse(ECC_Month$`TP2 cluster size (1)` > 2,"Multistrain","Singleton" ), Cluster_Size = ECC_Month$`TP2 cluster size (1)`, Geo_ECC = ECC_Month$TP2_ECC.0.0.1,Temp_ECC=ECC_Month$TP2_ECC.0.1.0 )
+
+## Create figure caption variables 
+Fig.1.1.A <- "Accumulated cases in countries"
+Fig.1.1.B <- "Predominant lineages by genome count (top20)"
+
+Fig.2.1.A <- "Geospatial and temporal ECC distribution (histogram)"
+Fig.2.1.B <- "Geospatial and temporal ECC 3D surface density at TP1 and TP2"
+
+Fig.2.2.A <- "Bubble plots with directionality vectors"
+Fig.2.2.B <- "Summary of directionality vectors by TP1 cluster size"
+Fig.2.2.C <- "Summary of directionality vectors by cluster growth rate"
+Tabble.2.1  <- "ECC change vector classes and possible transmission modes"
+Fig.2.2.D <- "Summary of directionality vectors by ECC and Delta ECC level "
+
+
+Fig.2.3.A <- "Top 20 growth clusters (by size)"
+Fig.2.3.B <- "Average geographic and temporal pairwise distance for top 20 clusters (by size)"
+Fig.2.3.C <- "Top 20 growth clusters (by growth rate)"
+Fig.2.3.D <- "Average geographic and temporal pairwise distance for top 20 clusters (by growth rate)"
+
+Fig.2.4.A <- "Monthly Geo and Temp ECC (average)"
+Fig.2.4.B <- "Top 10 clusters (by size) Geo ECC, Geo-Temp ECC,Temp ECC"
+Fig.2.4.C <- "Top 10 clusters (by growth rate) Geo ECC,Geo-Temp ECC,Temp ECC"
+
+Fig.2.5.A <- "Weekly Geo and Temp ECC (average)"
+Fig.2.5.B <- "Top 10 clusters (by size) Geo ECC, Geo-Temp ECC,Temp ECC"
+Fig.2.5.C <- "Top 10 clusters (by growth rate) Geo ECC,Geo-Temp ECC,Temp ECC"
+
+Fig.3.1.A <- "GEO + 50-50 + TEMP heatmaps for top 5 cluster"
+Fig.3.1.B <- "GEO + 50-50 + TEMP heatmaps for top 4 cluster"
+Fig.3.1.C <- "GEO + 50-50 + TEMP heatmaps for top 3 cluster"
+Fig.3.1.D <- "GEO + 50-50 + TEMP heatmaps for top 2 cluster "
+Fig.3.1.E <- "GEO + 50-50 + TEMP heatmaps for top 1 cluster"
+
+Fig.3.1.F <- "GEO + 50-50 + TEMP frequency for top 5 cluster"
+Fig.3.1.G <- "GEO + 50-50 + TEMP frequency for top 4 cluster"
+Fig.3.1.H <- "GEO + 50-50 + TEMP frequency for top 3 cluster"
+Fig.3.1.I <- "GEO + 50-50 + TEMP frequency for top 2 cluster "
+Fig.3.1.J <- "GEO + 50-50 + TEMP frequency for top 1 cluster"
+
+Fig.3.2.A <- "GEO + 50-50 + TEMP heatmaps for top 5 cluster"
+Fig.3.2.B <- "GEO + 50-50 + TEMP heatmaps for top 4 cluster"
+Fig.3.2.C <- "GEO + 50-50 + TEMP heatmaps for top 3 cluster"
+Fig.3.2.D <- "GEO + 50-50 + TEMP heatmaps for top 2 cluster "
+Fig.3.2.E <- "GEO + 50-50 + TEMP heatmaps for top 1 cluster"
+
+Fig.3.2.F <- "GEO + 50-50 + TEMP pairwise distance frequency for top 5 cluster"
+Fig.3.2.G <- "GEO + 50-50 + TEMP pairwise distance frequency for top 4 cluster"
+Fig.3.2.H <- "GEO + 50-50 + TEMP pairwise distance frequency for top 3 cluster"
+Fig.3.2.I <- "GEO + 50-50 + TEMP pairwise distance frequency for top 2 cluster "
+Fig.3.2.J <- "GEO + 50-50 + TEMP pairwise distance frequency for top 1 cluster"
+
+Fig.3.3.A <- "Pairwise geospatial distance for top20 clusters (by size)"
+Fig.3.3.B <- "Pairwise temporal distance for top20 clusters (by size) "
+
+Tab.4.1.a <- "SARS-Cov2 genomes by country and TP/months"
+Tab.4.1.b <- "SARS-Cov2 genomes by country and week"
+
+Tab.4.2.a <- "SARS-Cov2 genomes by PANGO lineages and country"
+Tab.4.2.b <- "SARS-Cov2 genomes by PANGO lineages and TP/month"
+Tab.4.2.c <- "SARS-Cov2 genomes by PANGO lineages and week"
+Tab.4.2.d <- "Change vector directionality"
+
+Fig.5.1.A.I <-  "TP1 vs TP2 genome counts"
+Fig.5.1.A.II <- "Cumulative genome counts by month, faceted by country"
+Fig.5.1.A.III <-  "Genome counts, faceted by month"
+Fig.5.1.A.IV <- "Cumulative genome counts by week, faceted by country "
+Fig.5.1.A.V  <- "Genome counts, faceted by week "
+
+Fig.5.1.B.I  <-  "TP1 vs TP2 genome counts"
+Fig.5.1.B.II <- "Cumulative genome counts by month, faceted by country"
+Fig.5.1.B.III <-  "Genome counts, faceted by month"
+Fig.5.1.B.IV <- "Cumulative genome counts by week, faceted by country "
+Fig.5.1.B.V  <- "Genome counts, faceted by week "
+
+Fig.5.2.A.I <-  "Cumulative genome counts for most prevalent lineages, by country"
+Fig.5.2.B.I <-  "Cumulative genome counts for most prevalent lineages, by country"
+
+Fig.5.3.A.I <-  "TP1 vs TP2  of countries detected "
+Fig.5.3.A.II <- "Countries detected: most prevalent lineages, by month"
+Fig.5.3.A.III <-  "Countries detected: most prevalent lineages, by week"
+
+Fig.5.3.B.I <-  "TP1 vs TP2 of	Provinces detected"
+Fig.5.3.B.II <- "Provinces detected: most prevalent lineages, by month"
+Fig.5.3.B.III <-  "Provinces detected: most prevalent lineages, by week"
+
+Fig.5.4 <- "ECC direction classes vs compass rose"
+
+```
+
+#### <span style="color:blue">1. Overview of cases</span>  {.unnumbered}
+##### &nbsp;<span style="color:blue"> 1.1. Cases and lineages </span> {.unnumbered}
+##### &nbsp;&nbsp; Figure 1.1.A. **`r paste0(Fig.1.1.A)`** {#Fig.1.1.A-link -}
+```{r  echo=FALSE,message=FALSE,fig.height=18, fig.width= 18}
+
+## Define the theme for plotting
+
+Plot_Theme = theme(plot.margin = unit(c(1,1,1,1), "cm"),
+           axis.text = element_text( size = 12,face = "bold"),
+           axis.title = element_text( size = 16, face = "bold" ),
+           #legend.position="none",
+           strip.text = element_text(size = 12,face = "bold"),
+           strip.background = element_rect(fill = "lightblue", colour = "black",size = 1),
+           plot.title = element_text(size = 22),
+           plot.tag = element_text(size = 22,face = "bold"))
+
+Tag_Theme_1 = theme(plot.tag = element_text(size =24,face = "bold"),
+                 plot.margin = unit(c(1,0,0,1), "cm"),
+                 plot.tag.position = c(0.00,1),
+                 plot.title = element_text(hjust= -0.03))
+
+Legend_Theme =theme(legend.title = element_text(size=12,face = "bold"),
+        legend.text = element_text(size=10,face = "bold"))
+
+## define font for plotly 
+t <- list(
+  family = "Courier New",
+  size = 16,
+  color = "blue")
+t1 <- list(
+  size = 16,
+  family = "Arial",
+  color = "black"
+)
+t2 <- list(
+  family = "Courier New",
+  size = 16,
+  color = "green")
+t3 <- list(family = 'Arial')
+
+
+
+## Monthly accumulated case line plot
+
+Country_sum <- ECC_Month%>% group_by(Country,Month_2)%>%summarise(Count =n()) %>%group_by(Country)%>%mutate(Count2=cumsum(Count))
+Country_Order <-ECC_Month%>% group_by(Country)%>%summarise(Count = n()) %>% arrange(desc(Count))
+P1 <-ggplot(data = Country_sum, aes(Month_2, y = Count2,  group=Country )) + 
+  theme_bw()+
+   facet_wrap(~ fct_relevel(Country, Country_Order$Country))+
+    geom_line(color= "#0077b6", size =1)+
+     labs(y = "Cases", x = "Month" ) +  
+      theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1)) +
+         Plot_Theme+  Legend_Theme
+P1
+
+```
+
+##### &nbsp;&nbsp;Figure 1.1.B. **`r paste0(Fig.1.1.B)`**  {#Fig.1.1.B-link -} 
+```{r echo=FALSE,message=FALSE,results=FALSE,fig.keep="all",fig.height= 6, fig.width= 18}
+Country_Order<-ECC_long %>%filter(Timepoint == "TP2")%>%group_by(Country)%>%dplyr::summarise(n=n())%>%arrange(desc(n))%>%top_n(20)
+Country_Order <-Country_Order[1:20,]                 
+T20_clusters <- ECC_long%>%filter (Timepoint == "TP2")%>%group_by(T0.original)%>%dplyr::summarise(n=n())%>% arrange(desc(n))%>%top_n(20)
+T10_clusters <- ECC_long%>%filter (Timepoint == "TP2")%>%group_by(T0.original)%>%dplyr::summarise(n=n())%>% arrange(desc(n))%>%top_n(10)
+T5_clusters  <- ECC_long%>%filter (Timepoint == "TP2")%>%group_by(T0.original)%>%dplyr::summarise(n=n())%>% arrange(desc(n))%>%top_n(5)
+Variant_prevelance<- ECC_long%>% select ("Strain","Timepoint", "Country","Province", "Year_Month", "Year_Week","PANGO_lineage")
+Dt20 <-Variant_prevelance %>%group_by(Country, Timepoint,PANGO_lineage)%>%filter (PANGO_lineage%in%T20_clusters$T0.original,Country%in%Country_Order$Country)%>%mutate(Genome_count=n())
+
+## creat full lineages in top 20 countries
+mat <-matrix(0, 20, 20)
+rownames (mat) <-unique(Dt20$PANGO_lineage)
+colnames(mat) <- unique(Dt20$Country)
+mat1 <- reshape2::melt(mat)
+mat2 <- mat1
+mat1$timepoint2 <- "TP1"
+mat2$timepoint2 <- "TP2"
+mat3 <-rbind(mat1,mat2)
+colnames(mat3) <-c("PANGO_lineage","Country","Count","Timepoint")
+DT20<- Dt20%>%group_by(Country, Timepoint,PANGO_lineage)%>%dplyr::summarise(n=n())
+DT20_FUll <- left_join(mat3,DT20 )
+DT20_FUll[is.na(DT20_FUll)] <- 0
+Country_Order<-DT20_FUll %>%filter(Timepoint == "TP2")%>%group_by(Country)%>%dplyr::summarise(count= sum(n))%>% arrange(desc(count))%>%rowid_to_column()%>%mutate(group = ifelse(rowid<6, "1",ifelse(rowid <11, "2",ifelse(rowid <16, "3","4"))))
+DT20_FUll <- left_join(DT20_FUll,Country_Order )%>%mutate(Country = factor(Country, levels=Country_Order$Country))
+
+# -Faceted histogram by Country
+P1 <-ggplot(DT20_FUll%>%filter(group == 1), aes(x = fct_relevel(PANGO_lineage,T20_clusters$T0.original), y = n, fill= Timepoint)) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge") +
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    facet_wrap(~ Country,ncol = 5)+
+     theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1)) +
+  # scale_x_discrete(position = "top") +
+  labs(y = "Genome Count", x = " ",fill = "Time point")
+      #ggtitle("Top 20 clusters-Genome count") 
+P1+ Plot_Theme+Legend_Theme
+
+```
+
+
+```{r  echo=FALSE,message=FALSE,results=FALSE,fig.keep="all",fig.height= 6, fig.width= 18}
+P2 <-ggplot(data =DT20_FUll%>%filter(group == 2), aes(x = fct_relevel(PANGO_lineage,T20_clusters$T0.original), y = n, fill= Timepoint)) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge") +
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    facet_wrap(~ Country,ncol = 5)+
+theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1))+
+  labs(y = "Genome Count", x = " ",fill = "Time point")+
+    Plot_Theme+ Tag_Theme_1 + Legend_Theme
+ P2
+
+```
+```{r  echo=FALSE,message=FALSE,results=FALSE,fig.keep="all",fig.height= 6, fig.width= 18}
+P3 <-ggplot(data =DT20_FUll%>%filter(group == 3), aes(x = fct_relevel(PANGO_lineage,T20_clusters$T0.original), y = n, fill= Timepoint)) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge") +
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    facet_wrap(~ Country,ncol = 5)+
+     theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1)) +
+  # scale_x_discrete(position = "top") +
+  labs(y = "Genome Count", x = " ",fill = "Time point")+
+    Plot_Theme+ Tag_Theme_1 +Legend_Theme
+P3
+
+```
+
+```{r  echo=FALSE,message=FALSE,results=FALSE,fig.keep="all",fig.height= 6, fig.width= 18}
+P4 <-ggplot(data =DT20_FUll%>%filter(group == 4), aes(x = fct_relevel(PANGO_lineage,T20_clusters$T0.original), y = n, fill= Timepoint)) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge") +
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    facet_wrap(~ Country,ncol = 5)+
+    theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1)) +
+  labs(y = "Genome Count", x = "PANGO_lineage",fill = "Time point")+
+      Plot_Theme+ Tag_Theme_1 +Legend_Theme
+P4
+
+```
+
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Overview of cases](#plot-link1)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+
+#### <span style="color:blue">2. Epidemiological cluster cohesion (ECC) analysis</span> {.unnumbered}
+##### &nbsp;<span style="color:blue"> 2.1. ECC histogram and contour plots</span> {.unnumbered}
+
+##### &nbsp;&nbsp; Figure 2.1.A. **`r paste0(Fig.2.1.A)`**  {#Fig.2.1.A-link -}
+```{r echo=FALSE,message=FALSE,results=FALSE, fig.height= 6, fig.width= 18} 
+## GEO ECC histogram: 
+TP1_ECC<- ECC_long%>%filter (Timepoint=="TP1")%>% select(Cluster_Size, Geo_ECC, Temp_ECC) %>%drop_na() 
+TP2_ECC<- ECC_long%>%filter (Timepoint=="TP2")%>% select(Cluster_Size, Geo_ECC, Temp_ECC)%>%drop_na() 
+
+P1 <-ggplot(TP1_ECC,aes(x = Geo_ECC)) +
+  theme_bw()+
+  geom_histogram(binwidth = 0.02,fill = "#0077b6")+
+  scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1.00),labels=c("0.00", "0.25", "0.50", "0.75", "1.00"),expand=c(0,0), lim=c(0,1))+
+  ggtitle("TP1")+
+  labs(y = "Genome Count",x = "Geo_ECC")+Plot_Theme +Legend_Theme
+
+# TEMP ECC histogram: 
+  # -Faceted histogram by time interval
+P2 <-ggplot(TP1_ECC,aes(x = Temp_ECC,)) +
+   theme_bw()+
+   geom_histogram(binwidth = 0.02,fill = "#0077b6")+
+  scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1.00),labels=c("0.00", "0.25", "0.50", "0.75", "1.00"),expand=c(0,0),   lim=c(0,1))+
+  ggtitle(" ")+
+  labs(y = "Genome Count",x = "Temp_ECC")+Plot_Theme +Legend_Theme
+
+P1+P2+plot_layout(widths = c(1, 1))
+```
+```{r echo=FALSE,message=FALSE,results=FALSE, fig.height= 6, fig.width= 18} 
+## GEO ECC histogram: 
+TP2_ECC<- ECC_long%>%filter (Timepoint=="TP2")%>% select(Cluster_Size, Geo_ECC, Temp_ECC)%>%drop_na() 
+
+P3 <-ggplot(TP2_ECC,aes(x = Geo_ECC)) +
+  theme_bw()+
+  geom_histogram(binwidth = 0.02,fill = "#FCA311")+
+  scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1.00),labels=c("0.00", "0.25", "0.50", "0.75", "1.00"),expand=c(0,0), lim=c(0,1))+
+  ggtitle("TP2")+
+  labs(y = "Genome Count",x = "Geo_ECC")+Plot_Theme +Legend_Theme
+
+# TEMP ECC histogram: 
+  # -Faceted histogram by time interval
+P4 <-ggplot(TP2_ECC,aes(x = Temp_ECC,)) +
+   theme_bw()+
+   geom_histogram(binwidth = 0.02,fill = "#FCA311")+
+  scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1.00),labels=c("0.00", "0.25", "0.50", "0.75", "1.00"),expand=c(0,0),   lim=c(0,1))+
+  ggtitle(" ")+
+  labs(y = "Genome Count",x = "Temp_ECC")+Plot_Theme +Legend_Theme
+
+P3+P4+plot_layout(widths = c(1, 1))
+```
+
+##### &nbsp;&nbsp;Figure 2.1.B. **`r paste0(Fig.2.1.B)`** {#Fig.2.1.B-link -}
+```{r fig.height= 6, fig.width= 9}
+
+## TP1 Contour
+TP1_ECC<- ECC_long%>%filter (Timepoint=="TP1")%>% select(Geo_ECC, Temp_ECC) %>%drop_na() 
+
+kd1 <- with(TP1_ECC, MASS::kde2d(Geo_ECC, Temp_ECC, n = 50))
+
+P1<- plot_ly(x = kd1$x, y = kd1$y, z = kd1$z,scene='scene1') %>% add_surface(colorbar=list(
+      title='TP1 Density (z)'
+    ),reversescale =T)%>%
+    layout(title= list(text = "</b> TP1 (x= Geo_ECC, y= Temp_ECC, z= Density)",font = t1, y = 1.1, x = 0.05),
+    scene = list(
+      camera = list(x=1.87, y=0.88, z=0.2)
+      ))
+
+## TP2 Contour
+TP2_ECC<- ECC_long%>%filter (Timepoint=="TP2")%>% select(Geo_ECC, Temp_ECC)%>%drop_na() 
+kd2 <- with(TP2_ECC, MASS::kde2d(Geo_ECC, Temp_ECC, n = 50))
+
+P2<- plot_ly(x = kd2$x, y = kd2$y, z = kd2$z,scene='scene2') %>% add_surface(colorbar=list(
+      title='TP2 Density (z)'
+    ),reversescale =T)%>%
+    layout(title= list(text = "</b> TP1 (left) vs TP2 (Geo_ECC(x),Temp_ECC (y), Density(z))",font = t1, y = 1.1, x = 0.05),
+    scene = list(
+      camera = list(x=1.87, y=0.88, z=-0.2)
+      ))
+
+
+subplot(P1,P2)  %>%
+    layout(showlegend = TRUE, legend = list(font = list(size = 30)))
+
+```
+
+ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Epidemiological cluster cohesion (ECC) analysis](#plot-link2)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+##### &nbsp;<span style="color:blue"> 2.2.	ECC Change vector directionality analysis</span> {.unnumbered}
+
+
+```{r error=FALSE, warning=FALSE, message=FALSE,}
+### create bubble plot data
+
+
+Bubble_Plot_data2 <- ECC_long%>%group_by(Timepoint,T0.original)%>%summarise_at(vars(Geo_ECC,Temp_ECC,Cluster_Size,Cluster_Size1, Geo_ECC1,Temp_ECC1,`Cluster growth by size`,`Cluster growth by rate`), mean)
+
+df3 <- Bubble_Plot_data2%>%filter (Timepoint == "TP2", Cluster_Size > 1)%>%mutate(Timepoint = "TP1", Cluster_Size = Cluster_Size1-1,)%>%drop_na()%>% rename_at(vars(c("Geo_ECC","Temp_ECC", "Geo_ECC1","Temp_ECC1")), ~c("Geo_ECC1","Temp_ECC1", "Geo_ECC","Temp_ECC"))%>%mutate(TP1_Size = ifelse (Cluster_Size == 0,"TP1_size = 0", ifelse (Cluster_Size == 1,"TP1_size = 1",ifelse (Cluster_Size> 1 & Cluster_Size < 11 ,"1< TP1_size < 11",ifelse (Cluster_Size > 100,"TP1_size > 100", "10< TP1_size < 101")))))%>%as.tibble()
+
+df2<- df3%>%select("T0.original","TP1_Size")
+TP2_Bubble <- Bubble_Plot_data2%>%filter(Timepoint=="TP2")%>%drop_na()%>%left_join(df2)
+
+Bubble_Plot_data1 <-rbind(df3,TP2_Bubble) 
+
+## TP1+TP2 plot
+P3 <- ggplot(Bubble_Plot_data1, aes(Geo_ECC, y= Temp_ECC,lable1=T0.original,size = Cluster_Size, lable12= `Cluster growth by size`,lable13= `Cluster growth by rate`,fill= Timepoint)) +
+    theme_bw()+
+    geom_point(alpha=0.8, shape=21, color= "black",position = "jitter")+
+     scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+       xlim(0, 1)+
+       ylim(0,1)+
+      # geom_text(aes(label = cluster_size_2),size=2,  hjust = 0.5)+
+        labs(y = "Temp_ECC", x = "Geo_ECC",tag = "C",fill = " ",size =" ")
+layout_ggplotly <- function(gg, x = -0.04, y = -0.04){
+  # The 1 and 2 goes into the list that contains the options for the x and y axis labels respectively
+  gg[['x']][['layout']][['annotations']][[1]][['y']] <- x
+  gg[['x']][['layout']][['annotations']][[2]][['x']] <- y
+  gg
+}
+ggplotly(P3, height = 800, width = 1000) %>%layout( margin = list(l = 40),title= list(text = "TP1 & TP2",font = t1, y = 1.1, x = 0.05), font=t3,xaxis = list(title=list(text='<b>Geo_ECC</b>', font = list(size = 16), standoff = 10)),yaxis = list(title=list(text='<b>Temp_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Time point</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))
+
+```
+
+##### &nbsp;&nbsp; Figure 2.2.A. **`r paste0(Fig.2.2.A)`**  {#Fig.2.2.A-link -}
+
+```{r error=FALSE, warning=FALSE, message=FALSE,fig.height= 9, fig.width= 18}
+## TP1  Cluster size < 1
+df <- df3%>%filter(Cluster_Size < 2)
+P2data <-Bubble_Plot_data1%>%filter(T0.original%in%df$T0.original)%>% mutate(Color = ifelse(TP1_Size== "TP1_size = 0"  ,"blue", "#ff00ee" ))
+
+P1 <- ggplot(P2data,aes(x=Geo_ECC, y= Temp_ECC,lable1=T0.original,size = Cluster_Size, lable12= `Cluster growth by size`,lable13= `Cluster growth by rate`,fill = TP1_Size)) +
+    theme_bw()+
+      geom_point(alpha=0.8, shape=21, color= "black")+
+     scale_fill_manual(values = c("#0077b6", "#ff00ee"))+
+    scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+       xlim(0, 1)+
+       ylim(0,1)+
+     geom_point(data = df,aes(Geo_ECC, y= Temp_ECC))+ 
+    labs(y = "Temp_ECC", x = "Geo_ECC",fill = " ",size =" ")
+
+ 
+ ggplotly(P1,height = 800, width = 1000)%>%
+  layout( margin = list(l = 10), title= list(text = "</b> TP1 cluster size < 2",font = t1, y = 1.1, x = 0.05),xaxis = list(title=list(text='<b>Geo_ECC</b>', font = list(size = 16), standoff = 10)),yaxis = list(title=list(text='<b>Temp_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>TP1_size</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))
+```
+
+
+```{r error=FALSE, warning=FALSE, message=FALSE}
+##  1< TP1_size < 11
+
+df<- df3%>%filter(TP1_Size =="1< TP1_size < 11")
+P3data <-Bubble_Plot_data1%>%filter(T0.original%in%df$T0.original)
+
+
+P2 <- ggplot(P3data,aes(x=Geo_ECC, y= Temp_ECC,lable1=T0.original,size = Cluster_Size, lable12= `Cluster growth by size`,lable13= `Cluster growth by rate`,fill= Timepoint)) +
+    theme_bw()+
+      geom_point(alpha=0.8, shape=21, color= "black")+
+     scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+       xlim(0, 1)+
+       ylim(0,1)+
+     geom_point(data = df, aes(Geo_ECC, y= Temp_ECC))+ 
+    labs(y = "Temp_ECC", x = "Geo_ECC",,fill = " ",size =" ")
+ 
+ ggplotly(P2,height = 800, width = 1000)%>%
+   add_annotations( x = df$Geo_ECC1,y = df$Temp_ECC1,
+                   xref = "x", 
+                   yref = "y",
+                   text = "",
+                   showarrow = T,
+                   arrowcolor='grey',
+                   arrowhead = 3,
+                   arrowsize = 1,
+                   arrowwidth= 1,
+                   ax = ~ df$Geo_ECC,
+                   ay = ~ df$Temp_ECC,
+                   axref = "x", 
+                   ayref = "y",
+                   alpha =0.02) %>%layout( margin = list(l = 10),title= list(text = "</b> 1< TP1_size < 11",font = t1, y = 1.1, x = 0.05),xaxis = list(title=list(text='<b>Geo_ECC</b>', font = list(size = 16), standoff = 10)),yaxis = list(title=list(text='<b>Temp_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Time point</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))
+
+```
+
+```{r error=FALSE, warning=FALSE, message=FALSE}
+##  10< TP1_size < 101
+df <- df3%>%filter(TP1_Size =="10< TP1_size < 101")
+P4data <-Bubble_Plot_data1%>%filter(T0.original%in%df$T0.original)
+
+
+P3 <- ggplot(P4data,aes(x=Geo_ECC, y= Temp_ECC,lable1=T0.original,size = Cluster_Size, lable12= `Cluster growth by size`,lable13= `Cluster growth by rate`,fill= Timepoint)) +
+    theme_bw()+
+      geom_point(alpha=0.8, shape=21, color= "black")+
+     scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+       xlim(0, 1)+
+       ylim(0,1)+
+     geom_point(data = df, aes(Geo_ECC, y= Temp_ECC),alpha = 0.8)+ 
+    labs(y = "Temp_ECC", x = "Geo_ECC",,fill = " ",size =" ")
+ 
+ ggplotly(P3,height = 800, width = 1000)%>%
+   add_annotations(x = df$Geo_ECC1,y = df$Temp_ECC1,
+                   xref = "x", 
+                   yref = "y",
+                   text = "",
+                   showarrow = T,
+                   arrowcolor='grey',
+                   arrowhead = 3,
+                   arrowsize = 1,
+                   arrowwidth= 1,
+                   ax = ~ df$Geo_ECC,
+                   ay = ~ df$Temp_ECC,
+                   axref = "x", 
+                   ayref = "y",
+                   alpha =0.02) %>%layout( margin = list(l = 10),title= list(text = "</b> 10< TP1_size < 101",font = t1, y = 1.1, x = 0.05),xaxis = list(title=list(text='<b>Geo_ECC</b>', font = list(size = 16), standoff = 10)),yaxis = list(title=list(text='<b>Temp_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Time point</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))
+ 
+```
+
+```{r error=FALSE, warning=FALSE, message=FALSE}
+##  TP1_size > 100
+df <- df3%>%filter(TP1_Size =="TP1_size > 100")
+P4data <-Bubble_Plot_data1%>%filter(T0.original%in%df$T0.original)
+
+
+P3 <- ggplot(P4data,aes(x=Geo_ECC, y= Temp_ECC,lable1=T0.original,size = Cluster_Size, lable12= `Cluster growth by size`,lable13= `Cluster growth by rate`,fill= Timepoint)) +
+    theme_bw()+
+      geom_point(alpha=0.8, shape=21, color= "black")+
+     scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+       xlim(0, 1)+
+       ylim(0,1)+
+     geom_point(data = df, aes(Geo_ECC, y= Temp_ECC),alpha = 0.8)+ 
+    labs(y = "Temp_ECC", x = "Geo_ECC",,fill = " ",size =" ")
+ 
+ ggplotly(P3,height = 800, width = 1000)%>%
+   add_annotations(x = df$Geo_ECC1,y = df$Temp_ECC1,
+                   xref = "x", 
+                   yref = "y",
+                   text = "",
+                   showarrow = T,
+                   arrowcolor='grey',
+                   arrowhead = 3,
+                   arrowsize = 1,
+                   arrowwidth= 1,
+                   ax = ~ df$Geo_ECC,
+                   ay = ~ df$Temp_ECC,
+                   axref = "x", 
+                   ayref = "y",
+                   alpha =0.02) %>%layout( margin = list(l = 10),title= list(text = "</b> TP1_size > 100",font = t1, y = 1.1, x = 0.05),xaxis = list(title=list(text='<b>Geo_ECC</b>', font = list(size = 16), standoff = 10)),yaxis = list(title=list(text='<b>Temp_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Time point</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))
+ 
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Epidemiological cluster cohesion (ECC) analysis](#plot-link2)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+##### &nbsp;&nbsp; Figure 2.2.B. **`r paste0(Fig.2.2.B)`**  {#Fig.2.2.B-link -}
+
+```{r error=FALSE, warning=FALSE, message=FALSE, results=FALSE,fig.keep="all",fig.height= 9, fig.width= 19}
+### pie plot for change vector on pango-lineages
+
+## angle calcualtion
+ang <- function(x,y) { 
+  z <- x + 1i * y
+  res <- 90 - Arg(z) / pi * 180
+  res %% 360
+}
+## Calcualte degree with the dataset and convert Radians to degrees
+Bubble_Plot_data2 <- ECC_long%>%group_by(Timepoint,T0.original)%>%summarise_at(vars(Delta_Geo_ECC, Delta_Temp_ECC,Geo_ECC,Temp_ECC,Cluster_Size,Cluster_Size1, Geo_ECC1,Temp_ECC1,`Cluster growth by size`,`Cluster growth by rate`), mean)
+
+df3 <- Bubble_Plot_data2%>%filter (Timepoint == "TP2", Cluster_Size > 1)%>%mutate(Timepoint = "TP1", Cluster_Size = Cluster_Size1-1,)%>%drop_na()%>% rename_at(vars(c("Geo_ECC","Temp_ECC", "Geo_ECC1","Temp_ECC1")), ~c("Geo_ECC1","Temp_ECC1", "Geo_ECC","Temp_ECC"))%>%mutate(TP1_Size = ifelse (Cluster_Size == 0,"TP1_size = 0", ifelse (Cluster_Size == 1,"TP1_size = 1",ifelse (Cluster_Size> 1 & Cluster_Size < 11 ,"1< TP1_size < 11",ifelse (Cluster_Size > 100,"TP1_size > 100", "10< TP1_size < 101")))))%>%as.tibble()
+
+df2<- df3%>%select("T0.original","TP1_Size")
+TP2_Bubble <- Bubble_Plot_data2%>%filter(Timepoint=="TP2")%>%drop_na()%>%left_join(df2)
+
+Bubble_Plot_data1 <-rbind(df3,TP2_Bubble) 
+
+Angel_data<- Bubble_Plot_data1 %>%mutate(Angle = ang(Delta_Geo_ECC,Delta_Temp_ECC))
+
+#### calculate direction
+library(rvest)
+
+url <- 'http://snowfence.umn.edu/Components/winddirectionanddegreeswithouttable3.htm'
+page <- read_html(url)
+directions_raw <- page %>% html_node('td table') %>% html_table(header = TRUE)
+
+directions <- directions_raw %>% 
+    set_names(~tolower(sub(' Direction', '', .x))) %>% 
+    slice(-1) %>% 
+  separate(degree, c('degree_min', 'degree_max'), sep = '\\s+-\\s+', convert = TRUE)
+
+Data_dir <- Angel_data %>% mutate(Vector_cardinal = cut(Angle, breaks = c(0, directions$degree_max, 360),labels = c(directions$cardinal, 'N')))%>%filter(Timepoint == 'TP2')
+
+
+## pie plotting
+## create missing 
+Vector_Order <- read_csv("input/Vector_Order.csv")
+Missed_direction <- Vector_Order %>%filter(!Vector_cardinal%in%unique(Data_dir$Vector_cardinal))
+Data_dir1 <- Data_dir[1:nrow(Missed_direction),]%>%select(-Vector_cardinal)
+Data_dir1[,3:ncol(Data_dir1)] <- 0
+Data_dir1$TP1_Size ="NA"
+Data_dir1$Vector_cardinal <-Missed_direction$Vector_cardinal
+
+Pie_data <- rbind(Data_dir,Data_dir1)%>%left_join(Vector_Order)%>%drop_na(Order)
+#my_image <- readPNG("C:/Users/guzhang/Desktop/cov-2 first wave dataset/EU_heatmap/Compass direction 2.png", native = TRUE)
+#my_image<- readPNG("input/Compass direction 2.png", native = TRUE)
+
+P1 <-Pie_data %>% 
+  arrange(Order)%>%
+  ggplot(aes(reorder(Vector_cardinal,Order), fill= TP1_Size)) +
+   geom_bar() +
+   coord_polar(start = -pi/16) +
+  theme_bw()+
+  scale_colour_manual(aesthetics =  "fill",
+    values =  c("NA" = "red", "TP1_size = 0" = "blue", "TP1_size = 1" = "#ff00ee", "1< TP1_size < 11" = "#00008B","10< TP1_size < 101"="#0077b6" ,"TP1_size > 100"= "orange"))+
+labs(y = "Lineage count", x = "Change vector direction")+
+       ggtitle ("Lineage count based on TP1 cluster size")+Plot_Theme + Legend_Theme
+                 
+## Bar
+P2<-Pie_data %>%arrange(Order)%>%
+ ggplot(aes(Order,  fill= TP1_Size)) +
+   geom_bar() +
+  theme_bw()+
+  scale_colour_manual(aesthetics =  "fill",
+    values =  c("NA" = "red", "TP1_size = 0" = "blue", "TP1_size = 1" = "#ff00ee", "1< TP1_size < 11" = "#00008B","10< TP1_size < 101"="#0077b6" ,"TP1_size > 100"= "orange"))+
+  scale_x_continuous(breaks=seq(1,16,1))+
+labs(y = "Lineage count", x = "Change vector direction classes",title = " " )+
+   theme(axis.text.x=element_text(size = 12,vjust = 1)) +
+   Plot_Theme + Legend_Theme
+
+P1+P2+plot_layout(widths = c(1.1, 1),guides = 'collect')
+```
+
+
+
+
+##### &nbsp;&nbsp; Figure 2.2.C. **`r paste0(Fig.2.2.C)`**  {#Fig.2.2.C-link -}
+
+```{r error=FALSE, warning=FALSE, message=FALSE, results=FALSE,fig.keep="all",fig.height= 9, fig.width= 18}
+devtools::install_github("EdwinTh/ggoutlier")
+## Histogram for cluster and genome distribution 
+## cluster histogram: 
+
+library(ggoutlier)
+
+Pie_data <-Pie_data%>%mutate(Growth_new =ifelse(Pie_data$`Cluster growth by rate` > 10, 10, Pie_data$`Cluster growth by rate`))
+P1 <-ggplot(Pie_data,aes(x = Growth_new )) +
+  theme_bw()+
+  geom_histogram(binwidth = 0.5,fill = "#0077b6")+
+  ggtitle("Lineage distribution")+
+  scale_x_continuous(breaks = 0:10, labels = c(0:9, "(10-1500)"))+
+  labs(y = "Lineage Count",x = "Cluster growth rate")+Plot_Theme +Legend_Theme
+
+
+## genome histogram: 
+Pie_data1<- Pie_data%>%mutate(Growth_rate_level  = ifelse (`Cluster growth by rate` < 2,"Growth rate < 2", ifelse (`Cluster growth by rate` < 4,"Growth rate < 4",ifelse (`Cluster growth by rate` < 6,"Growth rate < 6" ,ifelse (`Cluster growth by rate` < 8,"Growth rate < 8", "Growth rate > = 8")))))%>%as.tibble()
+
+Gen_data <-Pie_data1%>%left_join(ECC_long%>%filter(Timepoint == "TP2"))%>% drop_na(Geo_ECC)
+P2 <-ggplot(Gen_data,aes(x = Growth_new )) +
+  theme_bw()+
+  geom_histogram(binwidth = 0.5,fill = "#FCA311")+
+  ggtitle("Genome distribution")+
+  scale_x_continuous(breaks = 0:10, labels = c(0:9, "(10-1500)"))+
+  labs(y = "Genome Count",x = "Cluster growth rate")+Plot_Theme +Legend_Theme
+
+P1+P2+plot_layout(widths = c(1, 1))
+
+
+```
+
+```{r error=FALSE, warning=FALSE, message=FALSE, results=FALSE,fig.keep="all",fig.height= 9, fig.width= 19}
+Pie_data1<-Pie_data1%>%mutate(Growth_rate_level  = ifelse (TP1_Size =="NA","NA", Growth_rate_level))
+P1 <- Pie_data1 %>% 
+  arrange(Order)%>%
+  ggplot(aes(reorder(Vector_cardinal,Order), fill= Growth_rate_level)) +
+   geom_bar() +
+   coord_polar(start = -pi/16) +
+  theme_bw()+
+  scale_colour_manual(aesthetics =  "fill",
+    values =  c("NA" = "red", "Growth rate < 2" = "blue", "Growth rate < 4" = "#ff00ee", "Growth rate < 6" = "#00008B","Growth rate < 8"="#0077b6" ,"Growth rate > = 8" = "orange"))+
+labs(y = "Lineage count", x = "Change vector direction")+
+       ggtitle ("Lineage count based on cluster growth rate")+Plot_Theme + Legend_Theme
+                 
+P2<-Pie_data1 %>%arrange(Order)%>%
+ ggplot(aes(Order,fill= Growth_rate_level)) +
+   geom_bar() +
+  theme_bw()+
+  scale_colour_manual(aesthetics =  "fill",
+    values =  c("NA" = "red", "Growth rate < 2" = "blue", "Growth rate < 4" = "#ff00ee", "Growth rate < 6" = "#00008B","Growth rate < 8"="#0077b6" ,"Growth rate > = 8"= "orange"))+
+  scale_x_continuous(breaks=seq(1,16,1))+
+labs(y = "Lineage count", x = "Change vector direction classes",title = " " )+
+   theme(axis.text.x=element_text(size = 12,vjust = 1)) +
+   Plot_Theme + Legend_Theme
+
+          
+P1+P2+plot_layout(widths = c(1.1, 1),guides = 'collect')
+
+```
+
+```{r, fig.height= 6, fig.width= 14}
+ECC_level<- Pie_data%>% ungroup()%>%mutate(Geo_ECC_level= cut_interval(Geo_ECC,n = 6),Temp_ECC_level = cut_interval(Temp_ECC, n = 6), Delta_Geo_ECC_level = cut_interval(Delta_Geo_ECC, n = 6), Delta_Temp_ECC_level = cut_interval(Delta_Temp_ECC, n = 6))
+
+ECC_level <-ECC_level %>%left_join(ECC_long%>%filter(Timepoint == "TP2"))
+
+Change_Vector <- ECC_level%>%group_by(Order,Vector_cardinal)%>%summarise_at(vars(TP1_Temp.Avg.Dist, TP2_Temp.Avg.Dist, TP1_Geo.Avg.Dist, TP2_Geo.Avg.Dist), mean, na.rm = TRUE, )%>%mutate_if(is.numeric, round, 2)%>%mutate(Temporal_note = ifelse(TP2_Temp.Avg.Dist < 7,"Fast speaing",ifelse(TP2_Temp.Avg.Dist < 15,"Intermediate speaing", ifelse(TP2_Temp.Avg.Dist > 15,"Slow speaing","N/A"))), Geo_note = ifelse(TP2_Geo.Avg.Dist < 200,"Local transmission",ifelse(TP2_Geo.Avg.Dist < 500,"Interprovincial transmission", ifelse(TP2_Geo.Avg.Dist > 500,"Long distance transmission","N/A"))))%>%
+    rename("Chang vector classes" = Order, "CompassRose directions" = Vector_cardinal)%>%select("Chang vector classes", "TP1_Temp.Avg.Dist"   ,"TP2_Temp.Avg.Dist","TP1_Geo.Avg.Dist" ,"TP2_Geo.Avg.Dist" ,"Temporal_note", "Geo_note","CompassRose directions"  )
+
+
+tab<- ggtexttable(Change_Vector,rows = NULL)
+
+main.title <- "Table 2.1. ECC change vector classes and possible transmission modes"
+  
+subtitle <- paste0(
+  " ")%>%
+  strwrap(width = 80) 
+  
+
+tab <- ggtexttable(Change_Vector,rows = NULL, theme = ttheme("light"))
+tab %>%
+  tab_add_title(text = subtitle, face = "plain", size = 12) %>%
+  tab_add_title(text = main.title, padding = unit(0.1, "line"),size =14, hjust = 0.01) %>%
+  tab_add_footnote(text = "*ECC change vector classes are determined according to compassRoss directions", size = 10, face = "italic")
+
+```
+
+
+##### &nbsp;&nbsp; Figure 2.2.D. **`r paste0(Fig.2.2.D)`**  {#Fig.2.2.D-link -}
+```{r error=FALSE, warning=FALSE, message=FALSE, results=FALSE,fig.height= 6, fig.width= 18}
+### pie plot for change vector on Geo_ECC Temp_ECC, deta_Geo and delat Temp
+
+## set Timepoint, Multistrain_cluster, Geo_ECC level and Temp_level as factor
+
+#ECC_level<- Pie_data%>% ungroup()%>%mutate(Geo_ECC_level= cut_interval(Geo_ECC,n = 6),Temp_ECC_level = cut_interval(Temp_ECC, n = 6), Delta_Geo_ECC_level = cut_interval(Delta_Geo_ECC, n = 6), Delta_Temp_ECC_level = cut_interval(Delta_Temp_ECC, n = 6))
+
+#ECC_level <-ECC_level %>%left_join(ECC_long%>%filter(Timepoint == "TP2"))
+
+
+# Geo_ECC_Level Pie
+P2 <-ECC_level %>%
+ ggplot(aes(Order,  fill= Geo_ECC_level)) +
+  scale_colour_brewer(palette = "Set1") +
+   geom_bar() +
+    theme_bw()+
+   scale_x_continuous(breaks=seq(1,16,1))+
+    labs(y = "Genome count", x = "Change vector direction classes",title = "Genome count based on ECC level" )+
+   theme(axis.text.x=element_text(size = 12,vjust = 1))+
+    Plot_Theme + Legend_Theme
+
+   
+# Temp_Level Pie
+
+P3 <-ECC_level %>%
+  ggplot(aes(Order,  fill= Temp_ECC_level)) +
+  scale_colour_brewer(palette = "Set1") +
+   geom_bar() +
+    theme_bw()+
+    scale_x_continuous(breaks=seq(1,16,1))+
+    labs(y = " ", x = "Change vector direction classes",title = " ")+
+   theme(axis.text.x=element_text(size = 12,vjust = 1))+
+   Plot_Theme + Legend_Theme
+P2+P3
+```
+
+
+```{r error=FALSE, warning=FALSE, message=FALSE, results=FALSE,fig.height= 6, fig.width= 20}
+# Delta_Geo_ECC
+
+P4 <-ECC_level %>%
+ ggplot(aes(Order,  fill= Delta_Geo_ECC_level)) +
+  scale_colour_brewer(palette = "Set1") +
+   geom_bar() +
+    theme_bw()+
+     scale_x_continuous(breaks=seq(1,16,1))+
+    labs(y = "Genome count", x = "Change vector direction classes",title = "Genome count based on Delta ECC level" )+
+   theme(axis.text.x=element_text(size = 12,vjust = 1))+
+    Plot_Theme + Legend_Theme
+
+   
+# Delta_Temp_ECC
+
+P5 <-ECC_level %>%
+  ggplot(aes(Order,  fill= Delta_Temp_ECC_level)) +
+  scale_colour_brewer(palette = "Set1") +
+   geom_bar() +
+    theme_bw()+
+    scale_x_continuous(breaks=seq(1,16,1))+
+    labs(y = " ", x = "Change vector direction classes",title = " " )+
+   theme(axis.text.x=element_text(size = 12,vjust = 1))+
+    Plot_Theme + Legend_Theme
+P4+P5
+
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Epidemiological cluster cohesion (ECC) analysis](#plot-link2)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+##### &nbsp;<span style="color:blue"> 2.3.	Cluster Growth and Centroids </span> {.unnumbered}
+
+##### &nbsp;&nbsp; Figure 2.3.A. **`r paste0(Fig.2.3.A)`**  {#Fig.2.3.A-link -}
+```{r echo=FALSE,message=FALSE,fig.height= 14, fig.width= 18}
+## loading data
+library("geosphere")
+Centroid_data <- ECC_long%>%filter(Timepoint== "TP2")%>%select(Strain, T0.original,Latitude, Longitude, Date, delta_ECC_0.1.0:TP2_Geo.Avg.Dist,`Actual cluster growth (TP2 size - TP1 size)`:`Novel growth = (TP2 size) / (TP2 size - number of novels)`,Cluster_Size:PANGO_lineage)
+
+Centroid_data <-Centroid_data %>% mutate(`Average TP1 date` = as.Date(`Average TP1 date`, origin = "1969-12-30"), TP1_date.diff = Date-`Average TP1 date`,TP2_date.diff = Date -Centroid_data$`Average TP2 date`)
+Centroid_data <-Centroid_data %>% mutate(TP1_distance = distHaversine(cbind(Centroid_data$Longitude,Centroid_data$Latitude),cbind(Centroid_data$`Average TP1 longitude`,Centroid_data$`Average TP1 latitude`)),TP2_distance = distHaversine(cbind(Centroid_data$Longitude,Centroid_data$Latitude),cbind(Centroid_data$`Average TP2 longitude`,Centroid_data$`Average TP2 latitude`)))%>%mutate(TP1_distance =  TP1_distance/1000, TP2_distance =  TP2_distance/1000)
+
+Centroid_Total<- Centroid_data%>%group_by(PANGO_lineage)%>%summarise_at(vars(`Number of novels in the TP2 match`:Cluster_Size, Cluster_Size1), mean )%>%arrange(desc(Cluster_Size))%>%mutate_if(is.numeric, round, 2)
+colnames(Centroid_Total) <- c("PANGO_lineage","New_Size","Actual_growth_rate","Novel_growth_rate", "TP2_Size", "TP1_Size" )
+Centroid_Total<- Centroid_Total%>%mutate(TP2_Size = as.integer(TP2_Size), TP1_Size=as.integer(TP1_Size))
+
+
+CGM_long <-Centroid_Total%>% pivot_longer(cols =!PANGO_lineage,names_to = c("observation", ".value"),names_sep = "_")%>%filter(PANGO_lineage!= "Others",observation != "New")
+
+CGM_1 <- CGM_long[ ,1:3]%>%filter(!is.na(Size))
+P1<-ggplot(CGM_1, aes(x = reorder(PANGO_lineage, -Size), y = Size,fill = observation)) + 
+   theme_bw()+ 
+     geom_bar (position = "dodge", stat = "identity")+
+  #geom_text(aes(label = size), vjust=-0.05,hjust=-0.05, color="black", size=3,angle = 90, position = position_dodge(0.8))+
+   labs(y = "Cluster size", x = "PANGO Lineages", fill ="Cluster size")+
+    scale_fill_manual(values = c("#0077b6","#FCA311"))+
+   Plot_Theme + Legend_Theme+theme(axis.text.x=element_text(angle = 90, hjust = 1))
+
+library(gridExtra)
+mytable1 <- CGM_1[,c(2,1,3)] %>%pivot_wider(names_from = PANGO_lineage, values_from = Size)%>% rename_at(1, ~ "Cluster size ")
+table <- tableGrob(mytable1, rows=NULL,widths=unit(rep(0.89/ncol(mytable1), ncol(mytable1)),"npc"),theme = ttheme_default(colhead=list(fg_params=list(rot=90)),base_size = 12))
+grid.arrange(P1,table,heights=c(3,1))
+
+```
+
+
+##### &nbsp;&nbsp; Figure 2.3.B. **`r paste0(Fig.2.3.B)`**  {#Fig.2.3.B-link -}
+```{r echo=FALSE,message=FALSE,fig.height= 12, fig.width= 18 }
+## Geo and Temp Centriods
+Centroid <- Centroid_data%>%select(Strain, T0.original,Date,  "Average TP1 date","Average TP2 date","TP1_Temp.Avg.Dist","TP1_Geo.Avg.Dist"   ,"TP2_Temp.Avg.Dist","TP2_Geo.Avg.Dist",Cluster_Size,Delta_Temp_ECC: TP2_distance)
+T20_Centroid <-Centroid%>%filter(T0.original%in%T20_clusters$T0.original)
+Centroid_Average <-T20_Centroid %>%group_by(PANGO_lineage)%>%summarise_at(vars("TP1_Temp.Avg.Dist":Cluster_Size), mean )%>%arrange(desc(Cluster_Size))%>%mutate_if(is.numeric, round, 2)
+Centroid_long <- Centroid_Average%>% pivot_longer(cols =!c(PANGO_lineage,Cluster_Size),names_to = c("observation", ".value"),names_sep = "_")
+### Figures and tables  for Average Geo and Tempral distance  TP1 and TP2
+P3 <-ggplot(Centroid_long, aes(x = reorder(PANGO_lineage, - Cluster_Size), y = Geo.Avg.Dist, fill = observation)) + 
+   theme_bw()+ 
+     geom_bar (position = "dodge", stat = "identity")+
+  #geom_text(aes(label = size), vjust=-0.05,hjust=-0.05, color="black", size=3,angle = 90, position = position_dodge(0.8))+
+   labs(y = "Average distance (kms)", x = "PANGO Lineages", fill ="Timepoint ")+
+    scale_fill_manual(values = c("#0077b6","#FCA311"))+
+   Plot_Theme + Legend_Theme+theme(axis.text.x=element_text(angle = 90, hjust = 1))
+
+               
+mytable <- dcast(reshape2::melt(Centroid_Average[,c(1,3,5)], id.vars = "PANGO_lineage"), variable ~ PANGO_lineage)%>% rename_at(1,~"Geo.ave.dis")
+mytable <- mytable[, c("Geo.ave.dis",Centroid_Average$PANGO_lineage)]%>%mutate(Geo.ave.dis = ifelse(Geo.ave.dis == "TP1_Geo.Avg.Dist(kms)", "TP1","TP2"))
+table <- tableGrob(mytable, rows=NULL,widths=unit(rep(0.89/ncol(mytable), ncol(mytable)),"npc"),theme = ttheme_default(colhead=list(fg_params=list(rot=90)),base_size = 10))
+grid.arrange(P3,table,heights=c(3,1))
+```
+
+
+##### &nbsp;&nbsp; Figure 2.3.C. **`r paste0(Fig.2.3.C)`**  {#Fig.2.3.C-link -}
+```{r echo=FALSE,message=FALSE,fig.height= 14, fig.width= 18}
+CGM_2 <- CGM_long[ ,c(1,2,4)]%>%filter(!is.na(growth))%>%arrange(desc(growth))
+P2<-ggplot(CGM_2, aes(x = reorder(PANGO_lineage, -growth), y = growth,fill = observation)) + 
+   theme_bw()+ 
+     geom_bar (position = "dodge", stat = "identity")+
+  #geom_text(aes(label = size), vjust=-0.05,hjust=-0.05, color="black", size=3,angle = 90, position = position_dodge(0.8))+
+   labs(y = "Cluster growth rate", x = "PANGO Lineages", fill ="Growth rate type ")+
+    scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    ylim(0, max(CGM_2$growth))+
+   Plot_Theme + Legend_Theme+theme(axis.text.x=element_text(angle = 90, hjust = 1))
+ 
+               
+mytable <- CGM_2[,c(2,1,3)]%>%pivot_wider(names_from = PANGO_lineage, values_from =growth)%>% arrange()%>% rename_at(1,~"Growth rate ")
+table <- tableGrob(mytable, rows=NULL,widths=unit(rep(0.89/ncol(mytable1), ncol(mytable1)),"npc"),theme = ttheme_default(colhead=list(fg_params=list(rot=90)),base_size = 12))
+grid.arrange(P2,table,heights=c(3,1))
+
+
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Epidemiological cluster cohesion (ECC) analysis](#plot-link2)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+##### &nbsp;<span style="color:blue"> 2.4.	Monthly ECC trend analysis</span> {.unnumbered}
+
+##### &nbsp;&nbsp; Figure 2.4.A. **`r paste0(Fig.2.4.A)`**  {#Fig.2.4.A-link -}
+
+```{r echo=FALSE,message=FALSE,fig.height= 6, fig.width= 16}
+## loading data
+
+data_path <- "C:/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/results_Monthly/Merged_strain_results"
+ECC_files <- dir(data_path, pattern = "*.tsv")
+
+ECC_Month <- ECC_files%>%map(~ read_tsv(file.path(data_path, .))) %>% reduce(rbind)
+
+ECC_Month$interval <- gsub('set0', '2020-07', ECC_Month$interval)
+ECC_Month<- ECC_Month %>% separate(interval, into = c('Month_1', 'Month_2'), sep = 8)
+
+# Add Lineage information
+Lineages <-read_csv("input/GISAID Lineages (770000 isolates).csv")%>%select("Strain", "T0.original")
+ECC_Month <-merge(x = ECC_Month, y = Lineages, by = "Strain", all.x=TRUE)
+
+# create new varibles Timepoints, Multistrains, Week and Running day
+
+ECC_Month <- ECC_Month%>%mutate(Multistrain_Cluster = ifelse(ECC_Month$`TP2 cluster size (1)` > 2,"Multistrain","Singleton" ), Cluster_Size = ECC_Month$`TP2 cluster size (1)`, Geo_ECC = ECC_Month$TP2_ECC.0.0.1,Temp_ECC=ECC_Month$TP2_ECC.0.1.0 )
+
+Month_line <- ECC_Month%>%select (Month_2, Geo_ECC, Temp_ECC)%>%drop_na()%>% 
+  pivot_longer(cols = - Month_2,names_to = c("ECC_type", ".value"),names_sep = "_",values_to = "ECC")%>%
+    group_by(Month_2, ECC_type) %>%summarise(
+  count = n(), 
+  mean = mean(ECC, na.rm = TRUE),
+  sd = sd(ECC, na.rm = TRUE),
+  min = min(ECC, na.rm = TRUE),
+  max = max(ECC, na.rm = TRUE))
+  
+ggplot(Month_line , aes(x=Month_2, y= mean, group= ECC_type, color =ECC_type)) + 
+  theme_bw()+
+  ylim(0,1)+
+  geom_line(size = 1) +
+  scale_color_manual(values = c("#0077b6","#FCA311"))+
+  geom_point()+
+  geom_errorbar(aes(ymin= mean-sd, ymax= mean +sd), width=.4,
+                 position=position_dodge(0.05))+
+    labs(x = " Month ", y = "ECC (mean+/-sd)")+
+   theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1))+
+   Plot_Theme + Legend_Theme
+
+```
+
+
+##### &nbsp;&nbsp; Figure 2.4.B. **`r paste0(Fig.2.4.B)`**  {#Fig.2.4.B-link -}
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+
+Bubble_Plot_data1 <- ECC_Month%>%group_by(T0.original,Month_2)%>%summarise_at(vars(Geo_ECC,Temp_ECC,Cluster_Size), mean)%>%drop_na()%>%mutate(Geo.Temp_ECC = (Geo_ECC+Temp_ECC)/2)
+Bubble_Plot_data2 <- Bubble_Plot_data1 %>% pivot_longer(cols = -c(1,2,5),names_to = c("ECC.cat", ".value"),names_sep = "_")
+
+TP10 <- ECC_Month%>%group_by(T0.original)%>%summarise(n =n())%>%top_n(10)%>%arrange(desc(n))
+
+P3 <-ggplot(data = Bubble_Plot_data1%>%filter(T0.original%in%TP10$T0.original), aes(Month_2, y= Geo_ECC )) +  geom_line(aes(group =T0.original), size = 0.5)+
+  theme_bw()+ 
+    geom_point(aes(size = Cluster_Size, fill = factor(T0.original, levels= TP10$T0.original)),alpha=0.8, shape=21, color= "black")+
+   scale_colour_brewer(palette = "Set1") +
+  scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+    labs(y = "Geo_ECC", x = "Month",fill = " ",size =" ")
+ 
+ggplotly(P3,height = 800, width = 1000) %>%layout( margin = list(l = 10),xaxis = list(title=list(text='<b>Month</b>', font = list(size = 16), standoff = 5)),yaxis = list(title=list(text='<b>Geo_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Pango lineages</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))
+
+```
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+P2 <-ggplot(data = Bubble_Plot_data1%>%filter(T0.original%in%TP10$T0.original), aes(Month_2, y= Geo.Temp_ECC )) +  geom_line(aes(group =T0.original), size = 0.5)+
+  theme_bw()+ 
+    geom_point(aes(size = Cluster_Size, fill = factor(T0.original, levels= TP10$T0.original)),alpha=0.8, shape=21, color= "black")+
+   scale_colour_brewer(palette = "Set1") +
+  scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+    labs(y = "Geo.Temp_ECC ", x = "Month",fill = " ",size =" ")
+ 
+ggplotly(P2,height = 800, width = 1000) %>%layout( margin = list(l = 10),xaxis = list(title=list(text='<b>Month</b>', font = list(size = 16), standoff = 5)),yaxis = list(title=list(text='<b>Geo.Temp_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Pango lineages</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))
+```                                                                                                                 
+
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+
+P3 <-ggplot(data = Bubble_Plot_data1%>%filter(T0.original%in%TP10$T0.original), aes(Month_2, y= Temp_ECC )) +  geom_line(aes(group =T0.original), size = 0.5)+
+  theme_bw()+ 
+    geom_point(aes(size = Cluster_Size, fill = factor(T0.original, levels= TP10$T0.original)),alpha=0.8, shape=21, color= "black")+
+   scale_colour_brewer(palette = "Set1") +
+  scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+    labs(y = "Temp_ECC", x = "Month",fill = " ",size =" ")
+ 
+ggplotly(P3,height = 800, width = 1000) %>%layout( margin = list(l = 10), xaxis = list(title=list(text='<b>Month</b>', font = list(size = 16), standoff = 5)),yaxis = list(title=list(text='<b>Temp_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Pango lineages</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))
+
+```
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Epidemiological cluster cohesion (ECC) analysis](#plot-link2)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+##### &nbsp;&nbsp; Figure 2.4.C. **`r paste0(Fig.2.4.C)`**  {#Fig.2.4.C-link -}
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+### top 10 cluster growth rate lineages monthly ECC
+TP10_growth_rate <- CGM_2%>%filter(observation == "Actual")%>%arrange(desc(growth))%>%top_n(10)
+
+P4 <-ggplot(data = Bubble_Plot_data1%>%filter(T0.original%in%TP10_growth_rate$PANGO_lineage), aes(Month_2, y= Geo_ECC)) +  geom_line(aes(group =T0.original), size = 0.5)+
+  theme_bw()+ 
+    geom_point(aes(size = Cluster_Size, fill = factor(T0.original, levels= TP10_growth_rate$PANGO_lineage)),alpha=0.8, shape=21, color= "black")+
+   scale_colour_brewer(palette = "Set1") +
+  scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+    labs(y = "Geo_ECC", x = "Month",fill = " ",size =" ")
+ 
+ggplotly(P4,height = 800, width = 1000) %>%layout( margin = list(l = 10), font=t3,xaxis = list(title=list(text='<b>Month</b>', font = list(size = 16), standoff = 5)),yaxis = list(title=list(text='<b>Geo_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Pango lineages</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))
+
+```
+
+
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+P5 <-ggplot(data = Bubble_Plot_data1%>%filter(T0.original%in%TP10_growth_rate$PANGO_lineage), aes(Month_2, y= Geo.Temp_ECC )) +  geom_line(aes(group =T0.original), size = 0.5)+
+  theme_bw()+ 
+    geom_point(aes(size = Cluster_Size, fill =factor(T0.original, levels= TP10_growth_rate$PANGO_lineage)),alpha=0.8, shape=21, color= "black")+
+   scale_colour_brewer(palette = "Set1") +
+  scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+    labs(y = "Geo.Temp_ECC ", x = "Month",fill = " ",size =" ")
+ 
+ggplotly(P5,height = 800, width = 1000) %>%layout( margin = list(l = 10),font=t3,xaxis = list(title=list(text='<b>Month</b>', font = list(size = 16), standoff = 5)),yaxis = list(title=list(text='<b>Geo.Temp_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Pango lineages</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))
+```
+
+
+```{r  echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+
+P6 <-ggplot(data = Bubble_Plot_data1%>%filter(T0.original%in%TP10_growth_rate$PANGO_lineage), aes(Month_2, y= Temp_ECC )) +  geom_line(aes(group =T0.original), size = 0.5)+
+  theme_bw()+ 
+    geom_point(aes(size = Cluster_Size, fill = factor(T0.original, levels= TP10_growth_rate$PANGO_lineage)),alpha=0.8, shape=21, color= "black")+
+   scale_colour_brewer(palette = "Set1") +
+  scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+    labs(y = "Temp_ECC", x = "Month",fill = " ",size =" ")
+ 
+ggplotly(P6,height = 800, width = 1000) %>%layout( margin = list(l = 10), font=t3,xaxis = list(title=list(text='<b>Month</b>', font = list(size = 16), standoff = 5)),yaxis = list(title=list(text='<b>Temp_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Pango lineages</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))
+
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Epidemiological cluster cohesion (ECC) analysis](#plot-link2)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+##### &nbsp;<span style="color:blue"> 2.5. Week ly ECC trend analysis</span> {.unnumbered}
+
+##### &nbsp;&nbsp; Figure 2.5.A. **`r paste0(Fig.2.5.A)`**  {#Fig.2.5.A-link -}
+```{r echo=FALSE,message=FALSE,fig.height= 6, fig.width= 16}
+
+## loading data weekly
+data_path <- "C:/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/results_Weekly/Merged_strain_results"
+ECC_files <- dir(data_path, pattern = "*.tsv")
+
+ECC_Week <- ECC_files%>%map(~ read_tsv(file.path(data_path, .))) %>% reduce(rbind)
+
+ECC_Week$interval <- gsub('set0', '2020-07', ECC_Week$interval)
+
+ECC_Week <- ECC_Week%>% mutate(Week= ifelse(interval =="2020-07-27", "27", interval),Week1  = isoweek(Date)) 
+ECC_Week$"Year_Week" <-strftime(ECC_Week$Date, format = "%G-%V")
+# Add Lineage information
+Lineages <-read_csv("input/GISAID Lineages (770000 isolates).csv")%>%select("Strain", "T0.original")
+ECC_Week <-merge(x = ECC_Week, y = Lineages, by = "Strain", all.x=TRUE)
+# create new varibles Timepoints, Multistrains, Week and Running day
+
+ECC_Week <- ECC_Week%>%mutate(Multistrain_Cluster = ifelse(ECC_Week$`TP2 cluster size (1)` > 2,"Multistrain","Singleton" ), Cluster_Size = ECC_Week$`TP2 cluster size (1)`, Geo_ECC = ECC_Week$TP2_ECC.0.0.1,Temp_ECC=ECC_Week$TP2_ECC.0.1.0 )
+
+## weekly average ECC data and line graph
+Weekly_line <- ECC_Week%>%select (Year_Week, Geo_ECC, Temp_ECC)%>%drop_na()%>% 
+  pivot_longer(cols = - Year_Week,names_to = c("ECC_type", ".value"),names_sep = "_",values_to = "ECC")%>%
+    group_by(Year_Week, ECC_type) %>%summarise(
+  count = n(), 
+  mean = mean(ECC, na.rm = TRUE),
+  sd = sd(ECC, na.rm = TRUE),
+  min = min(ECC, na.rm = TRUE),
+  max = max(ECC, na.rm = TRUE))
+  
+ggplot(Weekly_line , aes(x=Year_Week, y= mean, group= ECC_type, color =ECC_type)) + 
+  theme_bw()+
+  ylim(0,1)+
+  geom_line(size = 1) +
+  scale_color_manual(values = c("#0077b6","#FCA311"))+
+  geom_point()+
+  geom_errorbar(aes(ymin= mean-sd, ymax= mean +sd), width=.4,
+                 position=position_dodge(0.05))+
+    labs(x = "Week", y = "ECC (mean+/-sd)")+
+   theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1))+
+   Plot_Theme + Legend_Theme
+
+```
+
+
+##### &nbsp;&nbsp; Figure 2.5.B. **`r paste0(Fig.2.5.B)`**  {#Fig.2.5.B-link -}
+```{r echo=FALSE,message=FALSE,fig.height= 15, fig.width= 18}
+Bubble_Plot_data1 <- ECC_Week%>%group_by(T0.original,Year_Week)%>%summarise_at(vars(Geo_ECC,Temp_ECC,Cluster_Size), mean)%>%drop_na()%>%mutate(Geo.Temp_ECC = (Geo_ECC+Temp_ECC)/2)
+Bubble_Plot_data2 <- Bubble_Plot_data1 %>% pivot_longer(cols = -c(1,2,5),names_to = c("ECC.cat", ".value"),names_sep = "_")
+
+# Geo
+P1 <-ggplot(data = Bubble_Plot_data1%>%filter(T0.original%in%TP10$T0.original), aes(Year_Week, y= Geo_ECC )) +  geom_line(aes(group =T0.original), size = 0.5)+
+  theme_bw()+ 
+    geom_point(aes(size = Cluster_Size, fill = factor(T0.original, levels= TP10$T0.original)),alpha=0.8, shape=21, color= "black")+
+   scale_colour_brewer(palette = "Set1") +
+  scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+    labs(y = "Geo_ECC", x = "Week",fill = " ",size =" ")
+ 
+ggplotly(P1,height = 800, width = 1000) %>%layout( margin = list(l = 10), font=t3,xaxis = list(title=list(text='<b>Week</b>', font = list(size = 16), standoff = 5)),yaxis = list(title=list(text='<b>Geo_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Pango lineages</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))%>%
+  layout(xaxis = list(tickangle = 90))
+```
+
+
+```{r fig.topcaption = TRUE,echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+# Geo_temp 
+P2 <-ggplot(data = Bubble_Plot_data1%>%filter(T0.original%in%TP10$T0.original), aes(Year_Week, y= Geo.Temp_ECC )) +  geom_line(aes(group =T0.original), size = 0.5)+
+  theme_bw()+ 
+    geom_point(aes(size = Cluster_Size, fill = factor(T0.original, levels= TP10$T0.original)),alpha=0.8, shape=21, color= "black")+
+   scale_colour_brewer(palette = "Set1") +
+  scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+    labs(y = "Geo.Temp_ECC ", x = "Week",fill = " ",size =" ")
+ 
+ggplotly(P2,height = 800, width = 1000) %>%layout( margin = list(l = 10), font=t3,xaxis = list(title=list(text='<b>Week</b>', font = list(size = 16), standoff = 5)),yaxis = list(title=list(text='<b>Geo.Temp_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Pango lineages</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))%>%
+  layout(xaxis = list(tickangle = 90))
+```
+
+
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+# Temp
+P3 <-ggplot(data = Bubble_Plot_data1%>%filter(T0.original%in%TP10$T0.original), aes(Year_Week, y= Temp_ECC )) +  geom_line(aes(group =T0.original), size = 0.5)+
+  theme_bw()+ 
+    geom_point(aes(size = Cluster_Size, fill = factor(T0.original, levels= TP10$T0.original)),alpha=0.8, shape=21, color= "black")+
+   scale_colour_brewer(palette = "Set1") +
+  scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+    labs(y = "Temp_ECC", x = "Month",fill = " ",size =" ")
+ 
+ggplotly(P3,height = 800, width = 1000) %>%layout( margin = list(l = 10),xaxis = list(title=list(text='<b>Week</b>', font = list(size = 16), standoff = 5 )),yaxis = list(title=list(text='<b>Temp_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Pango lineages</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))%>%
+  layout(xaxis = list(tickangle = 90))
+
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Epidemiological cluster cohesion (ECC) analysis](#plot-link2)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+
+##### &nbsp;&nbsp; Figure 2.5.C. **`r paste0(Fig.2.5.C)`**  {#Fig.2.5.C-link -}
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+## top 10 cluster growth lineages
+#Geo
+P4 <-ggplot(data = Bubble_Plot_data1%>%filter(T0.original%in%TP10_growth_rate$PANGO_lineage), aes(Year_Week, y= Geo_ECC )) +  geom_line(aes(group =T0.original), size = 0.5)+
+  theme_bw()+ 
+    geom_point(aes(size = Cluster_Size, fill = factor(T0.original, levels= TP10_growth_rate$PANGO_lineage)),alpha=0.8, shape=21, color= "black")+
+   scale_colour_brewer(palette = "Set1") +
+  scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+    labs(y = "Geo_ECC", x = "Week",fill = " ",size =" ")
+ 
+ggplotly(P4,height = 800, width = 1000) %>%layout( margin = list(l = 10),font=t3,xaxis = list(title=list(text='<b>Week</b>', font = list(size = 16), standoff = 5)),yaxis = list(title=list(text='<b>Geo_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Pango lineages</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))%>%
+  layout(xaxis = list(tickangle = 90))
+```
+
+
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+# Geo_Temp
+P5 <-ggplot(data = Bubble_Plot_data1%>%filter(T0.original%in%TP10_growth_rate$PANGO_lineage), aes(Year_Week, y= Geo.Temp_ECC )) +  geom_line(aes(group =T0.original), size = 0.5)+
+  theme_bw()+ 
+    geom_point(aes(size = Cluster_Size, fill = factor(T0.original, levels= TP10_growth_rate$PANGO_lineage)),alpha=0.8, shape=21, color= "black")+
+   scale_colour_brewer(palette = "Set1") +
+  scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+    labs(y = "Geo.Temp_ECC ", x = "Week",fill = " ",size =" ")
+ 
+ggplotly(P5,height = 800, width = 1000) %>%layout( margin = list(l = 10), font=t3,xaxis = list(title=list(text='<b>Week</b>', font = list(size = 16), standoff = 5)),yaxis = list(title=list(text='<b>Geo.Temp_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Pango lineages</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))%>%
+  layout(xaxis = list(tickangle = 90))
+```
+
+
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+# Temp-growth rate
+P6 <-ggplot(data = Bubble_Plot_data1%>%filter(T0.original%in%TP10_growth_rate$PANGO_lineage), aes(Year_Week, y= Temp_ECC )) +  geom_line(aes(group =T0.original), size = 0.5)+
+  theme_bw()+ 
+    geom_point(aes(size = Cluster_Size, fill = factor(T0.original, levels= TP10_growth_rate$PANGO_lineage)),alpha=0.8, shape=21, color= "black")+
+   scale_colour_brewer(palette = "Set1") +
+  scale_size_continuous(limits = c(0, max(Bubble_Plot_data1$Cluster_Size)), range = c(1,17), breaks =  c(10,100,500,1000,3000,6000))+
+    labs(y = "Temp_ECC", x = "Month",fill = " ",size =" ")
+ 
+ggplotly(P6,height = 800, width = 1000) %>%layout( margin = list(l = 10), font=t3,xaxis = list(title=list(text='<b>Week</b>', font = list(size = 16), standoff = 5 )),yaxis = list(title=list(text='<b>Temp_ECC</b>',font = list(size = 16), standoff = 10)),legend = list(title=list(text = "<b>Pango lineages</b>",y = 0.8, x = 1.0), x=1.0,y =0.75))%>%
+  layout(xaxis = list(tickangle = 90))
+
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Epidemiological cluster cohesion (ECC) analysis](#plot-link2)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+#### <span style="color:blue">3. Geospatial and temporal heterogeneity within top clusters</span>  {.unnumbered}
+
+```{r fig.height= 9, fig.width= 18 }
+library(magick)
+library(filesstrings)
+## top5 cluster by size  and adding Pango lineages names, change the file names of the heatmaps to have pango lineages
+
+TOP5 <-ECC_long %>%select(`Last time this cluster was seen in TP2`,T0.original,`Actual TP2 cluster`,Cluster_Size)%>%unique()%>%setNames(c("TP2_Cluster","Pango_ lineages","Actual TP2 cluster","Size"))%>%top_n(6)%>%arrange(desc(Size))%>%filter(Size != 3388)
+
+T5_files <- list.files("/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/report_specific/heatmaps/clustering/",full.names = T)
+
+T5_TP2_names <-unlist(T5_files) %>% gsub("/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/report_specific/heatmaps/clustering/", "", .)%>% gsub(".Rds", "", .) %>%data.frame()%>%setNames("TP2_Cluster_Size")%>% tidyr::separate(
+    col = TP2_Cluster_Size,
+    sep = c(13,14),
+    into = c("TP2_Cluster", "Del","`Actual TP2 cluster`"),
+    remove = FALSE)%>%select(-Del)
+T5_TP2_names <-T5_TP2_names %>%filter(TP2_Cluster%in%TOP5$TP2_Cluster) %>%left_join(TOP5)%>%arrange(desc(Size)) 
+
+#dir.create("/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/report_specific/freguencies")
+
+#move_files(F_files, "/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/report_specific/freguencies", overwrite=TRUE)
+
+## function to load heatmap
+Cluster_heatmap <- function(Cluster_Name,Pango_lineage, Size){
+All_files <-list.files("/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/report_specific/heatmaps/",pattern = Cluster_Name, full.names = T)
+F_files <- list.files("/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/report_specific/heatmaps/", pattern= "frequencies",full.names = T)
+D_files <- list.files("/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/report_specific/heatmaps/", pattern= "density",full.names = T)
+C_files <- list.files("/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/report_specific/heatmaps/", pattern= "clustering",full.names = T)
+Heatmap_files <-setdiff(All_files,c(F_files,D_files,C_files))
+F_files <- list.files("/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/report_specific/freguencies/", pattern= Cluster_Name,full.names = T)
+HF_images <- image_read(Heatmap_files)%>%image_scale("1000x1000")
+
+image_append(c(HF_images[1],HF_images[3],HF_images[2]))%>%image_annotate(paste0(Pango_lineage,"( n=", Size, " ):",  " Geo distance(left),", " Geo/Temp(50/50) distance and Temp distance (right)"),location = "+10+800",font = 'Times', size = 50 )}
+
+## function to load freguency histogram
+Cluster_frequency <- function(Cluster_Name,Pango_lineage, Size){
+
+F_files <- list.files("/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/report_specific/freguencies/", pattern= Cluster_Name,full.names = T)
+F_images <- image_read(F_files)%>%image_scale("1000x1000")
+
+image_append(c(F_images[1],F_images[3],F_images[2]))%>%image_annotate(paste0(Pango_lineage,"( n=", Size, " )"),location = "+10+800",font = 'Times', size = 50 )}
+```
+
+##### &nbsp;<span style="color:blue"> 3.1. Heatmaps and pair-wise distance frequency histogram for top 5 clusters (by size)</span> {.unnumbered}
+
+##### &nbsp;&nbsp; Figure 3.1.A. **`r paste0(Fig.3.1.A)`**  {#Fig.3.1.A-link -}
+```{r fig.height= 9, fig.width= 18 }
+Cluster_heatmap(T5_TP2_names$TP2_Cluster_Size[5],T5_TP2_names$`Pango_ lineages`[5],T5_TP2_names$Size[5])
+```
+
+
+##### &nbsp;&nbsp; Figure 3.1.B. **`r paste0(Fig.3.1.B)`**  {#Fig.3.1.B-link -}
+```{r fig.height= 9, fig.width= 18 }
+Cluster_heatmap(T5_TP2_names$TP2_Cluster_Size[4],T5_TP2_names$`Pango_ lineages`[4],T5_TP2_names$Size[4])
+```
+
+
+##### &nbsp;&nbsp; Figure 3.1.C. **`r paste0(Fig.3.1.C)`**  {#Fig.3.1.C-link -}
+```{r fig.height= 9, fig.width= 18 }
+Cluster_heatmap(T5_TP2_names$TP2_Cluster_Size[3],T5_TP2_names$`Pango_ lineages`[3],T5_TP2_names$Size[3])
+```
+
+
+##### &nbsp;&nbsp; Figure 3.1.D. **`r paste0(Fig.3.1.D)`**  {#Fig.3.1.D-link -}
+```{r fig.height= 9, fig.width= 18 }
+Cluster_heatmap(T5_TP2_names$TP2_Cluster_Size[2],T5_TP2_names$`Pango_ lineages`[2],T5_TP2_names$Size[2])
+```
+
+
+##### &nbsp;&nbsp; Figure 3.1.E. **`r paste0(Fig.3.1.E)`**  {#Fig.3.1.E-link -}
+```{r fig.height= 9, fig.width= 18 }
+Cluster_heatmap(T5_TP2_names$TP2_Cluster_Size[1],T5_TP2_names$`Pango_ lineages`[1],T5_TP2_names$Size[1])
+```
+
+##### &nbsp;&nbsp; Figure 3.1.F. **`r paste0(Fig.3.1.F)`**  {#Fig.3.1.F-link -}
+```{r fig.height= 9, fig.width= 18 }
+Cluster_frequency(T5_TP2_names$TP2_Cluster_Size[5],T5_TP2_names$`Pango_ lineages`[5],T5_TP2_names$Size[5])
+```
+
+
+##### &nbsp;&nbsp; Figure 3.1.G. **`r paste0(Fig.3.1.G)`**  {#Fig.3.1.G-link -}
+```{r fig.height= 9, fig.width= 18 }
+Cluster_frequency(T5_TP2_names$TP2_Cluster_Size[4],T5_TP2_names$`Pango_ lineages`[4],T5_TP2_names$Size[4])
+```
+
+
+##### &nbsp;&nbsp; Figure 3.1.H. **`r paste0(Fig.3.1.H)`**  {#Fig.3.1.H-link -}
+```{r fig.height= 9, fig.width= 18 }
+Cluster_frequency(T5_TP2_names$TP2_Cluster_Size[3],T5_TP2_names$`Pango_ lineages`[3],T5_TP2_names$Size[3])
+```
+
+
+##### &nbsp;&nbsp; Figure 3.1.I. **`r paste0(Fig.3.1.I)`**  {#Fig.3.1.I-link -}
+```{r fig.height= 9, fig.width= 18 }
+Cluster_frequency(T5_TP2_names$TP2_Cluster_Size[2],T5_TP2_names$`Pango_ lineages`[2],T5_TP2_names$Size[2])
+```
+
+
+##### &nbsp;&nbsp; Figure 3.1.J. **`r paste0(Fig.3.1.J)`**  {#Fig.3.1.J-link -}
+```{r fig.height= 9, fig.width= 18 }
+Cluster_frequency(T5_TP2_names$TP2_Cluster_Size[2],T5_TP2_names$`Pango_ lineages`[2],T5_TP2_names$Size[2])
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Geospatial and temporal heterogeneity within top clusters](#plot-link3)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+##### &nbsp;<span style="color:blue"> 3.2. Heatmaps and pair-wise distance frequency histogram for top 5 clusters (by growth rate)</span> {.unnumbered}
+
+##### &nbsp;<span style="color:blue"> 3.3. Pairwise distance for Top 20 clusters (by size (by growth rate)</span> {.unnumbered}
+##### &nbsp;&nbsp; Figure 3.3.A. **`r paste0(Fig.3.3.A)`**  {#Fig.3.3.A-link -}
+```{r fig.height= 9, fig.width= 18 }
+## whisker plots for Geo and temporal distance distribution around the mean
+Lineages2 <- ECC_long%>%select(`Last time this cluster was seen in TP2`, T0.original)%>%unique()
+colnames(Lineages2) <-c("Cluster", "Pango_lineage")
+WX <- list.files("/Users/guzhang/Desktop/Metrics-CGM-ECC-4.2.7/report_specific/epitables/", full.names = TRUE)
+
+ 
+Whiker_Data <- lapply(WX[3:5], function(x_i) {
+  cluster_name <- strsplit(x_i, split = "/") %>% unlist() %>% extract2(8) %>% gsub(".Rds", "", .)
+  readRDS(x_i) %>% add_column(Cluster = cluster_name)
+}) %>% bind_rows()%>%select(Cluster, Temp.Dist, Geog.Dist)%>%separate(Cluster, sep = 13, into = c("Cluster", "Cluster1"))%>%left_join(Lineages2)
+Whisker_Data <- as.data.frame(Whiker_Data)
+
+P5 <- ggplot(Whisker_Data, aes(x = Pango_lineage, y = Geog.Dist,fill = Pango_lineage)) +
+  #geom_boxplot(alpha =0.3)
+  theme_bw()+ 
+  geom_violin(trim=FALSE)+
+  labs(y = "Geo distance", x = "PANGO lineages",tag = "Figure 5E.",caption = "*Distance is calculated by dividing all values by the  the maximum distance in the pairwise distance matrix,  arriving at a max distance of 1")+
+     ggtitle ("Normolized pairwise Geo distance for top20 cluster size growth lineages") +  Plot_Theme +theme(plot.tag.position = c(0.03,1),
+                 plot.title = element_text(hjust= 0.12, vjust = 2.9),axis.text.x=element_text(angle = 90, hjust = 1)
+                )
+
+P5+theme(legend.position = "none") + stat_summary(fun.data="mean_sdl", mult=1, 
+                 geom="crossbar", width=0.05,fill = "white", alpha =0.5, )
+```
+
+
+##### &nbsp;&nbsp; Figure 3.3.B. **`r paste0(Fig.3.3.B)`**  {#Fig.3.3.B-link -}
+```{r fig.height= 9, fig.width= 18 }
+## whisker plots for Geo and temporal distance distribution around the mean
+#p6 <-ggplot(Whisker_Data[3:5], aes(x = Pango_lineage, y =Temp.Dist,fill = Pango_lineage)) +
+  #geom_boxplot(alpha =0.3)
+ # theme_bw()+ 
+ # geom_violin(trim=FALSE)+
+  #labs(y = "Temp distance", x = "PANGO lineages",tag = "Figure 5F.",caption = "*Distance is calculated by dividing all values by the  the maximum distance in the pairwise distance matrix,  arriving at a max distance of 1")+
+  #   ggtitle ("Normolized pairwise Temp distance for top20 cluster size growth lineages") +  Plot_Theme +theme(plot.tag.position = c(0.03,1),
+                # plot.title = element_text(hjust= 0.12, vjust = 2.9),axis.text.x=element_text(angle = 90, hjust = 1)
+          #      )
+#p6+theme(legend.position = "none") + stat_summary(fun.data="mean_sdl", mult=1, 
+                 #geom="crossbar", width=0.2 )
+```
+
+
+#### <span style="color:blue">4. Data summary tables</span> {#plot-link4 -} 
+##### &nbsp;<span style="color:blue"> 4.1. Summary of SARS-Cov2 genomes by geography and time</span> {.unnumbered}
+##### &nbsp;&nbsp; Table 4.1.a. **`r paste0(Tab.4.1.a)`**  {#Tab.4.1.a-link -}
+```{r table1a}
+pacman::p_load(
+  rio,          # File import
+  here,         # File locator
+  skimr,        # get overview of data
+  tidyverse,    # data management + ggplot2 graphics 
+  gtsummary,    # summary statistics and tests
+  rstatix,      # summary statistics and statistical tests
+  janitor,      # adding totals and percents to tables
+  scales,       # easily convert proportions to percents  
+  flextable,    # converting tables to pretty images
+  kableExtra)
+# Table 1a, Summary of SARS-Cov2 genomes by country and TP/month
+Table1a <-ECC_long %>% 
+  tabyl(Country, Timepoint) %>% 
+  adorn_totals(where = "col") %>%
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% 
+  arrange(desc(Total)) 
+Table1a <-Table1a[c(2:nrow(Table1a),1),1:3]
+rownames(Table1a) <- c()
+ # table for month
+Table1a1<-ECC_long %>%filter(Timepoint == "TP2") %>%
+  tabyl(Country, Year_Month) %>% 
+  adorn_totals(where = "col") %>% 
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% 
+  arrange(desc(Total)) 
+  
+rownames(Table1a1) <- c() 
+
+Table <-left_join(Table1a,Table1a1) 
+kable(Table, escape = FALSE,format = 'html')%>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed","responsive"),full_width = F, position = "float_left")%>%row_spec(nrow(Table), bold=T)%>%column_spec(NCOL(Table), bold=T)%>%add_header_above(c(" " = 1, "Timepoint" = (ncol(Table1a)-1), "Month" = (NCOL(Table1a1)-2)," " = 1))
+```
+
+
+##### &nbsp;&nbsp; Table 4.1.b. **`r paste0(Tab.4.1.b)`**  {#Tab.4.1.b-link -}
+```{r table1b}
+# Table 1b, Summary of SARS-Cov2 genomes by country and week
+Table1b<-ECC_long %>%filter(Timepoint == "TP2") %>% 
+  tabyl(Country, Year_Week) %>% 
+  adorn_totals(where = "col") %>%
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% 
+  adorn_title(
+    row_name = "Country",
+    col_name = "week",
+    placement = "combined")%>%arrange(desc(Total)) 
+#Name <- c("Country/week", min(ECC_long$Year_Week):max(ECC_long$Year_Week), "Total" )
+Table1b <-Table1b[c(2:nrow(Table1b),1),]
+rownames(Table1b) <- c()
+Table1b<-kable(Table1b, escape = FALSE,format = 'html',table.attr = "style='width:50%;'")%>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed","responsive"),full_width = F, position = "float_left",font_size = 8)%>%row_spec(nrow(Table1b), bold=T) %>%column_spec(ncol(Table1b), bold=T)
+
+Table1b
+```
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Data summary tables](#tab-link4)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+##### &nbsp;<span style="color:blue"> 4.2. Summary of SARS-Cov2 genomes by PANGO lineages</span> {.unnumbered}
+
+##### &nbsp;&nbsp; Table 4.2.a. **`r paste0(Tab.4.2.a)`**  {#Tab.4.2.a-link -}
+```{r table2a}
+### Summary of SARS-Cov2 genomes by PANGO lineages 
+ ## Summary of SARS-Cov2 genomes by PANGO lineages and country
+Table2a <-ECC_long %>%filter(Timepoint == "TP2") %>% 
+  tabyl(PANGO_lineage,Country ) %>% 
+  adorn_totals(where = "col") %>%
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% 
+  adorn_title(
+    row_name = "PANGO_lineage",
+    col_name = "Country",
+    placement = "combined")%>%arrange(desc(Total)) 
+Table2a <-Table2a[c(3:nrow(Table2a),2,1),]
+rownames(Table2a) <- c() 
+
+kable(Table2a, escape = FALSE,format = 'html')%>%kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed","responsive"),full_width = T)%>%row_spec(nrow(Table2a), bold=T)%>%column_spec(ncol(Table2a), bold=T)
+```
+
+
+##### &nbsp;&nbsp; Table 4.2.b. **`r paste0(Tab.4.2.b)`**  {#Tab.4.2.b-link -}
+```{r table2b}
+## Summary of SARS-Cov2 genomes by PANGO lineages and Timepoint/Month
+Table2b <-ECC_long %>% 
+  tabyl(PANGO_lineage, Timepoint) %>% 
+  adorn_totals(where = "col") %>%
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% arrange(desc(Total)) 
+   
+Table2b <-Table2b[c(3:nrow(Table2b),2,1),1:(ncol(Table2b)-1)]
+rownames(Table2b) <- c()
+
+Table2b1<-ECC_long %>%filter(Timepoint == "TP2") %>%
+  tabyl(PANGO_lineage, Year_Month) %>% 
+  adorn_totals(where = "col") %>% 
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% 
+  arrange(desc(Total))
+
+rownames(Table2b1) <- c() 
+
+Table2 <-left_join(Table2b,Table2b1)%>%drop_na()
+kable(Table2, escape = FALSE,format = 'html')%>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed","responsive"),full_width = F, position = "float_left")%>%row_spec(nrow(Table2), bold=T)%>%column_spec(NCOL(Table2), bold=T)%>%add_header_above(c(" " = 1, "Timepoint" = (ncol(Table2b)-1), "Month" = (NCOL(Table2b1)-2), " " = 1))
+```
+
+
+##### &nbsp;&nbsp; Table 4.2.c. **`r paste0(Tab.4.2.c)`**  {#Tab.4.2.c-link -}
+```{r table2c}
+##Table 2c. Summary of SARS-Cov2 genomes byPANGO lineages and week
+
+Table2c<-ECC_long %>%filter(Timepoint == "TP2") %>%
+  tabyl(PANGO_lineage, Year_Week) %>% 
+  adorn_totals(where = "col") %>% 
+  adorn_totals(where = "row") %>% 
+  adorn_percentages(denominator = "col") %>% 
+  adorn_pct_formatting() %>% 
+  adorn_ns(position = "front") %>% 
+  adorn_title(
+    row_name = "PANGO_lineage",
+    col_name = "Week",
+    placement = "combined") %>%arrange(desc(Total))
+Name <- c("PANGO_lineage/Week", min(ECC_long$Week):max(ECC_long$Week), "Total" )
+Table2c <-Table2c[c(2:nrow(Table2c),1),]
+rownames(Table2c) <- c() 
+kable(Table2c,align=rep('c', 19))%>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed","responsive"),full_width = F, position = "float_left",font_size = 9)%>%row_spec(nrow(Table2c), bold=T) %>%column_spec(ncol(Table2c), bold=T)
+
+```
+
+
+##### &nbsp;&nbsp; Table 4.2.d. **`r paste0(Tab.4.2.d)`**  {#Tab.4.2.d-link -}
+```{r}
+library(labelled)
+var.labels = c(Timepoint = "Timepoint", Temp_ECC="Temp_ECC", Geo_ECC="Geo_ECC", Delta_Temp_ECC="Delta_Temp_ECC",Delta_Geo_ECC= "Delta_Geo_ECC", Cluster_Size= "Cluster_Size_TP2", Angle = "Vector_Angle",Vector_cardinal="Vector_cardinal",TP1_Size="Cluster_Size_TP1") 
+TP3_dir <- Pie_data%>%select(Timepoint,Temp_ECC,Geo_ECC,Delta_Temp_ECC,Delta_Geo_ECC,Cluster_Size,Angle,Vector_cardinal,TP1_Size)
+TP2_dir <- labelled::set_variable_labels(TP3_dir,.labels = var.labels)
+TP2_dir%>%tbl_summary(by =  Vector_cardinal,
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     all_categorical() ~ "{n} / {N} ({p}%)"),
+    digits = all_continuous() ~ 2,
+    missing_text = "(Missing)")%>%bold_labels() %>%
+  as_kable()%>%kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed","responsive"),full_width = F, position = "float_left")
+  
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Data summary tables](#plot-link4)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+
+#### <span style="color:blue">5. Supplementary figures</span> {.unnumbered}
+##### &nbsp;<span style="color:blue"> 5.1.Genome counts over time	ECC </span> {.unnumbered}
+##### &nbsp;&nbsp;<span style="color:blue"> a.By Country </span>
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.1.A.I. **`r paste0(Fig.5.1.A.I)`** {#Fig.5.1.A.I-link -}
+```{r  echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+## TP1 vs TP2 Genome counts: (TP2 data only)
+
+Data1<- ECC_long%>% select(Strain, Country, Province, Day,Month, Year, Date,Year_Month,Year_Week,Timepoint,T0.original,Pango_lineage)
+
+Country_Order<- Data1%>%filter(Timepoint == "TP2")%>%group_by(Country)%>%dplyr::summarise(n=n())%>%arrange(desc(n))
+                                                                        
+Data_TP <- Data1%>%group_by(Country,Timepoint)%>% dplyr::summarise(n=n())%>%mutate(Country = factor(Country, levels=Country_Order$Country))
+
+ ggplot(Data_TP, aes(x = Country, y = n, fill= Timepoint )) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge")+
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+  theme(axis.text.x =element_text(face = "bold", size = 12, angle = 90,hjust = 1, vjust = 0.1),axis.text.y  =element_text(face = "bold", size = 12, angle = 90,vjust = 0.3,hjust = 0.5))+
+    labs(x = "Country", y = "Genome count")+
+     Plot_Theme+ Legend_Theme
+```
+
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.1.A.II. **`r paste0(Fig.5.1.A.II)`** {#Fig.5.1.A.II-link -}
+```{r  echo=FALSE,message=FALSE,fig.height= 14, fig.width= 18}
+## Cumulative genome counts by month, faceted by country
+Country_sum <- Data1%>%filter(Timepoint =="TP2")%>% group_by(Country,Year_Month)%>%summarise(Count =n()) %>%group_by(Country)%>%mutate(Count2=cumsum(Count))
+Country_Order <-ECC_Month%>% group_by(Country)%>%summarise(Count = n()) %>% arrange(desc(Count))
+P1 <-ggplot(data = Country_sum, aes(Year_Month, y = Count2,  group=Country )) + 
+  theme_bw()+
+   facet_wrap(~ fct_relevel(Country, Country_Order$Country))+
+    geom_line(color= "#0077b6", size =1)+
+     labs(y = "Cases", x = "Month" ) +  
+      theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1)) +
+         Plot_Theme+  Legend_Theme
+P1
+
+```
+
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.1.A.III. **`r paste0(Fig.5.1.A.III)`** {#Fig.5.1.A.III-link -}
+```{r  echo=FALSE,message=FALSE,fig.height= 16, fig.width= 18}
+## Genome counts, faceted by month 
+
+Country_Order <-ECC_Month%>% group_by(Country)%>%summarise(Count = n()) %>% arrange(desc(Count))
+Country_sum <- Data1%>%filter(Timepoint =="TP2")%>% group_by(Country,Year_Month)%>%summarise(Count =n()) %>%group_by(Country)%>%mutate(Count2=cumsum(Count))%>%mutate(Country = factor(Country, levels=Country_Order$Country))
+P1 <-ggplot(data = Country_sum, aes(Country, y = Count,  group= Year_Month )) + 
+  theme_bw()+
+   facet_wrap(~ Year_Month)+
+    geom_bar(stat = "identity",fill = "#0077b6")+
+     labs(y = "Cases", x = "Country" ) +  
+      theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1)) +
+         Plot_Theme+  Legend_Theme
+P1
+
+```
+
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.1.A.IV. **`r paste0(Fig.5.1.A.IV)`** {#Fig.5.1.A.IV-link -}
+```{r  echo=FALSE,message=FALSE,fig.height= 14, fig.width= 18}
+## Cumulative genome counts by month faceted by country
+Country_sum <- Data1%>%filter(Timepoint =="TP2")%>% group_by(Country,Year_Week)%>%summarise(Count =n()) %>%group_by(Country)%>%mutate(Count2=cumsum(Count))
+Country_Order <-ECC_Month%>% group_by(Country)%>%summarise(Count = n()) %>% arrange(desc(Count))
+
+ggplot(data = Country_sum, aes(Year_Week, y = Count2,  group=Country )) + 
+  theme_bw()+
+   facet_wrap(~ fct_relevel(Country, Country_Order$Country))+
+    geom_line(color= "#0077b6", size =1)+
+     labs(y = "Cases", x = "Week" ) +  
+      theme(axis.text.x = element_text(size = 7,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1)) +
+         Plot_Theme+  Legend_Theme
+
+```
+
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.1.A.V. **`r paste0(Fig.5.1.A.V)`** {#Fig.5.1.A.V-link -}
+```{r  echo=FALSE,message=FALSE,fig.height= 16, fig.width= 18}
+## Genome counts, faceted by week
+
+Country_Order <-ECC_Month%>% group_by(Country)%>%summarise(Count = n()) %>% arrange(desc(Count))
+Country_sum <- Data1%>%filter(Timepoint =="TP2")%>% group_by(Country,Year_Week)%>%summarise(Count =n()) %>%group_by(Country)%>%mutate(Count2=cumsum(Count))%>%mutate(Country = factor(Country, levels=Country_Order$Country))
+Country_Order <-ECC_Month%>% group_by(Country)%>%summarise(Count = n()) %>% arrange(desc(Count))
+
+P1 <-ggplot(data = Country_sum, aes(Country, y = Count,  group= Year_Week )) + 
+  theme_bw()+
+   facet_wrap(~ Year_Week)+
+    geom_bar(stat = "identity",fill = "#0077b6")+
+     labs(y = "Cases", x = "Country" ) +  
+      theme(axis.text.x = element_text(size = 7,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1)) +
+         Plot_Theme+  Legend_Theme
+P1
+
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Supplementary figures](#plot-link5)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)<br>
+
+
+##### &nbsp;&nbsp;<span style="color:blue"> b.By Provice </span>
+##### &nbsp;&nbsp;&nbsp; Figure 5.1.B.I. **`r paste0(Fig.5.1.B.I)`** {#Fig.5.2.B.I-link -}
+```{r  echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+
+## TP1 vs TP2 Genome counts
+country_code <- read_csv("input/Country_Code_1.csv")
+Data1<- ECC_long%>% select(Strain, Country, Province, Day,Month, Year, Date,Year_Month,Year_Week,Timepoint,T0.original,Pango_lineage)
+Data1<-Data1%>%left_join(country_code)
+Data1$Country_Province= paste(Data1$country_code, "_", Data1$Province)
+
+                                                                        
+Data_TP <- Data1%>%group_by(Country,Country_Province,Timepoint)%>% dplyr::summarise(Genome_count=n()) %>%group_by(Country)%>%mutate(Genome_count_Country= sum(Genome_count))%>%arrange(desc(Genome_count_Country),desc(Genome_count))
+Province_Order <-Data_TP%>%filter(Timepoint == "TP2")
+Data_TP <- Data_TP %>%mutate(Country_Province = factor(Country_Province, levels = unique(Province_Order$Country_Province )))
+ ggplot(Data_TP, aes(x = Country_Province, y = Genome_count, fill= Timepoint )) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge")+
+   scale_fill_manual(values = c("#0077b6","#FCA311"))+
+  theme(axis.text.x =element_text(face = "bold", size =7, angle = 90,hjust = 1, vjust = 0.1),axis.text.y  =element_text(face = "bold", size = 12, angle = 90,vjust = 0.3,hjust = 0.5))+
+    labs(x = "Country_Province", y = "Genome count")+
+     Plot_Theme+ Legend_Theme
+```
+
+
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.1.B.II. **`r paste0(Fig.5.1.B.II)`** {#Fig.5.1.B.II-link -}
+```{r  echo=FALSE,message=FALSE,fig.height= 60, fig.width= 20}
+## Cumulative genome counts by Month, faceted by country_province
+
+Country_sum <- Data1%>%filter(Timepoint =="TP2")%>% group_by(Country_Province,Year_Month)%>%summarise(Count =n()) %>%group_by(Country_Province)%>%mutate(Count2=cumsum(Count))
+
+
+P1 <-ggplot(data = Country_sum, aes(Year_Month, y = Count2,  group= Country_Province )) + 
+  theme_bw()+
+   facet_wrap(~ fct_relevel(Country_Province, unique(Province_Order$Country_Province )),ncol = 10)+
+    geom_line(color= "#0077b6", size =1)+
+     labs(y = "Cases", x = "Year_Month" ) +  
+      theme(axis.text.x = element_text(size = 6,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1),
+            strip.text = element_text(size = 8)) 
+        
+P1+theme(axis.text.x = element_text(size = 6,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1),
+            strip.text = element_text(size = 8)) 
+
+```
+
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.1.B.III. **`r paste0(Fig.5.1.B.III)`** {#Fig.5.1.B.III-link -}
+```{r  echo=FALSE,message=FALSE,fig.height= 20, fig.width= 20}
+## Genome counts, faceted by Week
+
+Country_sum <- Data1%>%filter(Timepoint =="TP2")%>% group_by(Country_Province,Year_Month)%>%summarise(Count =n()) %>%group_by(Country_Province)%>%mutate(Count2=cumsum(Count))
+
+P1 <-ggplot(data = Country_sum, aes(Country_Province, y = Count,  group= Year_Month )) + 
+  theme_bw()+
+   facet_wrap(~ Year_Month,ncol = 2)+
+    geom_bar(stat = "identity",fill = "#0077b6")+
+     labs(y = "Cases", x = "Country_Province" ) +  
+      theme(axis.text.x = element_text(size = 3 ,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1)) +
+         Plot_Theme+  Legend_Theme
+P1
+
+```
+
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.1.B.IV. **`r paste0(Fig.5.1.B.IV)`** {#Fig.5.1.B.IV-link -}
+```{r  echo=FALSE,message=FALSE,fig.height= 60, fig.width= 20}
+## Cumulative genome counts by Week, faceted by country_province
+
+Country_sum <- Data1%>%filter(Timepoint =="TP2")%>% group_by(Country_Province,Year_Week)%>%summarise(Count =n()) %>%group_by(Country_Province)%>%mutate(Count2=cumsum(Count))
+
+
+P1 <-ggplot(data = Country_sum, aes(Year_Week, y = Count2,  group= Country_Province )) + 
+  theme_bw()+
+   facet_wrap(~ fct_relevel(Country_Province, unique(Province_Order$Country_Province )),ncol = 10)+
+    geom_line(color= "#0077b6", size =1)+
+     labs(y = "Cases", x = "Year_Week" ) +  
+      theme(axis.text.x = element_text(size = 6,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1),
+            strip.text = element_text(size = 8)) 
+        
+P1+theme(axis.text.x = element_text(size = 6,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1),
+            strip.text = element_text(size = 8)) 
+
+```
+
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.1.B.V. **`r paste0(Fig.5.1.B.V)`** {#Fig.5.1.B.V-link -}
+```{r  echo=FALSE,message=FALSE,fig.height= 36, fig.width= 18}
+## Genome counts, faceted by week
+
+Country_sum <- Data1%>%filter(Timepoint =="TP2")%>% group_by(Country_Province,Year_Week)%>%summarise(Count =n()) %>%group_by(Country_Province)%>%mutate(Count2=cumsum(Count))
+
+P1 <-ggplot(data = Country_sum, aes(Country_Province, y = Count,  group= Year_Week )) + 
+  theme_bw()+
+   facet_wrap(~ Year_Week,ncol = 3)+
+    geom_bar(stat = "identity",fill = "#0077b6")+
+     labs(y = "Cases", x = "Country_Province" ) +  
+      theme(axis.text.x = element_text(size = 3 ,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1)) +
+         Plot_Theme+  Legend_Theme
+P1
+
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Supplementary figures](#plot-link5)
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
+
+##### &nbsp;<span style="color:blue"> 5.2. Lineage prevalence over tim </span> {.unnumbered}
+##### &nbsp;&nbsp;<span style="color:blue"> a.By Month </span>
+##### &nbsp;&nbsp;&nbsp; Figure 5.2.A.I. **`r paste0(Fig.5.2.A.I)`** {#Fig.5.2.A.I-link -}
+```{r  echo=FALSE,message=FALSE,results=FALSE,fig.keep="all",fig.height= 12, fig.width= 18}
+T8_clusters <- Data1%>%filter (Timepoint == "TP2")%>%group_by(T0.original)%>%dplyr::summarise(n=n())%>% arrange(desc(n))%>%top_n(8)
+
+T8_Data <- Data1%>%filter (Timepoint == "TP2", T0.original%in%T8_clusters$T0.original)%>%group_by(Country,T0.original,Year_Month)%>%dplyr::summarise(Count=n())%>% group_by(Country,T0.original)%>%mutate(Count2=cumsum(Count))%>%mutate(Country = factor(Country, levels=Country_Order$Country))
+
+P3 <-ggplot(T8_Data,aes(x = Year_Month, y= Count2,group = T0.original, color = T0.original)) +
+  theme_bw()+
+  geom_line(size = 1.3) +
+  facet_wrap(~ Country) +
+  scale_colour_brewer(palette = "Set1") +
+    theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1))+
+  labs(y = "Genome Count", x = "Month")+
+    Plot_Theme +Legend_Theme
+
+P3
+
+```
+
+
+##### &nbsp;&nbsp;<span style="color:blue"> b.By Week</span>
+##### &nbsp;&nbsp;&nbsp; Figure 5.2.B.I. **`r paste0(Fig.5.2.B.I)`** {#Fig.5.2.B.I-link -}
+```{r  echo=FALSE,message=FALSE,results=FALSE,fig.keep="all",fig.height= 12, fig.width= 18}
+T8_clusters <- Data1%>%filter (Timepoint == "TP2")%>%group_by(T0.original)%>%dplyr::summarise(n=n())%>% arrange(desc(n))%>%top_n(8)
+
+T8_Data <- Data1%>%filter (Timepoint == "TP2", T0.original%in%T8_clusters$T0.original)%>%group_by(Country,T0.original,Year_Week)%>%dplyr::summarise(Count=n())%>% group_by(Country,T0.original)%>%mutate(Count2=cumsum(Count))%>%mutate(Country = factor(Country, levels=Country_Order$Country))
+
+P3 <-ggplot(T8_Data,aes(x = Year_Week, y= Count2,group = T0.original, color = T0.original)) +
+  theme_bw()+
+  geom_line(size = 1.3) +
+  facet_wrap(~ Country) +
+  scale_colour_brewer(palette = "Set1") +
+    theme(axis.text.x = element_text(size = 6,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1))+
+  labs(y = "Genome Count", x = "Year_week")+
+    Plot_Theme +Legend_Theme
+
+P3
+
+```
+
+##### &nbsp;<span style="color:blue"> 5.3.Lineage spread by geographical area </span> {.unnumbered}
+##### &nbsp;&nbsp;<span style="color:blue"> a.By Country </span>
+##### &nbsp;&nbsp;&nbsp; Figure 5.3.A.I. **`r paste0(Fig.5.3.A.I)`**  {#Fig.5.3.A.I-link -}
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+## Country count in TP, Month and Week 
+T20_clusters <- Data1%>%filter (Timepoint == "TP2")%>%group_by(T0.original)%>%dplyr::summarise(n=n())%>% arrange(desc(n))%>%top_n(20)
+
+Country_TP <- Data1%>%filter (T0.original%in%T20_clusters$T0.original)%>%group_by(T0.original,Timepoint) %>% 
+  dplyr::summarise(Frequency = n_distinct(Country))%>% arrange((Frequency))
+
+Country_Month <- Data1%>% filter(Timepoint == "TP2",T0.original%in%T8_clusters$T0.original)%>%group_by(T0.original,Year_Month) %>% dplyr::summarise(Frequency = n_distinct(Country))
+  
+Country_Week <- Data1%>% filter(Timepoint == "TP2",T0.original%in%T8_clusters$T0.original)%>%group_by(T0.original,Year_Week) %>% dplyr::summarise(Frequency = n_distinct(Country))
+  
+C_TP <- ggplot(Country_TP, aes(x = fct_reorder(T0.original, desc(Frequency)), y =Frequency, fill= Timepoint )) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge")+
+    labs(y = "Number of countries", x = "Lineages",fill = "Time point")+
+    scale_fill_manual(values = c("#0077b6","#FCA311"))+
+     Plot_Theme +Legend_Theme+theme(axis.text.x=element_text( size=12, face= "bold",angle = 90, hjust = 1))
+
+C_TP 
+```
+
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.3.A.II. **`r paste0(Fig.5.3.A.II)`** {#Fig.5.3.A.II-link -}
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+C_Month  <-ggplot(Country_Month,aes(x = Year_Month, y = Frequency,group = T0.original, color = T0.original)) +
+  theme_bw()+
+  geom_line(size = 1.3) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(y = "Country Count", x = "Year_Month")+
+    theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1))+
+     Plot_Theme +Legend_Theme
+C_Month
+```
+
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.3.A.III. **`r paste0(Fig.5.3.A.III)`** {#Fig.5.3.A.III-link -}
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+C_Week  <-ggplot(Country_Week,aes(x = Year_Week, y = Frequency,group = T0.original, color = T0.original)) +
+  theme_bw()+
+  geom_line(size = 1.3) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(y = "Country Count", x = "Year_Week")+
+    theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1))+
+     Plot_Theme +Legend_Theme
+C_Week
+```
+
+
+##### &nbsp;&nbsp;<span style="color:blue"> b.By province </span>
+##### &nbsp;&nbsp;&nbsp; Figure 5.3.B.I. **`r paste0(Fig.5.3.B.I)`** {#Fig.5.3.B.I-link -}
+```{r  echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+## Province count in TP,Month, and WeeK
+
+Province_TP <- Data1%>%filter (T0.original%in%T20_clusters$T0.original)%>%group_by(T0.original,Timepoint) %>% 
+  dplyr::summarise(Frequency = n_distinct(Province))%>% arrange((Frequency))
+  
+
+Province_Month <- Data1%>% filter(Timepoint == "TP2",T0.original%in%T8_clusters$T0.original)%>%group_by(T0.original,Year_Month) %>% dplyr::summarise(Frequency = n_distinct(Province))
+  
+Province_Week <- Data1%>% filter(Timepoint == "TP2",T0.original%in%T8_clusters$T0.original)%>%group_by(T0.original,Year_Week) %>% dplyr::summarise(Frequency = n_distinct(Province))
+  
+P_TP <- ggplot(Province_TP, aes(x =fct_reorder(T0.original, desc(Frequency)), y =Frequency, fill= Timepoint)) + 
+   theme_bw() +
+   geom_bar(stat = "identity",position="dodge")+
+    labs(y = "Povince count", x = "Lineages", fill= "Time point")+
+    scale_fill_manual(values = c("#0077b6","#FCA311"))+
+    Plot_Theme +Legend_Theme+theme(axis.text.x=element_text( size=12, face= "bold",angle = 90, hjust = 1))
+
+P_TP 
+
+```
+
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.3.B.II. **`r paste0(Fig.5.3.B.II)`** {#Fig.5.3.B.II-link -}
+
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+
+P_Month <- ggplot(Province_Month,aes(x = Year_Month, y= Frequency,group = T0.original, color = T0.original)) +
+  theme_bw()+
+  geom_line(size = 1.3) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(y = "Province Count", x = "Year_Month")+
+    theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1))+
+     Plot_Theme +Legend_Theme
+  
+    
+P_Month 
+
+```
+
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.3.B.III. **`r paste0(Fig.5.3.B.III)`** {#Fig.5.3.B.III-link -}
+```{r echo=FALSE,message=FALSE,fig.height= 9, fig.width= 18}
+
+P_Week <- ggplot(Province_Week,aes(x = Year_Week, y= Frequency,group = T0.original, color = T0.original)) +
+  theme_bw()+
+  geom_line(size = 1.3) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(y = "Province Count", x = "Year_Week")+
+    theme(axis.text.x = element_text(size = 10,face = "bold",angle = 90, ,hjust = 1, vjust = 0.1))+
+      Plot_Theme +Legend_Theme  
+
+P_Week
+
+```
+
+
+##### &nbsp;&nbsp;&nbsp; Figure 5.4. **`r paste0(Fig.5.4)`** {#Fig.5.4-link -}
+```{r, error=FALSE, warning=FALSE, message=FALSE, results=FALSE,fig.keep="all",fig.height= 9, fig.width= 12}
+### pie plot for change vector on pango-lineages
+
+Pie_data1<-Pie_data %>%select(Vector_cardinal,Order)%>%distinct()%>%mutate(Count= Order)%>%setNames(c("CompassRoss_direction", "ECC direction classes","Count"))
+P1 <-Pie_data1 %>% 
+  arrange(Count)%>%
+  ggplot(aes(x=reorder(CompassRoss_direction, Count),y = Count)) +
+  geom_col(aes(fill = CompassRoss_direction)) +
+  scale_y_continuous(breaks=1:16)+
+  coord_polar(start = -pi/16)+
+  theme_bw()+
+  
+  labs(y = "ECC change vector direction classes", x = "CompassRoss Direction")+Plot_Theme + Legend_Theme
+P1
+```
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Supplementary figures](#plot-link5 )
+\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;go back to [Top](#top-link)
