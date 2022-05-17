@@ -1,7 +1,7 @@
 #! /usr/bin/env Rscript
 
 # General setup - calling libraries, etc. --------------------------------------------------------------
-msg <- file("logs/pairwise_strain_distances.txt", open="wt")
+msg <- file("logs/7_pairwise_strain_distances.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("optparse", "magrittr", "fossil", "tidyr", "plyr", "dplyr", "readr", 
@@ -68,6 +68,10 @@ if (num_cl == 0) {
     select(first_tp2_flag, tp2_cl_size, actual_growth_rate, new_growth) %>% unique() %>% 
     filter(tp2_cl_size >= (as.integer(params$mincl[2]) + 1)) 
   # we add 1 now because we used cluster size + 1 for the cgm columns
+  
+  # FOR NOW, SO WE DON'T HAVE MEMORY ISSUES DURING TESTING
+  # WILL NEED TO RESOLVE MEMORY ISSUES SO WE CAN REMOVE THIS LINE BEFORE THE NEXT VERSION RELEASE
+  cols_to_consider <- cols_to_consider[tp2_cl_size <= 2000]
   
   top_x_by_size <- cols_to_consider %>% arrange(-tp2_cl_size) %>% slice(1:num_cl) %>% 
     mutate(by_size = 1) %>% select(first_tp2_flag, tp2_cl_size, by_size)

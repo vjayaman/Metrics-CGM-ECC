@@ -4,7 +4,7 @@
 # max_cluster_size <- 2000
 
 # # General setup - calling libraries, etc. --------------------------------------------------------------
-msg <- file("logs/heatmaps.txt", open="wt")
+msg <- file("logs/8_heatmaps.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("optparse", "magrittr", "fossil", "tidyr", "plyr", "dplyr", 
@@ -48,10 +48,10 @@ if (num_cl == 0) {
   heatcolor <- colorRampPalette(c(params$lowcol[2],params$midcol[2],params$highcol[2]))(512)
   col_dir <- c(params$lowcol[2], params$highcol[2]) #c("Low similarity", "High similarity")
   
-  clustering_fname <- file.path("results", invl, "cluster_labs.Rds")
+  clustering_fname <- file.path("results", invl, "cluster_labs.txt")
   
   assert("7a_topX_distances.R was run beforehand", file.exists(clustering_fname))
-  clusters <- readRDS(clustering_fname) %>% arrange(TP2_cluster_size)
+  clusters <- read_tsv(clustering_fname) %>% arrange(TP2_cluster_size)
   
   metadata <- suppressMessages(read_tsv(arg$metadata)) %>% processedStrains()
   cfile_path <- file.path("results", invl, "epitables")
@@ -142,7 +142,7 @@ if (num_cl == 0) {
       file.path(basedir, "heatmaps", "clustering", paste0(cl_id, ".Rds")) %>% saveRDS(user_clustering, .)
       
     }else {
-      outputDetails(paste0("TP2 cluster ", clusters$chr[i], " has only one strain, no heatmap generated"))
+      outputDetails(paste0("TP2 cluster ", clusters$chr[i], " has only one strain, no heatmap generated\n"))
     }
   }
   

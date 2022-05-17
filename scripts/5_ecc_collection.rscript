@@ -1,6 +1,6 @@
 #! /usr/bin/env Rscript
 
-msg <- file("logs/ecc_collection.txt", open="wt")
+msg <- file("logs/5_ecc_collection.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",

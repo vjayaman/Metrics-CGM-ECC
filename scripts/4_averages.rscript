@@ -1,6 +1,6 @@
 #! /usr/bin/env Rscript
 
-msg <- file("logs/avg_dists.txt", open="wt")
+msg <- file("logs/4_avg_dists.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",

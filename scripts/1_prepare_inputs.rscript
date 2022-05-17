@@ -1,7 +1,7 @@
 #! /usr/bin/env Rscript
 # Current working directory should be Metrics-CGM-ECC/
 
-msg <- file(paste0("logs/prepare_inputs.txt"), open="wt")
+msg <- file(paste0("logs/1_prepare_inputs.txt"), open="wt")
 sink(msg, type="message")
 
 libs <- c("optparse", "magrittr", "readr", "dplyr", 

@@ -3,7 +3,7 @@
 
 # Current working directory should be Metrics-CGM-ECC/
 
-msg <- file("logs/cgm_collection.txt", open="wt")
+msg <- file("logs/2_cgm_collection.txt", open="wt")
 sink(msg, type="message")
 
 libs <- c("R6", "tibble", "optparse", "magrittr", "dplyr", "reshape2", "progress", 

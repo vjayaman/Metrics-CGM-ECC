@@ -2,7 +2,7 @@
 
 # Current working directory should be Metrics-CGM-ECC/
 
-msg <- file(paste0("logs/dist_matrices.txt"), open="wt")
+msg <- file(paste0("logs/3_dist_matrices.txt"), open="wt")
 sink(msg, type="message")
 
 libs <- c("R6","testit","optparse","magrittr","dplyr","tibble","readr",
