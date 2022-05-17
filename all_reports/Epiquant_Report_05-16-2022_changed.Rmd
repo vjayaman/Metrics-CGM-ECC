@@ -8,8 +8,8 @@ params:
   vector_file: "inputs/Vector_Order.csv"
   country_code_file: "inputs/Country_Code_1.csv"
   strain_results: "Merged_strain_results"
-  long_file_dir: "multiset"
-  epitables_dir: "results/multiset/epitables"
+  long_file_dir: "Multiset"
+  epitables_dir: "results/Multiset/epitables"
 ---
 
 ```{r setup, include=FALSE}
@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, eval=TRUE)
 ```
 
 
-```{r load-packages, warning = FALSE}
+```{r load-packages, warning = FALSE, message = FALSE}
 libs <- c("openxlsx", "reshape2", "plyr", "dplyr", "tidyr", "grid", "gridExtra", 
           "ggplot2", "RColorBrewer", "gplots", "readr", "scatterplot3d", 
           "heatmap3", "devtools", "knitr", "ggpubr", "ggrepel", "stringr", 
@@ -171,38 +171,36 @@ pacman::p_load(
 source("captions_and_functions.R")
 
 # LOADING DATA
-Lineages <- read_csv(params$lineage_file) %>% 
+Lineages <- read_csv(params$lineage_file, col_types = cols()) %>% 
   filter(T0 != "#N/A") %>% select("Strain", "T0.original", "Pango_lineage")
 
+ECC_long_base <- file.path("results", "Multiset", params$strain_results) %>%
+  list.files(., full.names = TRUE, pattern = "tsv") %>%
+  map(read_tsv, col_types = cols()) %>% reduce(rbind)
 
-ECC_long_base <- file.path("results", params$long_file_dir, params$strain_results) %>% 
+ECC_Month_base <- file.path("results", "YearMonth", params$strain_results) %>% 
   list.files(., full.names = TRUE, pattern = "tsv") %>% 
-  map(read_tsv) %>% reduce(rbind)
-
-
-ECC_Month_base <- file.path("results", "monthly", params$strain_results) %>% 
-  list.files(., full.names = TRUE, pattern = "tsv") %>% 
-  map(read_tsv) %>% reduce(rbind)
+  map(read_tsv, col_types = cols()) %>% reduce(rbind)
 
 first_monthday <- grep("set0", ECC_Month_base$interval, value = TRUE) %>% unique() %>% 
   as.character() %>% gsub("set0-", "", .)
 
 ECC_Month_base$interval <- gsub('set0', first_monthday, ECC_Month_base$interval)
 ECC_Month_base <- ECC_Month_base %>% separate(interval, into = c('Month_1', 'Month_2'), sep = 8)
-ECC_Month_base <- merge(x = ECC_Month_base, y = Lineages, by = "Strain", all.x = TRUE)
+ECC_Month_base <- merge(x = ECC_Month_base, y = Lineages, all.x = TRUE, 
+                        by = intersect(colnames(ECC_Month_base), colnames(Lineages)))
 
 
-ECC_Week <- file.path("results", "weekly", params$strain_results) %>% 
+ECC_Week <- file.path("results", "YearWeek", params$strain_results) %>% 
   list.files(., full.names = TRUE, pattern = "tsv") %>% 
-  map(read_tsv) %>% reduce(rbind)
-
-ECC_Week <- ECC_Week %>% 
+  map(read_tsv, col_types = cols()) %>% reduce(rbind) %>% 
   mutate(interval = gsub('set0', "00", interval), 
          Week1 = isoweek(Date), 
-         Year_Week = strftime(ECC_Week$Date, format = "%G-%V")) %>% 
-  merge(x = ., y = Lineages, by = "Strain", all.x = TRUE) %>% 
+         Year_Week = strftime(Date, format = "%G-%V"))
+
+ECC_Week <- ECC_Week %>% 
+  merge(x = ., y = Lineages, by = intersect(colnames(ECC_Week), colnames(Lineages)), all.x = TRUE) %>% 
   mutate_if(is.numeric, ~ round(., digit = 2))
-  # mutate(Week = ifelse(interval =="2020-07-27", "27", interval), )
 
 # create new variables Timepoints, Multistrains, Week and Running day
 ECC_Week <- ECC_Week %>% 
@@ -217,14 +215,15 @@ ECC_Week <- ECC_Week %>%
          "Cluster growth by size"=ECC_Week$`Actual cluster growth (TP2 size - TP1 size)`, 
          "Novel_growth by rate"=ECC_Week$`Novel growth = (TP2 size) / (TP2 size - number of novels)`)
 
-country_code <- read_csv(params$country_code_file)
-Vector_Order <- read_csv(params$vector_file)
+country_code <- read_csv(params$country_code_file, col_types = cols())
+Vector_Order <- read_csv(params$vector_file, col_types = cols())
 ```
 
 
 ```{r }
 # create new variables Timepoints, Multistrains, Week and Running day
-ECC_long <- merge(x = ECC_long_base, y = Lineages, by = "Strain", all.x = TRUE) %>% 
+ECC_long  <- merge(x = ECC_long_base, y = Lineages, all.x = TRUE, 
+              by = intersect(colnames(ECC_long_base), colnames(Lineages))) %>% 
   mutate(Week = week(Date), 
          Year_Week = strftime(Date, format = "%G-%V"), 
          Year_Month = strftime(Date, format = "%Y-%m"), 
@@ -1013,10 +1012,11 @@ Whisker_Data <- ECC_Month %>% select (Month_2, "Actual_growth by rate", "Novel_g
   setNames(c("Month", "Growth_type", "Growth_rate"))
 p6 <- ggplot(Whisker_Data, aes(x =Growth_type, y =Growth_rate, fill=Growth_type)) + theme_bw() +  
   geom_violin(trim=FALSE) + 
-  labs(y = "Growth rate", x = "Growth_type") + ggtitle ("Growth rate (by month)" ) + Plot_Theme 
-                                                                                                               
-P6 < -p6+theme(legend.position = "none") + 
+  labs(y = "Growth rate", x = "Growth_type") + ggtitle ("Growth rate (by month)" ) + Plot_Theme + 
+# P6 < p6+theme(legend.position = "none") + 
+  theme(legend.position = "none") +                                                                    
   stat_summary(fun.data="mean_sdl", mult=1, geom="crossbar", width=0.05, fill = "white", alpha =0.5 )
+p6
 ```
 
 
@@ -1042,7 +1042,8 @@ ECC_Week <- ECC_Week %>%
          "Novel_growth by rate"=`Novel growth = (TP2 size) / (TP2 size - number of novels)`) 
 
 ### monthly growth rate
-Whisker_Data <- ECC_long %>% select (Timepoint, "Actual_growth by rate", "Novel_growth by rate") %>% drop_na() %>% 
+Whisker_Data <- ECC_long %>% 
+  select (Timepoint, "Actual_growth by rate", "Novel_growth by rate") %>% drop_na() %>% 
   pivot_longer(cols = - Timepoint, names_to = c("Growth_type", ".value"), names_sep = "_") %>% 
   setNames(c("Timepoint", "Growth_type", "Growth_rate"))
 
@@ -1053,7 +1054,8 @@ p8 <- ggplot(Whisker_Data, aes(x=Growth_type, y=Growth_rate, fill=Growth_type)) 
                                                                                                                
 P8 <- p8 + theme(legend.position = "none") + 
   stat_summary(fun.data="mean_sdl", mult=1, geom="crossbar", width=0.05, fill = "white", alpha =0.5 )
-P8+P6+P7
+# P8+P6+P7
+P8+p6+P7
 ```
 
 ##### &nbsp;&nbsp; Figure 1.3.D. **`r paste0(Fig.1.3.D)`**  {#Fig.1.3.D-link -}
@@ -1692,10 +1694,10 @@ ggplotly(P7, height = 800, width = 1000) %>%
 
 #### <span style="color:blue">2. Geospatial and temporal heterogeneity within top clusters</span>  {.unnumbered}
 ```{r}
-heatmap_directory <- "results/multiset/heatmaps/"
-freq_directory <- "results/multiset/frequencies/"
-dens_directory <- "results/multiset/densities/"
-clust_directory <- "results/multiset/heatmaps/clustering/"
+heatmap_directory <- "results/Multiset/heatmaps/"
+freq_directory <- "results/Multiset/frequencies/"
+dens_directory <- "results/Multiset/densities/"
+clust_directory <- "results/Multiset/heatmaps/clustering/"
 ```
 
 ```{r fig.height= 9, fig.width= 18 }
@@ -1721,18 +1723,41 @@ TP2_lineage <- ECC_long %>% filter(Timepoint=="TP2") %>%
 
 TP2_lineage <- TP2_lineage %>% 
   mutate(TP2_Cluster_Size = paste0(TP2_lineage$`Last time this cluster was seen in TP2`, 
-                                   "-", TP2_lineage$Original_colname)) 
+                                   "-", TP2_lineage$Original_colname)) %>% 
+  select(TP2_Cluster_Size, Pango_lineage, Size, `Actual_growth by rate`, `Novel_growth by rate`, T0.original)
+# ADDED ------------------------
+# TP2_lineage$TP2_Cluster <- TP2_lineage$TP2_Cluster_Size %>% 
+#   lapply(., function(x_i) {strsplit(x_i, split = "-")[[1]][1]}) %>% unlist()
+# TP2_lineage$TP2_Cluster <- paste(TP2_lineage$TP2_Cluster, TP2_lineage$Pango_lineage, sep = "-")
 
-TP2_lineage <- TP2_lineage %>% select(TP2_Cluster_Size, Pango_lineage, Size, `Actual_growth by rate`, 
-                                      `Novel_growth by rate`, T0.original)
 
-clust_directory <- "results/multiset/heatmaps/clustering/"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ------------------------------
+
+
+clust_directory <- "results/Multiset/heatmaps/clustering/"
 T5_files <- list.files(clust_directory, full.names = T)
 
 TP2_names <- unlist(T5_files) %>% gsub(clust_directory, "", .) %>% 
   gsub(".Rds", "", .) %>% data.frame() %>% setNames("TP2_Cluster")
 
-heatmap_names <-TP2_lineage %>% filter(TP2_Cluster_Size %in% TP2_names$TP2_Cluster)
+heatmap_names <- TP2_lineage %>% filter(TP2_Cluster_Size %in% TP2_names$TP2_Cluster)
 
 T5_Size_names <-heatmap_names %>% select(TP2_Cluster_Size, T0.original, Size) %>% top_n(5) %>% arrange(desc(Size)) 
 
