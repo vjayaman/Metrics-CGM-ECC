@@ -35,7 +35,8 @@
 
 #### Not done
 
-* better average_dists implementation (faster, for larger files)
+* better average_dists implementation (faster, for larger files) (use C/python)
+* better ECC collections (faster, for larger files, consider parallelization) (use C)
 * whisker plots – too much data?
 * line 919 – pairwise geo and temp distance for top 20 clusters need to calculate the actual physical pairwise distance, then we have to change the distance calculation in step 4
 * heatmap generation - write up in a jupyter notebook / Rmarkdown file - so it's easy for others to verify steps
