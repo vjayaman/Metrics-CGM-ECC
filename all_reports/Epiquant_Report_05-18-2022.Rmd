@@ -10,6 +10,10 @@ params:
   strain_results: "Merged_strain_results"
   long_file_dir: "Multiset"
   epitables_dir: "results/Multiset/epitables"
+  heatmap_dir: "results/Multiset/heatmaps/"
+  freq_dir: "results/Multiset/frequencies/"
+  dens_dir: "results/Multiset/densities/"
+  clust_dir: "results/Multiset/heatmaps/clustering/"
 ---
 
 ```{r setup, include=FALSE}
@@ -18,12 +22,16 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, eval=TRUE)
 
 
 ```{r load-packages, warning = FALSE, message = FALSE}
+# lines that should be commented out / removed before git updates are marked with : 
+#                             # REMOVE THIS LINE BEFORE SUBMISSION
+
 libs <- c("openxlsx", "reshape2", "plyr", "dplyr", "tidyr", "grid", "gridExtra", 
           "ggplot2", "RColorBrewer", "gplots", "readr", "scatterplot3d", 
           "heatmap3", "devtools", "knitr", "ggpubr", "ggrepel", "stringr", 
           "magrittr", "tibble", "purrr", "summarytools", "lubridate", "tinytex", 
           "png", "patchwork", "tidyverse", "ggridges", "bookdown", "foreign", 
-          "data.table", "forcats", "plotly")
+          "data.table", "forcats", "plotly", "magick", "filesstrings")
+
 y <- lapply(libs, require, character.only = TRUE); rm(libs); rm(y)
 
 ## for tables
@@ -222,7 +230,7 @@ Vector_Order <- read_csv(params$vector_file, col_types = cols())
 
 ```{r }
 # create new variables Timepoints, Multistrains, Week and Running day
-ECC_long  <- merge(x = ECC_long_base, y = Lineages, all.x = TRUE, 
+ECC_long <- merge(x = ECC_long_base, y = Lineages, all.x = TRUE, 
               by = intersect(colnames(ECC_long_base), colnames(Lineages))) %>% 
   mutate(Week = week(Date), 
          Year_Week = strftime(Date, format = "%G-%V"), 
@@ -480,7 +488,7 @@ ggplotly(P3, height = 800, width = 1000) %>%
 ```{r error=FALSE, warning=FALSE, message=FALSE, fig.height= 6, fig.width= 9}
 ##  10< TP1_size < 101
 df <- df3 %>% filter(TP1_Size =="10< TP1_size < 101")
-P4data <-Bubble_Plot_data1 %>% filter(T0.original %in% df$T0.original)
+P4data <- Bubble_Plot_data1 %>% filter(T0.original %in% df$T0.original)
 
 
 P3 <- ggplot(P4data, aes(fill= Timepoint, label1=T0.original, size = Cluster_Size, 
@@ -644,7 +652,7 @@ Missed_direction <- Vector_Order %>% filter(!Vector_cardinal %in% unique(Data_di
 Data_dir1 <- Data_dir[1:nrow(Missed_direction), ] %>% select(-Vector_cardinal)
 Data_dir1[, 3:ncol(Data_dir1)] <- 0
 Data_dir1$TP1_Size ="TP1_size = NA"
-Data_dir1$Vector_cardinal <-Missed_direction$Vector_cardinal
+Data_dir1$Vector_cardinal <- Missed_direction$Vector_cardinal
 
 Pie_data <- rbind(Data_dir, Data_dir1) %>% 
   left_join(Vector_Order) %>% 
@@ -653,7 +661,7 @@ Pie_data <- rbind(Data_dir, Data_dir1) %>%
   mutate(Lineages = n()) %>% 
   arrange(Order)
 #my_image <- readPNG("C:/Users/guzhang/Desktop/cov-2 first wave dataset/EU_heatmap/Compass direction 2.png", native = TRUE)
-#my_image<- readPNG("input/Compass direction 2.png", native = TRUE)
+#my_image <- readPNG("input/Compass direction 2.png", native = TRUE)
 
 P1 <- ggplot(Pie_data, aes(x= reorder(Vector_cardinal, Order), fill= TP1_Size)) + 
   geom_bar() +
@@ -765,9 +773,9 @@ tab %>%
 
 ## set Timepoint, Multistrain_cluster, Geo_ECC level and Temp_level as factor
 
-#ECC_level<- Pie_data %>% ungroup() %>% mutate(Geo_ECC_level= cut_interval(Geo_ECC, n = 6), Temp_ECC_level = cut_interval(Temp_ECC, n = 6), Delta_Geo_ECC_level = cut_interval(Delta_Geo_ECC, n = 6), Delta_Temp_ECC_level = cut_interval(Delta_Temp_ECC, n = 6))
+#ECC_level <- Pie_data %>% ungroup() %>% mutate(Geo_ECC_level= cut_interval(Geo_ECC, n = 6), Temp_ECC_level = cut_interval(Temp_ECC, n = 6), Delta_Geo_ECC_level = cut_interval(Delta_Geo_ECC, n = 6), Delta_Temp_ECC_level = cut_interval(Delta_Temp_ECC, n = 6))
 
-#ECC_level <-ECC_level %>% left_join(ECC_long %>% filter(Timepoint == "TP2"))
+#ECC_level <- ECC_level %>% left_join(ECC_long %>% filter(Timepoint == "TP2"))
 
 
 # Geo_ECC_Level Pie
@@ -845,7 +853,7 @@ P1 + P4 + plot_layout(widths = c(1, 1), guides = 'collect')
 
 ```{r error=FALSE, warning=FALSE, message=FALSE, results=FALSE, fig.height= 9, fig.width= 20}
 # Delta_Temp_ECC
-P1 <-  ggplot(ECC_level, aes(x= reorder(Vector_cardinal, Order), fill= Delta_Temp_ECC_level)) +
+P1 <- ggplot(ECC_level, aes(x= reorder(Vector_cardinal, Order), fill= Delta_Temp_ECC_level)) +
   scale_colour_brewer(palette = "Set1") + 
   geom_bar() +
   coord_polar(start = -pi/16) +
@@ -903,7 +911,7 @@ Country_TP <- Data1 %>% group_by(Year_Month) %>%
   dplyr::summarise(Frequency = n_distinct(Country)) %>% arrange((Frequency))
 
 
-Province_TP<-Data1 %>% filter(T0.original %in% T20_clusters$T0.original) %>% 
+Province_TP <- Data1 %>% filter(T0.original %in% T20_clusters$T0.original) %>% 
   group_by(T0.original, Timepoint) %>% 
   dplyr::summarise(Frequency = n_distinct(Province)) %>% arrange((Frequency))
 
@@ -1007,9 +1015,10 @@ ECC_Month <- ECC_Month %>%
          "Novel_growth by rate" = ECC_Month$`Novel growth = (TP2 size) / (TP2 size - number of novels)`) 
 
 ### monthly growth rate
-Whisker_Data <- ECC_Month %>% select (Month_2, "Actual_growth by rate", "Novel_growth by rate") %>% drop_na() %>% 
+Whisker_Data <- ECC_Month %>% select(Month_2, "Actual_growth by rate", "Novel_growth by rate") %>% drop_na() %>% 
   pivot_longer(cols = - Month_2, names_to = c("Growth_type", ".value"), names_sep = "_") %>% 
   setNames(c("Month", "Growth_type", "Growth_rate"))
+
 p6 <- ggplot(Whisker_Data, aes(x =Growth_type, y =Growth_rate, fill=Growth_type)) + theme_bw() +  
   geom_violin(trim=FALSE) + 
   labs(y = "Growth rate", x = "Growth_type") + ggtitle ("Growth rate (by month)" ) + Plot_Theme + 
@@ -1074,7 +1083,7 @@ P1 <- ggplot(Pie_data1, aes(x = Growth_new )) + theme_bw() +
 
 
 ## genome histogram: 
-#Pie_data1<- Pie_data %>% mutate(Growth_rate_level = ifelse (`Cluster growth by rate` < 2, "Growth rate < 2", ifelse (`Cluster growth by rate` < 4, "Growth rate < 4", ifelse (`Cluster growth by rate` < 6, "Growth rate < 6" , ifelse (`Cluster growth by rate` < 8, "Growth rate < 8", "Growth rate > = 8"))))) %>% as.tibble()
+#Pie_data1 <- Pie_data %>% mutate(Growth_rate_level = ifelse (`Cluster growth by rate` < 2, "Growth rate < 2", ifelse (`Cluster growth by rate` < 4, "Growth rate < 4", ifelse (`Cluster growth by rate` < 6, "Growth rate < 6" , ifelse (`Cluster growth by rate` < 8, "Growth rate < 8", "Growth rate > = 8"))))) %>% as.tibble()
 
 Gen_data <- Pie_data1 %>% left_join(ECC_long %>% filter(Timepoint == "TP2")) %>% drop_na(Geo_ECC)
 P2 <- ggplot(Gen_data, aes(x = Growth_new )) + theme_bw() +
@@ -1124,11 +1133,11 @@ Centroid_data <- ECC_long %>% filter(Timepoint== "TP2") %>%
   select(Strain, T0.original, "TP1_Temp.Avg.Dist", "TP1_Geo.Avg.Dist", "TP2_Temp.Avg.Dist", 
          "TP2_Geo.Avg.Dist", Cluster_Size: PANGO_lineage) %>% drop_na()
 
-Centroid_Total<- Centroid_data %>% group_by(T0.original, PANGO_lineage) %>% 
+Centroid_Total <- Centroid_data %>% group_by(T0.original, PANGO_lineage) %>% 
   summarise_at(vars("TP1_Temp.Avg.Dist":"Actual_growth by rate" ), mean) %>% 
   arrange(desc(Cluster_Size)) %>% mutate_if(is.numeric, round, 2)
 
-Centroid_Total<- Centroid_Total %>% 
+Centroid_Total <- Centroid_Total %>% 
   mutate(TP2_Size = as.integer(Cluster_Size), TP1_Size=as.integer(Cluster_Size1)) %>% as.tibble()
 
 ## top 20 by TP2 size 
@@ -1153,7 +1162,7 @@ T20_CompassRoss <- Pie_data %>% as.tibble() %>%
   filter(T0.original %in% T20_S$PANGO_lineage) %>% select(T0.original, Vector_cardinal) %>% 
   rename("PANGO_lineage"= T0.original, "CompassRoss_direction"=Vector_cardinal) 
 
-T20_S <-T20_S %>% left_join(T20_CompassRoss) %>% 
+T20_S <- T20_S %>% left_join(T20_CompassRoss) %>% 
   mutate(PANGO_lineage= factor(PANGO_lineage, levels=T20_Size$T0.original))
 
 P1 <- ggplot(T20_S, aes(x = PANGO_lineage, , y = `Size`, fill = Timepoint)) + theme_bw() + 
@@ -1237,7 +1246,7 @@ T20_G <- T20_Growth_rate %>% select("T0.original", "Novel_growth by rate", "Actu
 
 T20_CompassRoss <- Pie_data %>% as.tibble() %>% filter(T0.original %in% T20_G$T0.original) %>% 
   select(T0.original, Vector_cardinal) %>% rename("CompassRoss_direction"=Vector_cardinal) 
-T20_G <-T20_G %>% left_join(T20_CompassRoss)
+T20_G <- T20_G %>% left_join(T20_CompassRoss)
 
 P1 <- ggplot(T20_G, aes(x = reorder(T0.original, -`growth by rate`), y = `growth by rate`, fill= observation)) + 
   theme_bw() + geom_bar (position = "dodge", stat = "identity" ) +
@@ -1365,7 +1374,7 @@ Bubble_Plot_data1 <- ECC_Month %>% group_by(T0.original, Month_2) %>%
 Bubble_Plot_data2 <- Bubble_Plot_data1 %>% 
   pivot_longer(cols = -c(1, 2, 5), names_to = c("ECC.cat", ".value"), names_sep = "_")
 
-TP10 <-T20_Size[1:10, ]
+TP10 <- T20_Size[1:10, ]
 data <- Bubble_Plot_data1 %>% filter(T0.original %in% TP10$T0.original) %>% 
   mutate(T0.original = factor(T0.original, levels= TP10$T0.original))
 
@@ -1533,7 +1542,7 @@ Bubble_Plot_data1 <- ECC_Week %>% group_by(T0.original, Year_Week) %>%
                     Geo_ECC1, Temp_ECC1, `Cluster growth by size`, `Novel_growth by rate`), mean) %>% 
   drop_na() %>% mutate(Geo.Temp_ECC = (Geo_ECC+Temp_ECC)/2)
 
-TP10 <-T20_Size[1:10, ]
+TP10 <- T20_Size[1:10, ]
 
 data <- Bubble_Plot_data1 %>% filter(T0.original %in% TP10$T0.original) %>% 
   mutate(T0.original = factor(T0.original, levels= TP10$T0.original)) %>% 
@@ -1693,20 +1702,14 @@ ggplotly(P7, height = 800, width = 1000) %>%
 &emsp;&emsp;go back to [Top](#top-link)
 
 #### <span style="color:blue">2. Geospatial and temporal heterogeneity within top clusters</span>  {.unnumbered}
-```{r}
-heatmap_directory <- "results/Multiset/heatmaps/"
-freq_directory <- "results/Multiset/frequencies/"
-dens_directory <- "results/Multiset/densities/"
-clust_directory <- "results/Multiset/heatmaps/clustering/"
-```
 
 ```{r fig.height= 9, fig.width= 18 }
-library(magick)
-library(filesstrings)
-## top5 cluster by TP2 size  and adding Pango lineages names, change the file names of the heatmaps to have pango lineages
+# library(magick); library(filesstrings)
+## top5 cluster by TP2 size and adding Pango lineages names, 
+## change the file names of the heatmaps to have pango lineages
 tpn <- readRDS("inputs/processed/allTP2.Rds")
 
-Lineages_1 <- as.data.table(tpn$original[, c("Strain", "T0")]) %>%
+Lineages_1 <- tpn$original[, c("Strain", "T0")] %>% as.data.table() %>%
   merge.data.table(tpn$new_cols[, c("Strain", "0")], ., by = "Strain") %>%
   set_colnames(c("Strain", "New_colname", "Original_colname"))
 
@@ -1714,62 +1717,49 @@ sizes <- Lineages_1 %>% pull(Original_colname) %>% table() %>% as.data.table() %
   set_colnames(c("Original_colname", "Size")) %>% mutate(across(.cols = everything(), as.integer))
  
 Lineages_1 <- merge.data.table(Lineages_1, sizes, by = c("Original_colname")) %>% 
-  select(Strain, New_colname, Original_colname, Size) %>% left_join(Lineages) %>% select(-Strain) %>% distinct()
+  select(Strain, New_colname, Original_colname, Size) %>% 
+  left_join(Lineages, by = "Strain") %>% select(-Strain) %>% distinct()
 
 
-TP2_lineage <- ECC_long %>% filter(Timepoint=="TP2") %>% 
-  select(T0.original, `Last time this cluster was seen in TP2`, `Novel_growth by rate`, `Actual_growth by rate`) %>% 
-  distinct() %>% left_join(Lineages_1)
+TP2_lineage <- ECC_long %>% #filter(Timepoint=="TP2") %>% 
+  select(T0.original, `Last time this cluster was seen in TP2`, 
+         `Novel_growth by rate`, `Actual_growth by rate`, `Actual TP2 cluster`) %>% 
+  distinct() %>% 
+  left_join(Lineages_1, by = c("Actual TP2 cluster" = "Original_colname", "T0.original")) %>% 
+  rename(Original_colname = `Actual TP2 cluster`)
 
 TP2_lineage <- TP2_lineage %>% 
-  mutate(TP2_Cluster_Size = paste0(TP2_lineage$`Last time this cluster was seen in TP2`, 
-                                   "-", TP2_lineage$Original_colname)) %>% 
-  select(TP2_Cluster_Size, Pango_lineage, Size, `Actual_growth by rate`, `Novel_growth by rate`, T0.original)
-# ADDED ------------------------
-# TP2_lineage$TP2_Cluster <- TP2_lineage$TP2_Cluster_Size %>% 
-#   lapply(., function(x_i) {strsplit(x_i, split = "-")[[1]][1]}) %>% unlist()
-# TP2_lineage$TP2_Cluster <- paste(TP2_lineage$TP2_Cluster, TP2_lineage$Pango_lineage, sep = "-")
+  mutate(TP2_Cluster = paste0(TP2_lineage$`Last time this cluster was seen in TP2`)) %>% #,
+                                   # "-", TP2_lineage$Original_colname)) %>%
+  select(TP2_Cluster, Original_colname, Pango_lineage, Size, 
+         `Actual_growth by rate`, `Novel_growth by rate`, T0.original)
 
 
+TP2_names <- list.files(params$clust_dir, full.names = T) %>% 
+  lapply(., function(x_i) {
+    cluster_label <- strsplit(x_i, split = "/")[[1]][5]
+    substr(cluster_label, 15, nchar(cluster_label)-4)
+}) %>% unlist() %>% data.frame() %>% setNames("T0.original")
 
+heatmap_names <- TP2_lineage %>% filter(T0.original %in% TP2_names$T0.original)
 
+T5_Size_names <- heatmap_names %>% select(Original_colname, T0.original, Size) %>% distinct() %>% 
+  top_n(5) %>% arrange(desc(Size))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ------------------------------
-
-
-clust_directory <- "results/Multiset/heatmaps/clustering/"
-T5_files <- list.files(clust_directory, full.names = T)
-
-TP2_names <- unlist(T5_files) %>% gsub(clust_directory, "", .) %>% 
-  gsub(".Rds", "", .) %>% data.frame() %>% setNames("TP2_Cluster")
-
-heatmap_names <- TP2_lineage %>% filter(TP2_Cluster_Size %in% TP2_names$TP2_Cluster)
-
-T5_Size_names <-heatmap_names %>% select(TP2_Cluster_Size, T0.original, Size) %>% top_n(5) %>% arrange(desc(Size)) 
+# CHECK SIZES
+part1 <- TP2_lineage %>% filter(Original_colname %in% T5_Size_names$Original_colname) %>% 
+  select(T0.original, Original_colname, Size) %>% arrange(T0.original) %>% distinct()
+part2 <- T5_Size_names %>% select(T0.original, Original_colname, Size) %>% arrange(T0.original)
+testit::assert("Sizes match", identical(part1, part2))
 
 Cluster_heatmap <- function(Cluster_Name, Pango_lineage, Size, heatmap_dir){
-  Heatmap_files <-list.files(heatmap_dir, pattern = Cluster_Name, full.names = T)
+  Heatmap_files <- list.files(heatmap_dir, pattern = Cluster_Name, full.names = T)
   HF_images <- image_read(Heatmap_files) %>% image_scale("1000x1000")
     image_append(c(HF_images[1], HF_images[3], HF_images[2])) %>% 
-     image_annotate(paste0(Pango_lineage, "( n=", Size, " ):", 
-                          " Geo distance(left), ", 
+     image_annotate(paste0(Pango_lineage, "( n=", Size, " ):", " Geo distance(left), ", 
                           " Geo/Temp(50/50) distance and Temp distance (right)"), 
-                   location = "+10+800", font = 'Times', size = 50 )
-  }
+                    location = "+10+800", font = 'Times', size = 50 )
+}
 
 ## function to load freguency histogram
 Cluster_frequency <- function(Cluster_Name, Pango_lineage, Size, freq_dir){
@@ -1786,85 +1776,85 @@ Cluster_frequency <- function(Cluster_Name, Pango_lineage, Size, freq_dir){
 ##### &nbsp;&nbsp; Figure 2.1.A. **`r paste0(Fig.2.1.A)`**  {#Fig.2.1.A-link -}
 
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_heatmap(Cluster_Name = T5_Size_names$TP2_Cluster_Size[5], 
+Cluster_heatmap(Cluster_Name = T5_Size_names$T0.original[5], 
                 Pango_lineage = T5_Size_names$T0.original[5], 
                 Size = T5_Size_names$Size[5], 
-                heatmap_dir = heatmap_directory)
+                heatmap_dir = params$heatmap_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.1.B. **`r paste0(Fig.2.1.B)`**  {#Fig.2.1.B-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_heatmap(Cluster_Name = T5_Size_names$TP2_Cluster_Size[4], 
+Cluster_heatmap(Cluster_Name = T5_Size_names$T0.original[4], 
                 Pango_lineage = T5_Size_names$T0.original[4], 
                 Size = T5_Size_names$Size[4], 
-                heatmap_dir = heatmap_directory)
+                heatmap_dir = params$heatmap_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.1.C. **`r paste0(Fig.2.1.C)`**   {#Fig.2.1.C-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_heatmap(Cluster_Name = T5_Size_names$TP2_Cluster_Size[3], 
+Cluster_heatmap(Cluster_Name = T5_Size_names$T0.original[3], 
                 Pango_lineage = T5_Size_names$T0.original[3], 
                 Size = T5_Size_names$Size[3], 
-                heatmap_dir = heatmap_directory)
+                heatmap_dir = params$heatmap_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.1.D. **`r paste0(Fig.2.1.D)`** {#Fig.2.1.D-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_heatmap(Cluster_Name = T5_Size_names$TP2_Cluster_Size[2], 
+Cluster_heatmap(Cluster_Name = T5_Size_names$T0.original[2], 
                 Pango_lineage = T5_Size_names$T0.original[2], 
                 Size = T5_Size_names$Size[2], 
-                heatmap_dir = heatmap_directory)
+                heatmap_dir = params$heatmap_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.1.E. **`r paste0(Fig.2.1.E)`**  {#Fig.2.1.E-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_heatmap(Cluster_Name = T5_Size_names$TP2_Cluster_Size[1], 
+Cluster_heatmap(Cluster_Name = T5_Size_names$T0.original[1], 
                 Pango_lineage = T5_Size_names$T0.original[1], 
                 Size = T5_Size_names$Size[1], 
-                heatmap_dir = heatmap_directory)
+                heatmap_dir = params$heatmap_dir)
 ```
 
 ##### &nbsp;&nbsp; Figure 2.1.F. **`r paste0(Fig.2.1.F)`**  {#Fig.2.1.F-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_frequency(Cluster_Name = T5_Size_names$TP2_Cluster_Size[5], 
+Cluster_frequency(Cluster_Name = T5_Size_names$T0.original[5], 
                   Pango_lineage = T5_Size_names$T0.original[5], 
-                  Size = T5_Size_names$Size[5], freq_dir = freq_directory)
+                  Size = T5_Size_names$Size[5], freq_dir = params$freq_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.1.G. **`r paste0(Fig.2.1.G)`**  {#Fig.2.1.G-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_frequency(Cluster_Name = T5_Size_names$TP2_Cluster_Size[4], 
+Cluster_frequency(Cluster_Name = T5_Size_names$T0.original[4], 
                   Pango_lineage = T5_Size_names$T0.original[4], 
-                  Size = T5_Size_names$Size[4], freq_dir = freq_directory)
+                  Size = T5_Size_names$Size[4], freq_dir = params$freq_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.1.H. **`r paste0(Fig.2.1.H)`**  {#Fig.2.1.H-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_frequency(Cluster_Name = T5_Size_names$TP2_Cluster_Size[3], 
+Cluster_frequency(Cluster_Name = T5_Size_names$T0.original[3], 
                   Pango_lineage = T5_Size_names$T0.original[3], 
-                  Size = T5_Size_names$Size[3], freq_dir = freq_directory)
+                  Size = T5_Size_names$Size[3], freq_dir = params$freq_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.1.I. **`r paste0(Fig.2.1.I)`**  {#Fig.2.1.I-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_frequency(Cluster_Name = T5_Size_names$TP2_Cluster_Size[2], 
+Cluster_frequency(Cluster_Name = T5_Size_names$T0.original[2], 
                   Pango_lineage = T5_Size_names$T0.original[2], 
-                  Size = T5_Size_names$Size[2], freq_dir = freq_directory)
+                  Size = T5_Size_names$Size[2], freq_dir = params$freq_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.1.J. **`r paste0(Fig.2.1.J)`**  {#Fig.2.1.J-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_frequency(Cluster_Name = T5_Size_names$TP2_Cluster_Size[1], 
+Cluster_frequency(Cluster_Name = T5_Size_names$T0.original[1], 
                   Pango_lineage = T5_Size_names$T0.original[1], 
-                  Size = T5_Size_names$Size[1], freq_dir = freq_directory)
+                  Size = T5_Size_names$Size[1], freq_dir = params$freq_dir)
 ```
 
 
@@ -1875,53 +1865,54 @@ Cluster_frequency(Cluster_Name = T5_Size_names$TP2_Cluster_Size[1],
 ##### &nbsp;<span style="color:blue"> 2.2. Heatmaps and pairwise distance frequency histograms for top 5 clusters  (by growth rate)</span> {.unnumbered}
 ```{r}
 ## top5 growth rate
-T5_Growth_names <-heatmap_names %>% select(TP2_Cluster_Size, T0.original, Size, `Novel_growth by rate`) %>% 
-  top_n(5)%>% arrange(desc(`Novel_growth by rate`)) 
+T5_Growth_names <- heatmap_names %>% 
+  select(TP2_Cluster, T0.original, Size, `Novel_growth by rate`) %>% distinct() %>% 
+  top_n(5) %>% arrange(desc(`Novel_growth by rate`)) 
 ```
 
 ##### &nbsp;&nbsp; Figure 2.2.A. **`r paste0(Fig.2.2.A)`**  {#Fig.2.2.A-link -}
 
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_heatmap(Cluster_Name = T5_Growth_names$TP2_Cluster_Size[5], 
+Cluster_heatmap(Cluster_Name = T5_Growth_names$T0.original[5], 
                 Pango_lineage = T5_Growth_names$T0.original[5], 
                 Size = T5_Growth_names$Size[5], 
-                heatmap_dir = heatmap_directory)
+                heatmap_dir = params$heatmap_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.2.B. **`r paste0(Fig.2.2.B)`**  {#Fig.2.2.B-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_heatmap(Cluster_Name = T5_Growth_names$TP2_Cluster_Size[4], 
+Cluster_heatmap(Cluster_Name = T5_Growth_names$T0.original[4], 
                 Pango_lineage = T5_Growth_names$T0.original[4], 
                 Size = T5_Growth_names$Size[4], 
-                heatmap_dir = heatmap_directory)
+                heatmap_dir = params$heatmap_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.2.C. **`r paste0(Fig.2.2.C)`**   {#Fig.2.2.C-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_heatmap(Cluster_Name = T5_Growth_names$TP2_Cluster_Size[3], 
+Cluster_heatmap(Cluster_Name = T5_Growth_names$T0.original[3], 
                 Pango_lineage = T5_Growth_names$T0.original[3], 
                 Size = T5_Growth_names$Size[3], 
-                heatmap_dir = heatmap_directory)
+                heatmap_dir = params$heatmap_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.2.D. **`r paste0(Fig.2.2.D)`** {#Fig.2.2.D-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_heatmap(Cluster_Name = T5_Growth_names$TP2_Cluster_Size[2], 
+Cluster_heatmap(Cluster_Name = T5_Growth_names$T0.original[2], 
                 Pango_lineage = T5_Growth_names$T0.original[2], 
                 Size = T5_Growth_names$Size[2], 
-                heatmap_dir = heatmap_directory)
+                heatmap_dir = params$heatmap_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.2.E. **`r paste0(Fig.2.2.E)`**  {#Fig.2.2.E-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_heatmap(Cluster_Name = T5_Growth_names$TP2_Cluster_Size[1], 
+Cluster_heatmap(Cluster_Name = T5_Growth_names$T0.original[1], 
                 Pango_lineage = T5_Growth_names$T0.original[1], 
                 Size = T5_Growth_names$Size[1], 
-                heatmap_dir = heatmap_directory)
+                heatmap_dir = params$heatmap_dir)
 ```
 &emsp;&emsp;go back to [Geospatial and temporal heterogeneity within top clusters](#plot-link3)
 \
@@ -1929,41 +1920,41 @@ Cluster_heatmap(Cluster_Name = T5_Growth_names$TP2_Cluster_Size[1],
 
 ##### &nbsp;&nbsp; Figure 2.2.F. **`r paste0(Fig.2.2.F)`**  {#Fig.2.2.F-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_frequency(Cluster_Name = T5_Growth_names$TP2_Cluster_Size[5], 
+Cluster_frequency(Cluster_Name = T5_Growth_names$T0.original[5], 
                   Pango_lineage = T5_Growth_names$T0.original[5], 
-                  Size = T5_Growth_names$Size[5], freq_dir = freq_directory)
+                  Size = T5_Growth_names$Size[5], freq_dir = params$freq_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.2.G. **`r paste0(Fig.2.2.G)`**  {#Fig.2.2.G-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_frequency(Cluster_Name = T5_Growth_names$TP2_Cluster_Size[4], 
+Cluster_frequency(Cluster_Name = T5_Growth_names$T0.original[4], 
                   Pango_lineage = T5_Growth_names$T0.original[4], 
-                  Size = T5_Growth_names$Size[4], freq_dir = freq_directory)
+                  Size = T5_Growth_names$Size[4], freq_dir = params$freq_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.2.H. **`r paste0(Fig.2.2.H)`**  {#Fig.2.2.H-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_frequency(Cluster_Name = T5_Growth_names$TP2_Cluster_Size[3], 
+Cluster_frequency(Cluster_Name = T5_Growth_names$T0.original[3], 
                   Pango_lineage = T5_Growth_names$T0.original[3], 
-                  Size = T5_Growth_names$Size[3], freq_dir = freq_directory)
+                  Size = T5_Growth_names$Size[3], freq_dir = params$freq_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.2.I. **`r paste0(Fig.2.2.I)`**  {#Fig.2.2.I-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_frequency(Cluster_Name = T5_Growth_names$TP2_Cluster_Size[2], 
+Cluster_frequency(Cluster_Name = T5_Growth_names$T0.original[2], 
                   Pango_lineage = T5_Growth_names$T0.original[2], 
-                  Size = T5_Growth_names$Size[2], freq_dir = freq_directory)
+                  Size = T5_Growth_names$Size[2], freq_dir = params$freq_dir)
 ```
 
 
 ##### &nbsp;&nbsp; Figure 2.2.J. **`r paste0(Fig.2.2.J)`**  {#Fig.2.2.J-link -}
 ```{r fig.height= 9, fig.width= 18 }
-Cluster_frequency(Cluster_Name = T5_Growth_names$TP2_Cluster_Size[1], 
+Cluster_frequency(Cluster_Name = T5_Growth_names$T0.original[1], 
                   Pango_lineage = T5_Growth_names$T0.original[1], 
-                  Size = T5_Growth_names$Size[1], freq_dir = freq_directory)
+                  Size = T5_Growth_names$Size[1], freq_dir = params$freq_dir)
 ```
 
 &emsp;&emsp;go back to [Geospatial and temporal heterogeneity within top clusters](#plot-link3)
@@ -1974,22 +1965,26 @@ Cluster_frequency(Cluster_Name = T5_Growth_names$TP2_Cluster_Size[1],
 ##### &nbsp;&nbsp; Figure 2.3.A. **`r paste0(Fig.2.3.A)`**  {#Fig.2.3.A-link -}
 ```{r fig.height= 9, fig.width= 18 }
 ## whisker plots for Geo and temporal distance distribution around the mean
-T5_Size_names <- TP2_lineage %>% select(TP2_Cluster_Size, Pango_lineage, Size) %>% top_n(5)%>% arrange(desc(Size)) 
+T5_Size_names <- TP2_lineage %>% select(TP2_Cluster, Pango_lineage, Size) %>% 
+  distinct() %>% arrange(desc(Size)) %>% 
+  # REMOVE THIS LINE BEFORE SUBMISSION
+  filter(Size <= 2000) %>% 
+  top_n(5)
 
 #Pattern <- paste0(T5_Size_names$TP2_Cluster_Size [1:5], "|", T5_TP2_names$TP2_Cluster_Size[2]  )
-Pattern <- paste0(T5_Size_names$TP2_Cluster_Size [1], "|", T5_Size_names$TP2_Cluster_Size [2], "|", 
-                  T5_Size_names$TP2_Cluster_Size [3], "|", T5_Size_names$TP2_Cluster_Size [4], "|", 
-                  T5_Size_names$TP2_Cluster_Size [5])
+Pattern <- paste0(T5_Size_names$TP2_Cluster[1], "|", T5_Size_names$TP2_Cluster[2], "|", 
+                  T5_Size_names$TP2_Cluster[3], "|", T5_Size_names$TP2_Cluster[4], "|", 
+                  T5_Size_names$TP2_Cluster[5])
 WX <- list.files(params$epitables_dir, full.names = TRUE)
 WX1 <- list.files(params$epitables_dir, pattern = Pattern, full.names = TRUE)
-#WX2 <- setdiff(WX, WX1)
+
 Lineages2 <- ECC_long %>% select(`Last time this cluster was seen in TP2`, T0.original) %>% unique()
-colnames(Lineages2) <-c("Cluster", "Pango_lineage")
+colnames(Lineages2) <- c("Cluster", "Pango_lineage")
 
 Whisker_Data <- lapply(WX1, function(x_i) {
   cluster_name <- strsplit(x_i, split = "/") %>% unlist() %>% extract2(4) %>% gsub(".Rds", "", .)
   readRDS(x_i) %>% sample_frac(0.25)%>% add_column(Cluster = cluster_name)
-})%>% bind_rows()  %>% select(Cluster, Temp.Dist, Geog.Dist) %>% 
+})%>% bind_rows() %>% select(Cluster, Temp.Dist, Geog.Dist) %>% 
   separate(Cluster, sep = 13, into = c("Cluster", "Cluster1"))
 
 Whisker_Data_Size <- Whisker_Data %>% left_join(Lineages2) %>% data.frame()
@@ -2035,8 +2030,8 @@ p6 + theme(legend.position = "none") +
 ```{r fig.height= 9, fig.width= 18 }
 ## top 5 clusters by growth rate
 T5_Size_names <- TP2_lineage %>% 
-  select(TP2_Cluster_Size, Pango_lineage, `Novel_growth by rate`) %>% top_n(5) %>% 
-  arrange(desc(`Novel_growth by rate`)) 
+  select(TP2_Cluster, Pango_lineage, `Novel_growth by rate`) %>% 
+  arrange(desc(`Novel_growth by rate`)) %>% top_n(5)
 
 Pattern <- paste0(T5_Size_names$TP2_Cluster_Size [1], "|", T5_Size_names$TP2_Cluster_Size [2], "|", 
                   T5_Size_names$TP2_Cluster_Size [3], "|", T5_Size_names$TP2_Cluster_Size [4], "|", 
@@ -2051,9 +2046,9 @@ Whisker_Data <- lapply(WX2, function(x_i) {
 
 
 Lineages2 <- ECC_long %>% select(`Last time this cluster was seen in TP2`, T0.original) %>% unique()
-colnames(Lineages2) <-c("Cluster", "Pango_lineage")
+colnames(Lineages2) <- c("Cluster", "Pango_lineage")
 
-Whisker_Data_Growth <- Whisker_Data %>% left_join(Lineages2)%>%data.frame()
+Whisker_Data_Growth <- Whisker_Data %>% left_join(Lineages2) %>% data.frame()
 rm(Whisker_Data)
 P5 <- ggplot(Whisker_Data_Growth , aes(x = Pango_lineage, y = Geog.Dist, fill = Pango_lineage)) + theme_bw()+ 
   #geom_boxplot(alpha =0.3)
@@ -2109,11 +2104,11 @@ Table1a <- ECC_long %>%
   adorn_pct_formatting() %>% 
   adorn_ns(position = "front") %>% 
   arrange(desc(Total)) 
-Table1a <-Table1a[c(2:nrow(Table1a), 1), 1:3]
+Table1a <- Table1a[c(2:nrow(Table1a), 1), 1:3]
 rownames(Table1a) <- c()
 
 # table for month
-Table1a1<-ECC_long %>% filter(Timepoint == "TP2") %>% 
+Table1a1 <- ECC_long %>% filter(Timepoint == "TP2") %>% 
   tabyl(Country, Year_Month) %>% 
   adorn_totals(where = "col") %>% 
   adorn_totals(where = "row") %>% 
@@ -2124,7 +2119,7 @@ Table1a1<-ECC_long %>% filter(Timepoint == "TP2") %>%
   
 rownames(Table1a1) <- c() 
 
-Table <-left_join(Table1a, Table1a1) 
+Table <- left_join(Table1a, Table1a1) 
 kable(Table, escape = FALSE, format = 'html') %>% 
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), 
                             full_width = F, position = "float_left") %>% 
@@ -2136,7 +2131,7 @@ kable(Table, escape = FALSE, format = 'html') %>%
 ##### &nbsp;&nbsp; Table 3.1.b. **`r paste0(Tab.3.1.b)`**  {#Tab.3.1.b-link -}
 ```{r table1b}
 # Table 1b, Summary of SARS-Cov2 genomes by country and week
-Table1b<-ECC_long %>% filter(Timepoint == "TP2") %>% 
+Table1b <- ECC_long %>% filter(Timepoint == "TP2") %>% 
   tabyl(Country, Year_Week) %>% 
   adorn_totals(where = "col") %>% 
   adorn_totals(where = "row") %>% 
@@ -2146,7 +2141,7 @@ Table1b<-ECC_long %>% filter(Timepoint == "TP2") %>%
   adorn_title(row_name = "Country", col_name = "week", placement = "combined") %>% 
   arrange(desc(Total)) 
 #Name <- c("Country/week", min(ECC_long$Year_Week):max(ECC_long$Year_Week), "Total" )
-Table1b <-Table1b[c(2:nrow(Table1b), 1), ]
+Table1b <- Table1b[c(2:nrow(Table1b), 1), ]
 rownames(Table1b) <- c()
 Table1b <- kable(Table1b, escape = FALSE, format = 'html', table.attr = "style='width:50%;'") %>% 
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), 
@@ -2166,7 +2161,7 @@ Table1b
 ```{r table2a}
 ### Summary of SARS-Cov2 genomes by PANGO lineages 
  ## Summary of SARS-Cov2 genomes by PANGO lineages and country
-Table2a <-ECC_long %>% filter(Timepoint == "TP2") %>% 
+Table2a <- ECC_long %>% filter(Timepoint == "TP2") %>% 
   tabyl(PANGO_lineage, Country ) %>% 
   adorn_totals(where = "col") %>% 
   adorn_totals(where = "row") %>% 
@@ -2178,7 +2173,8 @@ Table2a <- Table2a[c(3:nrow(Table2a), 2, 1), ]
 rownames(Table2a) <- c() 
 
 kable(Table2a, escape = FALSE, format = 'html') %>% 
-  kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = T) %>% 
+  kableExtra::kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = T) %>% 
   row_spec(nrow(Table2a), bold=T) %>% column_spec(ncol(Table2a), bold=T)
 ```
 
@@ -2210,7 +2206,7 @@ Table2b1 <- ECC_long %>% filter(Timepoint == "TP2") %>%
 
 rownames(Table2b1) <- c() 
 
-Table2 <-left_join(Table2b, Table2b1) %>% drop_na()
+Table2 <- left_join(Table2b, Table2b1) %>% drop_na()
 kable(Table2, escape = FALSE, format = 'html') %>% 
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), 
                             full_width = F, position = "float_left") %>% 
@@ -2472,7 +2468,7 @@ P1
 ```{r echo=FALSE, message=FALSE, results=FALSE, fig.keep="all", fig.height= 6, fig.width= 18}
 Country_Order <- ECC_long %>% filter(Timepoint == "TP2") %>% group_by(Country) %>% 
   dplyr::summarise(n=n()) %>% arrange(desc(n)) %>% top_n(20)
-Country_Order <-Country_Order[1:20, ]                 
+Country_Order <- Country_Order[1:20, ]                 
 T20_clusters <- ECC_long %>% filter(Timepoint == "TP2") %>% group_by(T0.original) %>% 
   dplyr::summarise(n=n()) %>% arrange(desc(n)) %>% top_n(20)
 T10_clusters <- ECC_long %>% filter(Timepoint == "TP2") %>% group_by(T0.original) %>% 
@@ -2481,7 +2477,7 @@ T5_clusters <- ECC_long %>% filter(Timepoint == "TP2") %>% group_by(T0.original)
   dplyr::summarise(n=n()) %>% arrange(desc(n)) %>% top_n(5)
 Variant_prevelance <- ECC_long %>% 
   select ("Strain", "Timepoint", "Country", "Province", "Year_Month", "Year_Week", "PANGO_lineage")
-Dt20 <-Variant_prevelance %>% group_by(Country, Timepoint, PANGO_lineage) %>% 
+Dt20 <- Variant_prevelance %>% group_by(Country, Timepoint, PANGO_lineage) %>% 
   filter(PANGO_lineage %in% T20_clusters$T0.original, Country %in% Country_Order$Country) %>% 
   mutate(Genome_count=n())
 
@@ -2611,7 +2607,7 @@ P3
 ## Country count in TP, Month and Week 
 Data1 <- ECC_long %>% select(Strain, Country, Province, Day, Month, Year, Date, 
                              Year_Month, Year_Week, Timepoint, T0.original, Pango_lineage)
-Data1 <-Data1 %>% left_join(country_code)
+Data1 <- Data1 %>% left_join(country_code)
 Data1$Country_Province= paste(Data1$country_code, "_", Data1$Province)
 T20_clusters <- Data1 %>% filter(Timepoint == "TP2") %>% group_by(T0.original) %>% 
   dplyr::summarise(n=n()) %>% arrange(desc(n)) %>% top_n(20)
@@ -2619,7 +2615,7 @@ T20_clusters <- Data1 %>% filter(Timepoint == "TP2") %>% group_by(T0.original) %
 Country_TP <- Data1 %>% filter(T0.original %in% T20_clusters$T0.original) %>% group_by(T0.original, Timepoint) %>% 
   dplyr::summarise(Frequency = n_distinct(Country)) %>% arrange((Frequency))
 
-Province_TP <-Data1 %>% filter(T0.original %in% T20_clusters$T0.original) %>% group_by(T0.original, Timepoint) %>% 
+Province_TP <- Data1 %>% filter(T0.original %in% T20_clusters$T0.original) %>% group_by(T0.original, Timepoint) %>% 
   dplyr::summarise(Frequency = n_distinct(Province)) %>% arrange((Frequency))
 
 Country_Month <- Data1 %>% filter(Timepoint == "TP2", T0.original %in% T8_clusters$T0.original) %>% 
