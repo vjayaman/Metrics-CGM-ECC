@@ -32,12 +32,13 @@
     * see *results/<interval type>/cluster_labs.txt* after running script 7 to get details on which clusters have figures
 * top growth clusters not the same as GZ’s results
     * fixed --> see *all_reports/Epiquant_Report_05-18-2022.Rmd* for the check on cluster sizes. All of the report now works with the latest outputs from the metrics generation part, and the document formatting now has more spacing, etc. for better readability
+* line 919 – pairwise geo and temp distance for top 20 clusters need to calculate the actual physical pairwise distance, then we have to change the distance calculation in step 4
+    * they are calculating actual distances in the metrics generation process (but need to articulate this better in the docs)
 
 #### Not done
 
 * better average_dists implementation (faster, for larger files) (use C/python)
 * better ECC collections (faster, for larger files, consider parallelization) (use C)
 * whisker plots – too much data?
-* line 919 – pairwise geo and temp distance for top 20 clusters need to calculate the actual physical pairwise distance, then we have to change the distance calculation in step 4
 * heatmap generation - write up in a jupyter notebook / Rmarkdown file - so it's easy for others to verify steps
     * partially done
