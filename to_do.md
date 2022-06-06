@@ -42,3 +42,5 @@
 * whisker plots – too much data?
 * heatmap generation - write up in a jupyter notebook / Rmarkdown file - so it's easy for others to verify steps
     * partially done
+* initial setup should prompt user to remove/rename *logs/*, *intermediate_dists/*, and *results/* if running a new set of data (so overwriting results for a different data set does not happen)
+
