@@ -9,7 +9,7 @@ Under *documentation/*, we have jupyter notebook scripts for running the analysi
 
 
 
-Imported to GitLab - cscscience setup. Will synchronize updates here with the GitLab repository with each major change. 
+Importing to GitLab with each updated version - cscscience setup. Synchronization may be out of date (this page will have most recent changes). 
 
 Metrics-CGM-ECC
 ================
@@ -134,5 +134,3 @@ can be found at:
 * <https://github.com/vjayaman/EQProject> and 
 * <https://github.com/vjayaman/ClusterGrowthMetrics>)
 
-Testing work will be compiled and added to 
-* <https://github.com/vjayaman/Testing-Metrics-CGM-ECC>
