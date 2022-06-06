@@ -8,11 +8,11 @@ Threshold of interest: 0
 Is in a non-singleton cluster (at TP2): false
 Filtering by date: [,]
 Column names: Source,Country,Province,City
-Interval type: YearWeek
-Dividers: none
+Interval type: Multiset
+Dividers: 2020-11-15
 Week labeling: true
 Source-temporal-geographic coefficents: 0-1-0,0-0-1
-Generate heatmaps for top __ largest clusters: 3
+Generate heatmaps for top __ largest clusters: 5
 Min cluster size to consider for largest growth (for heatmaps): 10
 Cluster by: temp_geo
 Transform heatmap data: false

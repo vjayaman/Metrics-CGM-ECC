@@ -1,0 +1,201 @@
+Strain	Source	Country	Province	City	Latitude	Longitude	Day	Month	Year	TP1	TP2
+Spain/NC-IBV-97020603/2020	Cow_Farm	Spain	Navarra	Pamplona	42.6680717	-1.646924	1	8	2020	1	1
+Wales/PHWC-47D6AE/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	8	10	2020	1	1
+Switzerland/SO-ETHZ-420021/2020	Cow_Farm	Switzerland	Solothurn	0	47.2069588	7.5333118	18	12	2020	0	1
+Scotland/QEUH-129F5E4/2021	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	14	2	2021	0	1
+Netherlands/UT-RIVM-11859/2021	Cow_Farm	Netherlands	Utrecht	0	52.0916824	5.1203632	2	2	2021	0	1
+Wales/PHWC-4C9BB3/2021	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	10	2	2021	0	1
+mink/Denmark/mDK-170/2020	Cow_Farm	Denmark	0	0	50.6031036	9.0311127	7	11	2020	0	1
+mink/Denmark/mDK-234/2020	Cow_Farm	Denmark	0	0	50.6031036	9.0311127	2	11	2020	0	1
+Netherlands/ZH-EMC-1296/2020	Cow_Farm	Netherlands	South Holland	0	51.9377823	4.462554	21	12	2020	0	1
+Scotland/QEUH-9CEAF8/2020	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	17	9	2020	1	1
+Poland/19832/2020	Cow_Farm	Poland	0	0	56.2487679	9.3879137	1	11	2020	0	1
+Turkey/HSGM-1626/2021	Cow_Farm	Turkey	0	0	51.5001526	-0.126236	21	1	2021	0	1
+Ireland/MH-NVRL-t21IRL29644/2021	Cow_Farm	Ireland	Meath	0	53.6546021	-6.688817	15	2	2021	0	1
+Switzerland/BL-ETHZ-451529/2021	Cow_Farm	Switzerland	Basel-Land	0	47.501203	7.715625	11	1	2021	0	1
+Portugal/PT3219/2021	Cow_Farm	Portugal	0	0	55.438162	11.716534	9	2	2021	0	1
+Germany/SN-RKI-I-032107/2021	Cow_Farm	Germany	Saxony	0	51.0523453	13.3484688	23	2	2021	0	1
+Switzerland/VD-ETHZ-280220/2020	Cow_Farm	Switzerland	Vaud	0	46.657185	6.505449	9	9	2020	1	1
+NorthernIreland/QEUH-96AA49/2020	Cow_Farm	United Kingdom	Northern Ireland	0	54.6089058	-6.6949229	17	8	2020	1	1
+Spain/CT-HUGTiPR005TQ1A2/2021	Cow_Farm	Spain	Catalunya	Badalona	41.7979813	1.528533	9	2	2021	0	1
+Spain/CT-HUVH-84939/2020	Cow_Farm	Spain	Catalunya	0	41.7979813	1.528533	27	7	2020	1	1
+Sweden/20-52943/2020	Cow_Farm	Sweden	Orebro	0	59.2737541	15.2075396	27	8	2020	1	1
+Wales/MILK-9EEB3B/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	23	9	2020	1	1
+Italy/CAM-COTUGNO-11265/2020	Cow_Farm	Italy	Campania	0	40.8605804	14.8440666	21	12	2020	0	1
+Sweden/SE00163187/2021	Cow_Farm	Sweden	Skane	0	55.7999992	13.6169996	18	1	2021	0	1
+Luxembourg/LNS6034314/2020	Cow_Farm	Luxembourg	Luxembourg	0	49.889965	5.457335	23	11	2020	0	1
+Wales/PHWC-4BCC65/2021	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	18	1	2021	0	1
+Spain/CT-IrsiCaixaR003MP1E8/2021	Cow_Farm	Spain	Catalunya	Badalona	41.7979813	1.528533	1	2	2021	0	1
+Spain/VC-IBV-98014429/2020	Cow_Farm	Spain	Comunitat Valenciana	Valencia	39.3902435	-0.543139	14	10	2020	1	1
+Ireland/D-NVRL-21IRL42550/2021	Cow_Farm	Ireland	Dublin	0	53.3440971	-6.2674861	13	2	2021	0	1
+Wales/PHWC-49446B/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	19	11	2020	0	1
+Germany/NW-RKI-I-017423/2021	Cow_Farm	Germany	North Rhine Westphalia	0	51.4796906	7.5623112	30	1	2021	0	1
+Wales/PHWC-499642/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	3	12	2020	0	1
+Sweden/SE00208864/2021	Cow_Farm	Sweden	Skane	0	55.7999992	13.6169996	1	2	2021	0	1
+Portugal/PT2416/2021	Cow_Farm	Portugal	0	0	55.8761482	12.3121624	12	1	2021	0	1
+Luxembourg/LNS2321488/2020	Cow_Farm	Luxembourg	Luxembourg	0	49.889965	5.457335	24	11	2020	0	1
+Iceland/4062/2020	Cow_Farm	Iceland	Reykjavik	0	64.1472092	-21.9424	24	9	2020	1	1
+Scotland/QEUH-13360CF/2021	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	25	2	2021	0	1
+Wales/MILK-993F2A/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	25	8	2020	1	1
+Germany/SN-RKI-I-020126/2021	Cow_Farm	Germany	Saxony	0	51.0523453	13.3484688	9	2	2021	0	1
+Switzerland/VS-ETHZ-460321/2021	Cow_Farm	Switzerland	Valais	0	46.260448	7.712266	20	1	2021	0	1
+Spain/CT-IrsiCaixaR006QG7F1/2021	Cow_Farm	Spain	Catalunya	Manresa	41.7979813	1.528533	15	2	2021	0	1
+Portugal/PT2706/2021	Cow_Farm	Portugal	0	0	55.8761482	12.3121624	12	1	2021	0	1
+Germany/SN-RKI-I-031551/2021	Cow_Farm	Germany	Saxony	0	51.0523453	13.3484688	25	2	2021	0	1
+Netherlands/UT-EMC-237/2020	Cow_Farm	Netherlands	Utrecht	0	52.0916824	5.1203632	28	12	2020	0	1
+Italy/MOL-IZSGC-72053.1.12/2021	Cow_Farm	Italy	Molise	Campobasso	41.6310921	14.4934607	4	2	2021	0	1
+Germany/TH-RKI-I-015712/2021	Cow_Farm	Germany	Thuringia	0	50.9037933	11.0247221	28	1	2021	0	1
+Wales/PHWC-4D50F1/2021	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	4	2	2021	0	1
+Netherlands/ZE-RIVM-11130/2021	Cow_Farm	Netherlands	Zeeland	0	51.5613708	3.897608	22	1	2021	0	1
+Poland/2081274433_gx1/2021	Cow_Farm	Poland	Wielkopolskie	Maniewo	52.3315773	17.2424011	29	1	2021	0	1
+Scotland/EDB10829/2020	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	8	12	2020	0	1
+Portugal/PT1947/2020	Cow_Farm	Portugal	0	0	56.2487679	9.3879137	11	11	2020	0	1
+Wales/QEUH-A001F4/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	30	9	2020	1	1
+Germany/SN-RKI-I-016475/2021	Cow_Farm	Germany	Saxony	0	51.0523453	13.3484688	27	1	2021	0	1
+Ireland/D-NVRL-85IRL21634/2021	Cow_Farm	Ireland	Dublin	0	53.3440971	-6.2674861	4	2	2021	0	1
+Wales/ALDP-B1B66F/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	1	11	2020	0	1
+Spain/MD-IBV-99020638/2020	Cow_Farm	Spain	Madrid	Madrid	40.4166908	-3.700346	16	9	2020	1	1
+Italy/CAM-AMES-12-57/2021	Cow_Farm	Italy	Campania	Naples	40.8605804	14.8440666	19	2	2021	0	1
+Scotland/QEUH-12371CC/2021	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	8	2	2021	0	1
+Switzerland/SG-ETHZ-420700/2020	Cow_Farm	Switzerland	Sankt Gallen	0	47.421621	9.377789	24	12	2020	0	1
+Spain/CT-HUGTiPR006BX5F5/2021	Cow_Farm	Spain	Catalunya	Sant Antoni de Vilamajor	41.7979813	1.528533	15	2	2021	0	1
+Netherlands/NH-RIVM-12339/2021	Cow_Farm	Netherlands	North Holland	0	52.5769081	4.924386	27	1	2021	0	1
+Italy/ABR-IZSGC-101854/2021	Cow_Farm	Italy	Abruzzo	0	42.2274933	13.8549938	19	2	2021	0	1
+Wales/PHWC-49064B/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	12	11	2020	0	1
+Switzerland/GE-33176762/2021	Cow_Farm	Switzerland	Geneva	0	46.2038116	6.1399651	4	2	2021	0	1
+Iceland/3301/2020	Cow_Farm	Iceland	Reykjavik	0	64.1472092	-21.9424	18	9	2020	1	1
+Switzerland/VD-GEN2585/2021	Cow_Farm	Switzerland	Vaud	0	46.657185	6.505449	11	1	2021	0	1
+Scotland/QEUH-A22217/2020	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	1	10	2020	1	1
+Spain/PV-IBV-97011438/2020	Cow_Farm	Spain	Basque Country	San Sebastian	43.0430984	-2.6168649	7	12	2020	0	1
+Wales/PHWC-48646C/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	14	10	2020	1	1
+Italy/CAM-TIGEM-4279/2021	Cow_Farm	Italy	Campania	0	40.8605804	14.8440666	1	1	2021	0	1
+Wales/PHWC-4C7414/2021	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	3	2	2021	0	1
+Switzerland/ZH-ETHZ-270047/2020	Cow_Farm	Switzerland	Z<fc>rich	0	47.3670006	8.5500002	1	9	2020	1	1
+Wales/ALDP-C3913C/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	9	12	2020	0	1
+Germany/TH-RKI-I-015617/2021	Cow_Farm	Germany	Thuringia	0	50.9037933	11.0247221	27	1	2021	0	1
+Netherlands/UT-RIVM-21427/2020	Cow_Farm	Netherlands	Utrecht	0	52.0916824	5.1203632	27	12	2020	0	1
+Switzerland/BL-ETHZ-450162/2021	Cow_Farm	Switzerland	Basel-Land	0	47.501203	7.715625	12	1	2021	0	1
+Sweden/SE00217109/2021	Cow_Farm	Sweden	Gavleborgs Lan	0	61.4492455	16.2890415	4	2	2021	0	1
+Sweden/21-50669/2021	Cow_Farm	Sweden	Halland	0	56.75	13	25	1	2021	0	1
+Scotland/QEUH-C33509/2020	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	11	12	2020	0	1
+NorthernIreland/QEUH-961A33/2020	Cow_Farm	United Kingdom	Northern Ireland	0	54.6089058	-6.6949229	2	8	2020	1	1
+Slovenia/17-013939-CE/2021	Cow_Farm	Slovenia	0	0	51.5001526	-0.126236	1	2	2021	0	1
+Germany/RP-RKI-I-028371/2021	Cow_Farm	Germany	Rheinland-Pfalz	0	49.9137344	7.4491291	23	2	2021	0	1
+Italy/CAM-TIGEM-2873/2021	Cow_Farm	Italy	Campania	0	40.8605804	14.8440666	10	2	2021	0	1
+Switzerland/un-ETHZ-24/2021	Cow_Farm	Switzerland	0	0	51.5001526	-0.126236	12	1	2021	0	1
+Wales/PHWC-4A484E/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	17	12	2020	0	1
+Italy/CAM-TIGEM-169/2020	Cow_Farm	Italy	Campania	0	40.8605804	14.8440666	26	10	2020	0	1
+Wales/ALDP-1068CE1/2021	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	15	1	2021	0	1
+Ireland/LS-NVRL-21IRL42865/2021	Cow_Farm	Ireland	Laois	0	53.0343056	-7.301867	22	2	2021	0	1
+Germany/TH-RKI-I-011869/2021	Cow_Farm	Germany	Thuringia	0	50.9037933	11.0247221	29	1	2021	0	1
+Wales/PHWC-49DD67/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	1	12	2020	0	1
+Wales/PHWC-4C18C3/2021	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	27	1	2021	0	1
+Wales/PHWC-4B51F4/2021	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	6	1	2021	0	1
+Switzerland/ZH-ETHZ-510250/2021	Cow_Farm	Switzerland	Z<fc>rich	0	47.3670006	8.5500002	20	2	2021	0	1
+Wales/PHWC-4D6931/2021	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	24	2	2021	0	1
+Spain/CT-IBV-98015597/2021	Cow_Farm	Spain	Catalunya	Barcelona	41.7979813	1.528533	5	1	2021	0	1
+Wales/PHWC-4A584D/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	16	12	2020	0	1
+Poland/Masovia-13802/2020	Cow_Farm	Poland	Masovia	0	52.427727	21.368225	9	9	2020	1	1
+Scotland/EDB12845/2021	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	3	1	2021	0	1
+Norway/4822/2020	Cow_Farm	Norway	Trondelag	0	63.8391762	11.1136017	23	10	2020	0	1
+NorthernIreland/QEUH-96ED2E/2020	Cow_Farm	United Kingdom	Northern Ireland	0	54.6089058	-6.6949229	19	8	2020	1	1
+Germany/SN-RKI-I-032268/2021	Cow_Farm	Germany	Saxony	0	51.0523453	13.3484688	24	2	2021	0	1
+Scotland/QEUH-132AE6A/2021	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	24	2	2021	0	1
+Switzerland/FR-ETHZ-500117/2020	Cow_Farm	Switzerland	Fribourg	0	46.8025017	7.1512809	12	11	2020	0	1
+Spain/CL-MS7034/2021	Cow_Farm	Spain	Castilla y Leon	0	41.7512932	-4.7886071	26	1	2021	0	1
+Netherlands/LI-MUMC-80/2020	Cow_Farm	Netherlands	Limburg	Maastricht	50.975752	5.335691	25	8	2020	1	1
+Italy/UMB-ISS-7241/2021	Cow_Farm	Italy	Umbria	0	42.965641	12.4900665	13	2	2021	0	1
+Sweden/SE00215745/2021	Cow_Farm	Sweden	Skane	0	55.7999992	13.6169996	3	2	2021	0	1
+Wales/PHWC-4A2FE1/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	14	12	2020	0	1
+Germany/SN-RKI-I-014993/2021	Cow_Farm	Germany	Saxony	0	51.0523453	13.3484688	1	2	2021	0	1
+Wales/PHWC-49B3D0/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	12	11	2020	0	1
+Netherlands/ZH-EMC-591/2020	Cow_Farm	Netherlands	South Holland	0	51.9377823	4.462554	18	9	2020	1	1
+Scotland/QEUH-A016D6/2020	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	2	10	2020	1	1
+Ireland/D-NVRL-21IRL29642/2021	Cow_Farm	Ireland	Dublin	0	53.3440971	-6.2674861	2	2	2021	0	1
+Switzerland/BL-ETHZ-420402/2020	Cow_Farm	Switzerland	Basel-Land	0	47.501203	7.715625	21	12	2020	0	1
+Sweden/SE00241234/2021	Cow_Farm	Sweden	Skane	0	55.7999992	13.6169996	10	2	2021	0	1
+Sweden/RVFOI21-00124/2021	Cow_Farm	Sweden	Vasterbotten	0	65	17.5	2	2	2021	0	1
+Germany/SN-RKI-I-026071/2021	Cow_Farm	Germany	Saxony	0	51.0523453	13.3484688	18	2	2021	0	1
+Scotland/EDB15820/2021	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	30	1	2021	0	1
+Slovakia/UKBA-607/2020	Cow_Farm	Slovakia	Bratislava	0	48.1464005	17.1068783	30	11	2020	0	1
+Wales/PHWC-4BC791/2021	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	16	1	2021	0	1
+Ireland/KE-NVRL-e85IRL88515/2021	Cow_Farm	Ireland	Kildare	0	53.1598282	-6.908998	16	2	2021	0	1
+Germany/ST-MD724/2021	Cow_Farm	Germany	Saxony-Anhalt	0	52.0131493	11.7006187	12	2	2021	0	1
+Netherlands/LI-RIVM-10420/2021	Cow_Farm	Netherlands	Limburg	0	50.975752	5.335691	10	1	2021	0	1
+Turkey/HSGM-D213/2021	Cow_Farm	Turkey	0	0	51.5001526	-0.126236	11	2	2021	0	1
+Luxembourg/LNS7137571/2020	Cow_Farm	Luxembourg	Luxembourg	0	49.889965	5.457335	5	12	2020	0	1
+Germany/NI-RKI-I-019286/2021	Cow_Farm	Germany	Niedersachsen	0	52.645877	9.750942	11	2	2021	0	1
+Germany/HH-RKI-I-032378/2021	Cow_Farm	Germany	Hamburg	0	53.5572548	9.995966	25	2	2021	0	1
+Iceland/5363/2020	Cow_Farm	Iceland	Reykjavik	0	64.1472092	-21.9424	13	10	2020	1	1
+Switzerland/AG-ETHZ-380299/2020	Cow_Farm	Switzerland	Aargau	0	47.436517	8.144788	25	11	2020	0	1
+Switzerland/GE-32869532/2021	Cow_Farm	Switzerland	Geneva	0	46.2038116	6.1399651	4	1	2021	0	1
+Wales/PHWC-4BED51/2021	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	25	1	2021	0	1
+Ireland/WH-NVRL-e85IRL83533/2021	Cow_Farm	Ireland	Westmeath	0	53.425045	-7.9446239	15	2	2021	0	1
+Norway/3663/2021	Cow_Farm	Norway	Vestland	0	60.787185	5.973351	2	2	2021	0	1
+Luxembourg/LNS2472886/2021	Cow_Farm	Luxembourg	Luxembourg	0	49.889965	5.457335	2	1	2021	0	1
+Wales/PHWC-49A034/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	28	11	2020	0	1
+NorthernIreland/CAMC-1063CAA/2021	Cow_Farm	United Kingdom	Northern Ireland	0	54.6089058	-6.6949229	16	1	2021	0	1
+Italy/CAM-TIGEM-3538/2021	Cow_Farm	Italy	Campania	0	40.8605804	14.8440666	1	1	2021	0	1
+Wales/PHWC-16F323/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	5	10	2020	1	1
+Iceland/4081/2020	Cow_Farm	Iceland	Reykjavik	0	64.1472092	-21.9424	16	10	2020	0	1
+Poland/NIPH-NIH_ECDC-213/2021	Cow_Farm	Poland	Podlaskie	Bia?ystok	53.2644501	22.9296741	9	2	2021	0	1
+Netherlands/ZH-EMC-1035/2020	Cow_Farm	Netherlands	South Holland	0	51.9377823	4.462554	23	11	2020	0	1
+Netherlands/LI-MUMC-708/2021	Cow_Farm	Netherlands	Limburg	Sittard-Geleen	50.975752	5.335691	26	1	2021	0	1
+Switzerland/BE-ETHZ-440485/2021	Cow_Farm	Switzerland	Bern	0	46.9480019	7.4481311	1	1	2021	0	1
+Iceland/4155/2020	Cow_Farm	Iceland	Reykjavik	0	64.1472092	-21.9424	27	10	2020	0	1
+Spain/CT-IBV-98014618/2021	Cow_Farm	Spain	Catalunya	Barcelona	41.7979813	1.528533	18	1	2021	0	1
+Germany/SN-RKI-I-032238/2021	Cow_Farm	Germany	Saxony	0	51.0523453	13.3484688	18	2	2021	0	1
+Switzerland/GE-33266105/2021	Cow_Farm	Switzerland	Geneva	0	46.2038116	6.1399651	13	2	2021	0	1
+Spain/VC-IBV-98014364/2020	Cow_Farm	Spain	Comunitat Valenciana	Sagunt	39.3902435	-0.543139	16	10	2020	0	1
+Sweden/20-08931/2020	Cow_Farm	Sweden	Ostergotland	0	58.4169998	15.75	11	7	2020	1	1
+Switzerland/SO-ETHZ-451314/2021	Cow_Farm	Switzerland	Solothurn	0	47.2069588	7.5333118	9	1	2021	0	1
+Germany/SL-SU-30050923/2021	Cow_Farm	Germany	Saarland	0	49.384407	6.953229	12	2	2021	0	1
+Switzerland/BL-ETHZ-500435/2021	Cow_Farm	Switzerland	Basel-Land	0	47.501203	7.715625	18	2	2021	0	1
+Ireland/KY-NVRL-21IRL35803/2020	Cow_Farm	Ireland	Kerry	0	52.0597839	-9.5069351	27	10	2020	0	1
+Scotland/QEUH-12C7F12/2021	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	18	2	2021	0	1
+Wales/MILK-B3C176/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	1	11	2020	0	1
+Wales/PHWC-489D40/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	27	10	2020	0	1
+Netherlands/NH-RIVM-20621/2020	Cow_Farm	Netherlands	North Holland	0	52.5769081	4.924386	20	12	2020	0	1
+Netherlands/GE-EMC-322/2020	Cow_Farm	Netherlands	Gelderland	0	52.0617256	5.9390802	6	10	2020	1	1
+Wales/PHWC-480936/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	22	10	2020	0	1
+Wales/PHWC-496D04/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	24	11	2020	0	1
+Poland/NIPH-NIH_ECDC-205/2021	Cow_Farm	Poland	Podlaskie	Bia?ystok	53.2644501	22.9296741	8	2	2021	0	1
+Slovenia/90-008580-NM/2021	Cow_Farm	Slovenia	0	0	51.5001526	-0.126236	1	2	2021	0	1
+Netherlands/GE-RIVM-13427/2021	Cow_Farm	Netherlands	Gelderland	0	52.0617256	5.9390802	10	2	2021	0	1
+Ireland/KY-NVRL-86IRL26883/2021	Cow_Farm	Ireland	Kerry	0	52.0597839	-9.5069351	9	2	2021	0	1
+Norway/7168/2020	Cow_Farm	Norway	Oslo	0	59.9138222	10.7387409	17	12	2020	0	1
+Italy/ABR-IZSGC-376239/2020	Cow_Farm	Italy	Abruzzo	0	42.2274933	13.8549938	31	12	2020	0	1
+Iceland/6618/2020	Cow_Farm	Iceland	Reykjavik	0	64.1472092	-21.9424	10	10	2020	1	1
+Slovenia/21-001273-LJ/2021	Cow_Farm	Slovenia	0	0	51.5001526	-0.126236	1	1	2021	0	1
+Wales/ALDP-9BEA73/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	9	9	2020	1	1
+Scotland/QEUH-12B73EC/2021	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	16	2	2021	0	1
+Sweden/SE00156509/2021	Cow_Farm	Sweden	Skane	0	55.7999992	13.6169996	15	1	2021	0	1
+Ireland/KE-NVRL-85IRL49563/2021	Cow_Farm	Ireland	Kildare	0	53.1598282	-6.908998	9	2	2021	0	1
+Switzerland/BL-ETHZ-480121/2021	Cow_Farm	Switzerland	Basel-Land	0	47.501203	7.715625	29	1	2021	0	1
+Germany/NW-RKI-I-027544/2021	Cow_Farm	Germany	North Rhine Westphalia	0	51.4796906	7.5623112	15	2	2021	0	1
+Italy/VEN-IZSVe-20RS2272-29_PD/2020	Cow_Farm	Italy	Veneto	Padova	45.6531715	11.8458281	14	10	2020	1	1
+Germany/NW-RKI-I-029225/2021	Cow_Farm	Germany	North Rhine Westphalia	0	51.4796906	7.5623112	22	2	2021	0	1
+Wales/PHWC-48AC60/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	21	10	2020	0	1
+Wales/PHWC-4CD92E/2021	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	12	2	2021	0	1
+Netherlands/GR-RIVM-13260/2021	Cow_Farm	Netherlands	Groningen	0	53.2144699	6.5664811	1	2	2021	0	1
+NorthernIreland/RAND-1259D48/2021	Cow_Farm	United Kingdom	Northern Ireland	0	54.6089058	-6.6949229	5	2	2021	0	1
+Scotland/QEUH-11CB3D7/2021	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	1	2	2021	0	1
+Spain/MD-IBV-99020773/2020	Cow_Farm	Spain	Madrid	Madrid	40.4166908	-3.700346	14	12	2020	0	1
+Wales/PHWC-16E825/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	4	10	2020	1	1
+Switzerland/SZ-ETHZ-471095/2021	Cow_Farm	Switzerland	Schwyz	0	47.0210342	8.6536007	27	1	2021	0	1
+Germany/SN-RKI-I-012790/2021	Cow_Farm	Germany	Saxony	0	51.0523453	13.3484688	25	1	2021	0	1
+Spain/MD-IBV-99020798/2021	Cow_Farm	Spain	Madrid	Madrid	40.4166908	-3.700346	21	1	2021	0	1
+Switzerland/SH-ETHZ-490006/2021	Cow_Farm	Switzerland	Schaffhausen	0	47.6975441	8.6351728	8	2	2021	0	1
+Switzerland/BE-ETHZ-300281/2020	Cow_Farm	Switzerland	Bern	0	46.9480019	7.4481311	1	10	2020	1	1
+Netherlands/LI-MUMC-102/2020	Cow_Farm	Netherlands	Limburg	Beekdaelen	50.975752	5.335691	19	11	2020	0	1
+Scotland/QEUH-A0273C/2020	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	28	9	2020	1	1
+Scotland/QEUH-C1489C/2020	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	6	12	2020	0	1
+Scotland/QEUH-A0C35C/2020	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	3	10	2020	1	1
+Wales/PHWC-482CC2/2020	Cow_Farm	United Kingdom	Wales	0	51.481308	-3.1804979	21	10	2020	0	1
+Iceland/5540/2020	Cow_Farm	Iceland	Reykjavik	0	64.1472092	-21.9424	2	11	2020	0	1
+Germany/SN-RKI-I-024765/2021	Cow_Farm	Germany	Saxony	0	51.0523453	13.3484688	15	2	2021	0	1
+Scotland/CVR4089/2020	Cow_Farm	United Kingdom	Scotland	0	55.9501953	-3.1875629	31	8	2020	1	1
+Switzerland/BS-UHB-42506666/2020	Cow_Farm	Switzerland	Basel-Stadt	Basel	47.5648575	7.6152802	27	10	2020	0	1
+Spain/CE-ISCIII-2016496/2020	Cow_Farm	Spain	Ceuta	0	35.8882408	-5.316184	14	10	2020	1	1
+Germany/NW-RKI-I-027541/2021	Cow_Farm	Germany	North Rhine Westphalia	0	51.4796906	7.5623112	16	2	2021	0	1
+Portugal/PT3555/2021	Cow_Farm	Portugal	0	0	55.437078	9.305069	7	2	2021	0	1
